@@ -2,18 +2,25 @@ package de.thecoolcraft11.mixin;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import de.thecoolcraft11.ScreenshotData;
+import de.thecoolcraft11.ScreenshotUpload;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.network.ServerInfo;
 import net.minecraft.client.texture.NativeImage;
 import net.minecraft.client.util.ScreenshotRecorder;
 import net.minecraft.registry.entry.RegistryEntry;
+import net.minecraft.text.ClickEvent;
+import net.minecraft.text.HoverEvent;
 import net.minecraft.text.Text;
+import net.minecraft.util.Formatting;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.biome.Biome;
 import net.minecraft.entity.Entity;
 import net.minecraft.world.WorldProperties;
 import net.minecraft.util.math.Direction;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
@@ -27,8 +34,12 @@ import java.util.function.Consumer;
 import static de.thecoolcraft11.ScreenshotUpload.uploadScreenshot;
 import static de.thecoolcraft11.ScreenshotUploader.getConfig;
 
+
 @Mixin(ScreenshotRecorder.class)
 public class ScreenshotMixin {
+
+    @Unique
+    private static final Logger logger = LoggerFactory.getLogger(ScreenshotMixin.class);
 
     @Unique
     private static final JsonObject config = getConfig();
@@ -36,10 +47,14 @@ public class ScreenshotMixin {
     @Inject(at = @At(value = "HEAD"), method = "method_1661")
     private static void screenshotCaptured(NativeImage nativeImage_1, File file_1, Consumer<Text> consumer_1, CallbackInfo ci) {
         MinecraftClient client = MinecraftClient.getInstance();
-        if (config.get("requireNoHud").getAsBoolean() && !client.options.hudHidden || config.get("limitToServer").getAsBoolean() && !Objects.equals(Objects.requireNonNull(client.getCurrentServerEntry()).address, config.get("limitedServerAddr").getAsString())) {
+
+        if (config.get("requireNoHud").getAsBoolean() && !client.options.hudHidden ||
+                config.get("limitToServer").getAsBoolean() &&
+                        !Objects.equals(Objects.requireNonNull(client.getCurrentServerEntry()).address, config.get("limitedServerAddr").getAsString())) {
             return;
         }
 
+        // Collect necessary data for the upload
         String username = client.getSession().getUsername();
         String uuid = String.valueOf(client.getSession().getUuidOrNull());
         String accountType = String.valueOf(client.getSession().getAccountType());
@@ -60,8 +75,60 @@ public class ScreenshotMixin {
 
         String jsonData = serializeToJson(data);
 
-        uploadScreenshot(nativeImage_1, jsonData);
+        new Thread(() -> {
+            JsonObject uploadResult = uploadScreenshot(nativeImage_1, jsonData);
+
+            client.execute(() -> {
+                String statusMessage = uploadResult.get("status").getAsString();
+
+                if ("success".equals(statusMessage)) {
+                    JsonObject responseBody = null;
+                    try {
+                        responseBody = JsonParser.parseString(uploadResult.get("responseBody").getAsString()).getAsJsonObject();
+                    } catch (Exception e) {
+                        logger.error("Failed to parse responseBody", e);
+                    }
+
+                    if (responseBody != null) {
+                        String screenshotUrl = responseBody.has("url") && !responseBody.get("url").isJsonNull() ? responseBody.get("url").getAsString() : null;
+                        String galleryUrl = responseBody.has("gallery") && !responseBody.get("gallery").isJsonNull() ? responseBody.get("gallery").getAsString() : null;
+
+                        Text fullMessage = Text.literal("Screenshot uploaded successfully! ");
+
+                        if (screenshotUrl != null) {
+                            String linkText = "[OPEN]";
+                            Text clickableLink = Text.literal(linkText)
+                                    .styled(style -> style.withClickEvent(new ClickEvent(ClickEvent.Action.OPEN_URL, screenshotUrl))
+                                            .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, Text.literal("Click To See Screenshot"))).withColor(Formatting.AQUA));
+                            fullMessage = fullMessage.copy().append(clickableLink);
+                        }
+
+                        if (galleryUrl != null) {
+                            String galleryText = "[ALL]";
+                            Text clickableLink2 = Text.literal(galleryText)
+                                    .styled(style -> style.withClickEvent(new ClickEvent(ClickEvent.Action.OPEN_URL, galleryUrl))
+                                            .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, Text.literal("Click To See All Screenshots"))).withColor(Formatting.YELLOW));
+                            fullMessage = fullMessage.copy().append(" ").append(clickableLink2);
+                        }
+
+                        if (screenshotUrl == null && galleryUrl == null) {
+                            fullMessage = Text.literal("Screenshot upload failed: The server did not return valid URLs.");
+                        }
+
+                        client.inGameHud.getChatHud().addMessage(fullMessage);
+                    }
+                } else {
+                    String errorMessage = uploadResult.has("message") ? uploadResult.get("message").getAsString() : "Unknown error";
+                    Text errorText = Text.literal("Screenshot upload failed: " + errorMessage);
+                    client.inGameHud.getChatHud().addMessage(errorText);
+                }
+            });
+        }).start();
     }
+
+
+
+
 
     @Unique
     private static String getWorldName(MinecraftClient client) {
@@ -134,7 +201,7 @@ public class ScreenshotMixin {
             Iterable<Entity> entities = client.world.getEntities();
             int entityCount = 0;
 
-            for (Entity entity : entities) {
+            for (Entity ignored : entities) {
                 entityCount++;
             }
 
@@ -184,5 +251,5 @@ public class ScreenshotMixin {
         Gson gson = new Gson();
         return gson.toJson(data);
     }
-
 }
+

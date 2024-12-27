@@ -4,51 +4,51 @@ import com.google.gson.annotations.SerializedName;
 
 public class ScreenshotData {
     @SerializedName("username")
-    private String username;
+    private final String username;
 
     @SerializedName("uuid")
-    private String uuid;
+    private final String uuid;
 
     @SerializedName("accountType")
-    private String accountType;
+    private final String accountType;
 
     @SerializedName("world_name")
-    private String worldName;
+    private final String worldName;
 
     @SerializedName("coordinates")
-    private String coordinates;
+    private final String coordinates;
 
     @SerializedName("biome")
-    private String biome;
+    private final String biome;
 
     @SerializedName("facing_direction")
-    private String facingDirection;
+    private final String facingDirection;
 
     @SerializedName("dimension")
-    private String dimension;
+    private final String dimension;
 
     @SerializedName("player_state")
-    private String playerState;
+    private final String playerState;
 
     @SerializedName("chunk_info")
-    private String chunkInfo;
+    private final String chunkInfo;
 
     @SerializedName("entities_info")
-    private String entitiesInfo;
+    private final String entitiesInfo;
 
     @SerializedName("world_info")
-    private String worldInfo;
+    private final String worldInfo;
 
     @SerializedName("server_address")
-    private String serverAddress;
+    private final String serverAddress;
 
     @SerializedName("client_settings")
-    private String clientSettings;
+    private final String clientSettings;
 
     @SerializedName("system_info")
-    private String systemInfo;
+    private final String systemInfo;
 
-    // Constructor and getters/setters
+    // Constructor
     public ScreenshotData(String username, String uuid, String accountType, String worldName, String coordinates, String biome, String facingDirection, String dimension, String playerState, String chunkInfo, String entitiesInfo, String worldInfo, String serverAddress, String clientSettings, String systemInfo) {
         this.username = username;
         this.uuid = uuid;
@@ -67,5 +67,6 @@ public class ScreenshotData {
         this.systemInfo = systemInfo;
     }
 
-    // Getters and setters omitted for brevity
 }
+
+

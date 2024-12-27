@@ -51,10 +51,10 @@ public class ScreenshotUploader implements ModInitializer {
 
 			try (FileWriter writer = new FileWriter(CONFIG_FILE)) {
 				GSON.toJson(config, writer);
-				LOGGER.info("Default config created at: " + CONFIG_FILE.getAbsolutePath());
+				LOGGER.info("Default config created at: {}", CONFIG_FILE.getAbsolutePath());
 			}
 		} catch (IOException e) {
-			LOGGER.error("Failed to create default config: " + e.getMessage());
+			LOGGER.error("Failed to create default config: {}", e.getMessage());
 		}
 	}
 
@@ -81,7 +81,7 @@ public class ScreenshotUploader implements ModInitializer {
 			config = GSON.fromJson(reader, JsonObject.class);
 			LOGGER.info("Config reloaded successfully!");
 		} catch (IOException e) {
-			LOGGER.error("Failed to reload config: " + e.getMessage());
+			LOGGER.error("Failed to reload config: {}", e.getMessage());
 		}
 	}
 
