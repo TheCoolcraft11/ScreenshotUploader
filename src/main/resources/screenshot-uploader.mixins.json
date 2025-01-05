@@ -3,6 +3,9 @@
 	"package": "de.thecoolcraft11.mixin",
 	"compatibilityLevel": "JAVA_17",
 	"mixins": [
+
+	],
+	"client": [
 		"ScreenshotMixin"
 	],
 	"injectors": {

@@ -1,6 +1,8 @@
-package de.thecoolcraft11;
+package de.thecoolcraft11.util;
 
 import com.google.gson.JsonObject;
+import de.thecoolcraft11.packet.ScreenshotPayload;
+import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.client.texture.NativeImage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -9,34 +11,56 @@ import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.util.ArrayList;
+import java.util.List;
 
-import static de.thecoolcraft11.ScreenshotUploader.getConfig;
+public class ScreenshotUploadHelper {
 
+    private static final Logger logger = LoggerFactory.getLogger(ScreenshotUploadHelper.class);
 
-public class ScreenshotUpload {
-
-    private static final Logger logger = LoggerFactory.getLogger(ScreenshotUpload.class);
-    private static final JsonObject config = getConfig();
-
-    public static JsonObject uploadScreenshot(NativeImage nativeImage, String jsonData) {
+    public static List<JsonObject> uploadScreenshot(NativeImage nativeImage, String jsonData, List<String> uploadUrls) {
         File tempFile;
-        JsonObject result = new JsonObject();
+        List<JsonObject> resultList = new ArrayList<>();
 
         try {
             tempFile = File.createTempFile("screenshot", ".png");
             nativeImage.writeTo(tempFile);
         } catch (IOException e) {
+            JsonObject result = new JsonObject();
             logger.error("Failed to create temporary file for screenshot", e);
             result.addProperty("status", "error");
             result.addProperty("message", "Failed to create temporary file.");
-            return result;
+            resultList.add(result);
+            return resultList;
         }
+
+
+        for (String uploadUrl : uploadUrls) {
+            if (uploadUrl.contains("mcserver://this")) {
+                sendScreenshotPacket(tempFile);
+            }else {
+                JsonObject result = uploadToUrl(tempFile, jsonData, uploadUrl);
+                resultList.add(result);
+            }
+
+        }
+
+        if (tempFile.exists() && !tempFile.delete()) {
+            logger.warn("Failed to delete temporary file: {}", tempFile.getAbsolutePath());
+        }
+
+        return resultList;
+    }
+
+    private static JsonObject uploadToUrl(File tempFile, String jsonData, String uploadUrl) {
+        JsonObject result = new JsonObject();
 
         try {
             String boundary = Long.toHexString(System.currentTimeMillis());
             String CRLF = "\r\n";
 
-            URI uploadUri = URI.create(config.get("upload_url").getAsString());
+            URI uploadUri = URI.create(uploadUrl);
             HttpURLConnection conn = (HttpURLConnection) uploadUri.toURL().openConnection();
             conn.setDoOutput(true);
             conn.setRequestMethod("POST");
@@ -69,11 +93,9 @@ public class ScreenshotUpload {
                 writer.append(jsonData).flush();
                 writer.append(CRLF).flush();
 
-                // End of the request
                 writer.append(String.format("--%s--", boundary)).append(CRLF).flush();
             }
 
-            // Handle response
             int responseCode = conn.getResponseCode();
             String responseMessage = conn.getResponseMessage();
 
@@ -93,15 +115,23 @@ public class ScreenshotUpload {
             }
 
         } catch (IOException e) {
-            logger.error("IOException occurred while uploading screenshot", e);
+            logger.error("IOException occurred while uploading screenshot to {}: {}", uploadUrl, e.getMessage());
             result.addProperty("status", "error");
             result.addProperty("message", e.getMessage());
-        } finally {
-            if (tempFile.exists() && !tempFile.delete()) {
-                logger.warn("Failed to delete temporary file: {}", tempFile.getAbsolutePath());
-            }
         }
 
         return result;
+    }
+    public static void sendScreenshotPacket(File tempFile) {
+        byte[] bytes;
+        try {
+            bytes = Files.readAllBytes(tempFile.toPath());
+            tempFile.delete();
+
+            ClientPlayNetworking.send(new ScreenshotPayload(bytes));
+
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to send screenshot", e);
+        }
     }
 }

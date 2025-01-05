@@ -4,7 +4,9 @@ import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import de.thecoolcraft11.ScreenshotData;
-import de.thecoolcraft11.ScreenshotUpload;
+import de.thecoolcraft11.util.ReceivePackets;
+import net.fabricmc.api.EnvType;
+import net.fabricmc.api.Environment;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.network.ServerInfo;
 import net.minecraft.client.texture.NativeImage;
@@ -19,6 +21,7 @@ import net.minecraft.world.biome.Biome;
 import net.minecraft.entity.Entity;
 import net.minecraft.world.WorldProperties;
 import net.minecraft.util.math.Direction;
+import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.spongepowered.asm.mixin.Mixin;
@@ -27,15 +30,19 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
+
 import java.io.*;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 import java.util.function.Consumer;
 
-import static de.thecoolcraft11.ScreenshotUpload.uploadScreenshot;
-import static de.thecoolcraft11.ScreenshotUploader.getConfig;
+import static de.thecoolcraft11.util.ScreenshotUploadHelper.uploadScreenshot;
+import static de.thecoolcraft11.ScreenshotUploaderClient.getConfig;
 
 
 @Mixin(ScreenshotRecorder.class)
+@Environment(EnvType.CLIENT)
 public class ScreenshotMixin {
 
     @Unique
@@ -43,6 +50,7 @@ public class ScreenshotMixin {
 
     @Unique
     private static final JsonObject config = getConfig();
+
 
     @Inject(at = @At(value = "HEAD"), method = "method_1661")
     private static void screenshotCaptured(NativeImage nativeImage_1, File file_1, Consumer<Text> consumer_1, CallbackInfo ci) {
@@ -54,7 +62,6 @@ public class ScreenshotMixin {
             return;
         }
 
-        // Collect necessary data for the upload
         String username = client.getSession().getUsername();
         String uuid = String.valueOf(client.getSession().getUuidOrNull());
         String accountType = String.valueOf(client.getSession().getAccountType());
@@ -76,59 +83,97 @@ public class ScreenshotMixin {
         String jsonData = serializeToJson(data);
 
         new Thread(() -> {
-            JsonObject uploadResult = uploadScreenshot(nativeImage_1, jsonData);
+            List<String> targets = new ArrayList<>();
+            targets.add(config.get("upload_url").getAsString());
+            if(ReceivePackets.serverSiteAddress != null) {
+                targets.add(ReceivePackets.serverSiteAddress);
+            }
+            StringBuilder messageBuilder = getStringBuilder(targets);
 
-            client.execute(() -> {
-                String statusMessage = uploadResult.get("status").getAsString();
+            client.inGameHud.getChatHud().addMessage(
+                    Text.literal( "Uploading Screenshots to ").append(Text.literal(messageBuilder.toString()).styled(style -> style.withColor(Formatting.AQUA))));
 
-                if ("success".equals(statusMessage)) {
-                    JsonObject responseBody = null;
-                    try {
-                        responseBody = JsonParser.parseString(uploadResult.get("responseBody").getAsString()).getAsJsonObject();
-                    } catch (Exception e) {
-                        logger.error("Failed to parse responseBody", e);
-                    }
+            List<JsonObject> uploadResults = uploadScreenshot(nativeImage_1, jsonData, targets);
 
-                    if (responseBody != null) {
-                        String screenshotUrl = responseBody.has("url") && !responseBody.get("url").isJsonNull() ? responseBody.get("url").getAsString() : null;
-                        String galleryUrl = responseBody.has("gallery") && !responseBody.get("gallery").isJsonNull() ? responseBody.get("gallery").getAsString() : null;
+            client.execute(() ->
+              uploadResults.forEach(uploadResult -> {
+                  String statusMessage = uploadResult.get("status").getAsString();
 
-                        Text fullMessage = Text.literal("Screenshot uploaded successfully! ");
+                  if ("success".equals(statusMessage)) {
+                      JsonObject responseBody = null;
+                      try {
+                          responseBody = JsonParser.parseString(uploadResult.get("responseBody").getAsString()).getAsJsonObject();
+                      } catch (Exception e) {
+                          logger.error("Failed to parse responseBody", e);
+                      }
 
-                        if (screenshotUrl != null) {
-                            String linkText = "[OPEN]";
-                            Text clickableLink = Text.literal(linkText)
-                                    .styled(style -> style.withClickEvent(new ClickEvent(ClickEvent.Action.OPEN_URL, screenshotUrl))
-                                            .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, Text.literal("Click To See Screenshot"))).withColor(Formatting.AQUA));
-                            fullMessage = fullMessage.copy().append(clickableLink);
-                        }
+                      if (responseBody != null) {
+                          String screenshotUrl = responseBody.has("url") && !responseBody.get("url").isJsonNull() ? responseBody.get("url").getAsString() : null;
+                          String galleryUrl = responseBody.has("gallery") && !responseBody.get("gallery").isJsonNull() ? responseBody.get("gallery").getAsString() : null;
 
-                        if (galleryUrl != null) {
-                            String galleryText = "[ALL]";
-                            Text clickableLink2 = Text.literal(galleryText)
-                                    .styled(style -> style.withClickEvent(new ClickEvent(ClickEvent.Action.OPEN_URL, galleryUrl))
-                                            .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, Text.literal("Click To See All Screenshots"))).withColor(Formatting.YELLOW));
-                            fullMessage = fullMessage.copy().append(" ").append(clickableLink2);
-                        }
+                          Text fullMessage = Text.literal("Screenshot uploaded successfully! ");
 
-                        if (screenshotUrl == null && galleryUrl == null) {
-                            fullMessage = Text.literal("Screenshot upload failed: The server did not return valid URLs.");
-                        }
 
-                        client.inGameHud.getChatHud().addMessage(fullMessage);
-                    }
-                } else {
-                    String errorMessage = uploadResult.has("message") ? uploadResult.get("message").getAsString() : "Unknown error";
-                    Text errorText = Text.literal("Screenshot upload failed: " + errorMessage);
-                    client.inGameHud.getChatHud().addMessage(errorText);
-                }
-            });
+                          if (screenshotUrl != null) {
+                              String linkText = "[OPEN]";
+                              Text clickableLink = Text.literal(linkText)
+                                      .styled(style -> style.withClickEvent(new ClickEvent(ClickEvent.Action.OPEN_URL, screenshotUrl))
+                                              .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, Text.literal("Click To See Screenshot"))).withColor(Formatting.AQUA));
+                              fullMessage = fullMessage.copy().append(clickableLink);
+                          }
+
+                          if (galleryUrl != null) {
+                              String galleryText = "[ALL]";
+                              Text clickableLink2 = Text.literal(galleryText)
+                                      .styled(style -> style.withClickEvent(new ClickEvent(ClickEvent.Action.OPEN_URL, galleryUrl))
+                                              .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, Text.literal("Click To See All Screenshots"))).withColor(Formatting.YELLOW));
+                              fullMessage = fullMessage.copy().append(" ").append(clickableLink2);
+                          }
+
+                          if (screenshotUrl == null && galleryUrl == null) {
+                              fullMessage = Text.literal("Screenshot upload failed: The server did not return valid URLs.");
+                          }
+
+                          client.inGameHud.getChatHud().addMessage(fullMessage);
+                      }
+                  } else {
+                      String errorMessage = uploadResult.has("message") ? uploadResult.get("message").getAsString() : "Unknown error";
+
+                      String errorDetail = switch (errorMessage.split(":")[0].toUpperCase()) {
+                          case "CONNECTION REFUSED" -> "The server could not be reached.\n" +
+                                  "What to do: Make sure the server is online and the address is correct.";
+                          case "TIMEOUT" -> "The connection to the server took too long.\n" +
+                                  "What to do: Check your internet connection and try again.";
+                          case "HOST UNREACHABLE" -> "The server address could not be found.\n" +
+                                  "What to do: Ensure the address is correct and the server is running.";
+                          default -> "An unexpected error occurred. Please try again later.";
+                      };
+
+                      Text errorText = Text.literal("Screenshot upload failed: " + errorMessage.split(":")[0])
+                              .styled(style -> style.withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, Text.literal(errorDetail))));
+
+                      client.inGameHud.getChatHud().addMessage(errorText);
+                  }
+              })
+            );
         }).start();
     }
 
+    @Unique
+    private static @NotNull StringBuilder getStringBuilder(List<String> targets) {
+        StringBuilder messageBuilder = new StringBuilder();
 
+        for (int i = 0; i < targets.size(); i++) {
+            String target = targets.get(i);
+            String targetText = target.equals("mcserver://this") ? "This Server" : target;
+            messageBuilder.append(targetText);
 
-
+         if (i < targets.size() - 1) {
+                messageBuilder.append(", ");
+            }
+        }
+        return messageBuilder;
+    }
 
     @Unique
     private static String getWorldName(MinecraftClient client) {
