@@ -1,12 +1,13 @@
 package de.thecoolcraft11;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import de.thecoolcraft11.packet.AddressPayload;
 import de.thecoolcraft11.packet.ScreenshotPayload;
 import de.thecoolcraft11.packet.ScreenshotResponsePayload;
+import de.thecoolcraft11.util.DiscordWebhook;
 import de.thecoolcraft11.util.WebServer;
+import de.thecoolcraft11.util.config.ConfigManager;
 import net.fabricmc.api.DedicatedServerModInitializer;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
@@ -22,7 +23,6 @@ import javax.imageio.ImageIO;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.*;
-import java.net.InetAddress;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -35,76 +35,42 @@ public class ScreenshotUploaderServer implements DedicatedServerModInitializer {
     public static final String MOD_ID = "screenshot-uploader";
     public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
 
-    private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
-    private static final File CONFIG_FILE = new File("./config/screenshotUploader/serverConfig.json");
-    private static JsonObject config;
 
-    private void createDefaultConfig() {
-        try {
-            File parentDir = CONFIG_FILE.getParentFile();
-            if (!parentDir.exists() && !parentDir.mkdirs()) {
-                throw new IOException("Failed to create config directory: " + parentDir.getAbsolutePath());
-            }
-
-            config = new JsonObject();
-            config.addProperty("screenshotWebserver", true);
-            config.addProperty("port", 4567);
-            config.addProperty("allowDelete", false);
-            config.addProperty("useCustomWebURL", false);
-            config.addProperty("customWebURL", "");
-
-            try (FileWriter writer = new FileWriter(CONFIG_FILE)) {
-                GSON.toJson(config, writer);
-                LOGGER.info("Default config created at: {}", CONFIG_FILE.getAbsolutePath());
-            }
-        } catch (IOException e) {
-            LOGGER.error("Failed to create default config: {}", e.getMessage());
-        }
-    }
-
-
-    private void loadConfig() {
-        if (!CONFIG_FILE.exists()) {
-            createDefaultConfig();
-        }
-
-        try (FileReader reader = new FileReader(CONFIG_FILE)) {
-            config = GSON.fromJson(reader, JsonObject.class);
-            System.out.println("Config loaded successfully!");
-        } catch (IOException e) {
-            System.err.println("Failed to load config: " + e.getMessage());
-            createDefaultConfig();
-        }
-    }
 
 
     @Override
     public void onInitializeServer() {
+        File configDir = new File("config/screenshotUploader");
+        if(!configDir.exists()) {
+            configDir.mkdir();
+        }
+        ConfigManager.initialize(configDir,false);
+
         ServerLifecycleEvents.SERVER_STARTED.register(this::onServerStarting);
-        loadConfig();
-        if(config.get("screenshotWebserver").getAsBoolean()) {
+        if (ConfigManager.getServerConfig().screenshotWebserver) {
             String ipAddress = "127.0.0.1";
-            int port = config.get("port").getAsInt();
+            int port = ConfigManager.getServerConfig().port;
             LOGGER.info("Starting web server on {}:{} ...", ipAddress, port);
             startWebServer();
         }
-        ServerPlayConnectionEvents.JOIN.register((player, packetSender, minecraftServer)-> {
+        ServerPlayConnectionEvents.JOIN.register((player, packetSender, minecraftServer) -> {
+            if(ConfigManager.getServerConfig().sendUrlToClient) {
+                String serverAddress = "mcserver://this";
+                if (ConfigManager.getServerConfig().useCustomWebURL) {
+                    serverAddress = ConfigManager.getServerConfig().customWebURL;
+                }
 
-
-            String serverAddress = "mcserver://this";
-            if(config.get("useCustomWebURL").getAsBoolean()) {
-                serverAddress = config.get("customWebURL").getAsString();
+                ServerPlayNetworking.send(player.getPlayer(), new AddressPayload(serverAddress));
             }
-
-            ServerPlayNetworking.send(player.getPlayer(), new AddressPayload(serverAddress));
-        });
-
-        ServerPlayNetworking.registerGlobalReceiver(ScreenshotPayload.ID, (payload, context) -> {
-           byte[] bytes = payload.bytes();
-           context.server().execute(() ->
-               handleReceivedScreenshot(bytes, context.player())
-           );
-        });
+            ServerPlayNetworking.registerGlobalReceiver(ScreenshotPayload.ID, (payload, context) -> {
+                byte[] bytes = payload.bytes();
+                String json = payload.json();
+                context.server().execute(() ->
+                        handleReceivedScreenshot(bytes, json, context.player())
+                );
+            });
+        }
+        );
     }
 
     private void onServerStarting(MinecraftServer server) {
@@ -130,8 +96,7 @@ public class ScreenshotUploaderServer implements DedicatedServerModInitializer {
     }
 
 
-
-    private static void handleReceivedScreenshot(byte[] screenshotData, ServerPlayerEntity player) {
+    private static void handleReceivedScreenshot(byte[] screenshotData, String jsonData, ServerPlayerEntity player) {
         try {
             String playerName = player.getName().getString();
             String fileName = "screenshot-" + playerName + "_" + System.currentTimeMillis() + ".png";
@@ -139,7 +104,6 @@ public class ScreenshotUploaderServer implements DedicatedServerModInitializer {
             File screenshotFile = new File("screenshotUploader/" + fileName);
             Files.write(screenshotFile.toPath(), screenshotData);
             System.out.println("Screenshot received from " + player.getName().getString() + " and saved as " + fileName);
-
             String uploadedFilePath = "screenshotUploader/" + fileName;
             String outputFilePath = "screenshotUploader/screenshots/" + formatFileName(fileName, playerName);
             convertToJpeg(uploadedFilePath, outputFilePath);
@@ -147,20 +111,34 @@ public class ScreenshotUploaderServer implements DedicatedServerModInitializer {
 
             Files.delete(Paths.get(uploadedFilePath));
 
-            String ipAdress = getServerIp();
-            int port = config.get("port").getAsInt();
-            JsonObject jsonObject = getJsonObject(ipAdress, port, outputFilePath);
+            String urlString = getServerIp();
+            if (!urlString.matches("^https?://.*")) {
+                urlString = "http://" + urlString;
+            }
+
+            if (!urlString.matches(".*:\\d+.*")) {
+                urlString = urlString.replaceFirst("^(https?://[^/]+)", "$1:" + ConfigManager.getServerConfig().port);
+            }
+
+            JsonObject jsonObject = getJsonObject(urlString, outputFilePath);
+            try {
+                JsonObject webhookJson = JsonParser.parseString(jsonData).getAsJsonObject();
+                if(ConfigManager.getServerConfig().sendDiscordWebhook) {
+                    DiscordWebhook.sendMessage(ConfigManager.getServerConfig().webhookUrl, playerName, webhookJson.get("server_address").getAsString(), webhookJson.get("dimension").getAsString(), webhookJson.get("coordinates").getAsString(), webhookJson.get("facing_direction").getAsString(), webhookJson.get("biome").getAsString(), jsonObject.get("url").getAsString());
+                }
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
             ServerPlayNetworking.send(player, new ScreenshotResponsePayload(jsonObject.toString()));
         } catch (IOException e) {
             LOGGER.error("Error handling uploaded screenshot: {}", e.getMessage());
         }
     }
 
-    private static @NotNull JsonObject getJsonObject(String ipAdress, int port, String outputFilePath) {
-        String websiteAddress = "http://" + ipAdress + ":" + port;
+    private static @NotNull JsonObject getJsonObject(String websiteAddress, String outputFilePath) {
 
-        String screenshotUrl = websiteAddress + outputFilePath.replace("uploads", "");
-        String galleryUrl = websiteAddress + "/screenshots";
+        String screenshotUrl = websiteAddress + outputFilePath.replace("screenshotUploader", "");
+        String galleryUrl = websiteAddress + "/";
 
         JsonObject jsonObject = new JsonObject();
         jsonObject.addProperty("message", "File uploaded sucessfully");
@@ -172,7 +150,7 @@ public class ScreenshotUploaderServer implements DedicatedServerModInitializer {
 
     private void startWebServer() {
         String ipAddress = "127.0.0.1";
-        int port = config.get("port").getAsInt();
+        int port = ConfigManager.getServerConfig().port;
         try {
             WebServer.startWebServer(ipAddress, port);
         } catch (Exception e) {
@@ -204,6 +182,7 @@ public class ScreenshotUploaderServer implements DedicatedServerModInitializer {
         }
 
     }
+
     private static String formatFileName(String originalFilename, String username) {
 
         String regex = "(screenshot)(\\d+)(\\.png)$";
@@ -220,15 +199,9 @@ public class ScreenshotUploaderServer implements DedicatedServerModInitializer {
             return originalFilename;
         }
     }
-    public static String getServerIp() {
-        try {
-            InetAddress ip = InetAddress.getLocalHost();
-            return ip.getHostAddress();
-        } catch (Exception e) {
-            LOGGER.error("Exeption while getting server IP: {}", e.getMessage());
-            return "localhost";
-        }
+
+    private static String getServerIp() {
+        return ConfigManager.getServerConfig().websiteURL;
     }
 }
-
 

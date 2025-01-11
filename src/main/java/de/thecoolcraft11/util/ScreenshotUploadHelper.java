@@ -38,7 +38,7 @@ public class ScreenshotUploadHelper {
 
         for (String uploadUrl : uploadUrls) {
             if (uploadUrl.contains("mcserver://this")) {
-                sendScreenshotPacket(tempFile);
+                sendScreenshotPacket(tempFile, jsonData);
             }else {
                 JsonObject result = uploadToUrl(tempFile, jsonData, uploadUrl);
                 resultList.add(result);
@@ -122,13 +122,13 @@ public class ScreenshotUploadHelper {
 
         return result;
     }
-    public static void sendScreenshotPacket(File tempFile) {
+    public static void sendScreenshotPacket(File tempFile, String json) {
         byte[] bytes;
         try {
             bytes = Files.readAllBytes(tempFile.toPath());
             tempFile.delete();
 
-            ClientPlayNetworking.send(new ScreenshotPayload(bytes));
+            ClientPlayNetworking.send(new ScreenshotPayload(bytes, json));
 
         } catch (IOException e) {
             throw new RuntimeException("Failed to send screenshot", e);

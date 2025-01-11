@@ -3,6 +3,7 @@ package de.thecoolcraft11.util;
 import com.sun.net.httpserver.HttpServer;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
+import de.thecoolcraft11.util.config.ConfigManager;
 import net.fabricmc.loader.api.FabricLoader;
 
 import java.io.*;
@@ -40,7 +41,7 @@ public class WebServer {
             }
             File dir = new File("./screenshotUploader/screenshots/");
             File[] files = dir.listFiles((dir1, name) -> name.endsWith(".jpg") || name.endsWith(".png"));
-            String response = GalleryBuilder.buildGallery(files, true);
+            String response = GalleryBuilder.buildGallery(files, ConfigManager.getServerConfig().allowDelete);
             exchange.getResponseHeaders().add("Content-Type", "text/html; charset=UTF-8");
             exchange.sendResponseHeaders(200, response.getBytes().length);
             try (OutputStream os = exchange.getResponseBody()) {
