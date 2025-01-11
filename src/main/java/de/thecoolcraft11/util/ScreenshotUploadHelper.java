@@ -7,6 +7,9 @@ import net.minecraft.client.texture.NativeImage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.imageio.ImageIO;
+import java.awt.*;
+import java.awt.image.BufferedImage;
 import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URI;
@@ -122,16 +125,44 @@ public class ScreenshotUploadHelper {
 
         return result;
     }
-    public static void sendScreenshotPacket(File tempFile, String json) {
-        byte[] bytes;
-        try {
-            bytes = Files.readAllBytes(tempFile.toPath());
-            tempFile.delete();
 
-            ClientPlayNetworking.send(new ScreenshotPayload(bytes, json));
+
+
+    public static void sendScreenshotPacket(File tempFile, String json) {
+        try {
+            BufferedImage originalImage = ImageIO.read(tempFile);
+
+            if (originalImage.getColorModel().hasAlpha()) {
+                BufferedImage rgbImage = new BufferedImage(originalImage.getWidth(), originalImage.getHeight(), BufferedImage.TYPE_INT_RGB);
+                Graphics2D graphics = rgbImage.createGraphics();
+                graphics.setColor(Color.WHITE);
+                graphics.fillRect(0, 0, originalImage.getWidth(), originalImage.getHeight());
+                graphics.drawImage(originalImage, 0, 0, null);
+                graphics.dispose();
+                originalImage = rgbImage;
+            }
+            ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+
+            javax.imageio.ImageWriter writer = ImageIO.getImageWritersByFormatName("jpeg").next();
+            javax.imageio.ImageWriteParam param = writer.getDefaultWriteParam();
+            param.setCompressionMode(javax.imageio.ImageWriteParam.MODE_EXPLICIT);
+            param.setCompressionQuality(0.7f);
+
+            writer.setOutput(ImageIO.createImageOutputStream(byteArrayOutputStream));
+            writer.write(null, new javax.imageio.IIOImage(originalImage, null, null), param);
+            writer.dispose();
+
+            byte[] compressedImageBytes = byteArrayOutputStream.toByteArray();
+
+            ClientPlayNetworking.send(new ScreenshotPayload(compressedImageBytes, json));
+
+            if (!tempFile.delete()) {
+                logger.warn("Failed to delete temporary file while sending packet: {}", tempFile.getAbsolutePath());
+            }
 
         } catch (IOException e) {
-            throw new RuntimeException("Failed to send screenshot", e);
+            throw new RuntimeException("Failed to compress and send screenshot", e);
         }
     }
+
 }
