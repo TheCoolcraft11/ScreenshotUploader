@@ -1,9 +1,11 @@
 package de.thecoolcraft11.util;
 
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
 import com.sun.net.httpserver.HttpServer;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
-import de.thecoolcraft11.util.config.ConfigManager;
+import de.thecoolcraft11.config.ConfigManager;
 import net.fabricmc.loader.api.FabricLoader;
 
 import java.io.*;
@@ -17,7 +19,7 @@ import java.util.regex.Pattern;
 
 public class WebServer {
 
-    public static void startWebServer(String ipAddress, int port) throws Exception {
+    public static void startWebServer(String ipAddress, int port, String urlString) throws Exception {
 
 
 
@@ -28,6 +30,7 @@ public class WebServer {
         server.createContext("/delete", new DeleteFileHandler());
         server.createContext("/static", new StaticFileHandler());
         server.createContext("/screenshots", new ScreenshotFileHandler());
+        server.createContext("/screenshot-list", new ScreenshotListHandler(urlString));
 
         server.start();
     }
@@ -144,6 +147,7 @@ public class WebServer {
 
         }
     }
+
     private static class StaticFileHandler implements HttpHandler {
         @Override
         public void handle(HttpExchange exchange) throws IOException {
@@ -168,6 +172,47 @@ public class WebServer {
                 os.write(fileContent);
             }
 
+        }
+    }
+
+    private static class ScreenshotListHandler implements HttpHandler {
+        private static String urlString;
+        public ScreenshotListHandler(String urlString) {
+            ScreenshotListHandler.urlString = urlString;
+        }
+
+        @Override
+        public void handle(HttpExchange exchange) throws IOException {
+            if (!"GET".equals(exchange.getRequestMethod())) {
+                exchange.sendResponseHeaders(405, -1);
+                return;
+            }
+            File dir = new File("./screenshotUploader/screenshots/");
+            File[] files = dir.listFiles((dir1, name) -> name.endsWith(".jpg") || name.endsWith(".png"));
+
+            String jsonResponse = getString(files);
+
+            exchange.getResponseHeaders().add("Content-Type", "application/json; charset=UTF-8");
+            exchange.sendResponseHeaders(200, jsonResponse.getBytes().length);
+
+            try (OutputStream os = exchange.getResponseBody()) {
+                os.write(jsonResponse.getBytes());
+            }
+        }
+
+        private String getString(File[] files) {
+            JsonArray fileArray = new JsonArray();
+            if (files != null) {
+                for (File file : files) {
+                    JsonObject fileObject = new JsonObject();
+                    fileObject.addProperty("filename", file.getName());
+                    fileObject.addProperty("url", urlString+ "/screenshots/" + file.getName());
+                    fileObject.addProperty("username",file.getName().split("-")[1].split("_")[0]);
+                    fileArray.add(fileObject);
+                }
+            }
+
+            return fileArray.toString();
         }
     }
 }

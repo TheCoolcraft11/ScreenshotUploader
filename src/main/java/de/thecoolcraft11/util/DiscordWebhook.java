@@ -19,8 +19,8 @@ import static de.thecoolcraft11.ScreenshotUploaderServer.MOD_ID;
 
 public class DiscordWebhook {
     private static final Logger logger = LoggerFactory.getLogger(MOD_ID);
-    public static void sendMessage(String webhookURL, String username, String server, String world, String coordinates, String direction, String biome, String screenshotUrl)  {
-        String jsonPayload = createPayload(username, server, world, coordinates, direction, biome, screenshotUrl);
+    public static void sendMessage(String webhookURL, String username, String server, String world, String coordinates, String direction, String biome, String screenshotUrl, String worldInfo)  {
+        String jsonPayload = createPayload(username, server, world, coordinates, direction, biome, screenshotUrl, worldInfo);
         try {
             int responseCode = getResponseCode(webhookURL, jsonPayload);
             if (responseCode == HttpURLConnection.HTTP_OK || responseCode == HttpURLConnection.HTTP_NO_CONTENT) {
@@ -50,15 +50,15 @@ public class DiscordWebhook {
         return connection.getResponseCode();
     }
 
-    private static String createPayload(String username, String server, String world, String coordinates, String direction, String biome, String screenshotUrl) {
+    private static String createPayload(String username, String server, String world, String coordinates, String direction, String biome, String screenshotUrl, String worldInfo) {
         Map<String, Object> payload = new HashMap<>();
         Map<String, Object> embed = new HashMap<>();
-        embed.put("description", "**" + (username == null ? "Unkown" : username) + "** has made a new screenshot:");
+        embed.put("description", "**" + (username == null ? "Unknown" : username) + "** has made a new screenshot:");
         embed.put("color", null);
 
         Map<String, String> field = new HashMap<>();
         field.put("name", "\u200B");
-        field.put("value", String.format("__%s__\n**%s**\n%s - %s\n%s", server, world, coordinates, direction, biome));
+        field.put("value", String.format("__%s__\n**%s**\n%s - %s\n%s\n%s", server, world, coordinates, direction, biome, worldInfo));
 
         List<Map<String, String>> fields = new ArrayList<>();
         fields.add(field);
@@ -70,10 +70,10 @@ public class DiscordWebhook {
         embeds.add(embed);
 
         payload.put("embeds", embeds);
-        payload.put("username", username == null ? "Unkown" : username);
+        payload.put("username", username == null ? "Unknown" : username);
         payload.put("avatar_url", username == null ? null : "https://minotar.net/avatar/" + username);
         payload.put("attachments", new Object[0]);
-        payload.put("thread_name", username == null ? "Unkown" : username);
+        payload.put("thread_name", username == null ? "Unknown" : username);
 
         Gson gson = new Gson();
         return gson.toJson(payload);

@@ -1,9 +1,11 @@
-package de.thecoolcraft11.util.config;
+package de.thecoolcraft11.config;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import com.google.gson.JsonObject;
 import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import de.thecoolcraft11.config.data.ClientConfig;
+import de.thecoolcraft11.config.data.ServerConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -56,7 +58,7 @@ public class ConfigManager {
                 addMissingFields(serverConfig, jsonElement, configFile);
             }
         } catch (IOException e) {
-           logger.error("Failed to load config: {}", e.getMessage());
+            logger.error("Failed to load config: {}", e.getMessage());
             if (isClient) {
                 clientConfig = new ClientConfig();
             } else {
@@ -78,7 +80,7 @@ public class ConfigManager {
                     jsonObject.add(fieldName, GSON.toJsonTree(defaultValue));
 
                     field.set(config, defaultValue);
-                    System.out.println("Added missing field: '" + fieldName + "' with default value.");
+                    logger.info("Added missing field: '{}' with default value.", fieldName);
                 }
             } catch (IllegalAccessException e) {
                 logger.error("Failed to add new config values: {}", e.getMessage());
@@ -91,7 +93,7 @@ public class ConfigManager {
     private static void saveConfig(File configFile, JsonObject jsonObject) {
         try (FileWriter writer = new FileWriter(configFile)) {
             GSON.toJson(jsonObject, writer);
-            System.out.println("Config saved to " + configFile.getName());
+            logger.info("Config saved to {}", configFile.getName());
         } catch (IOException e) {
             logger.error("Failed to save Client config: {}", e.getMessage());
         }
@@ -114,6 +116,7 @@ public class ConfigManager {
             logger.error("Failed to save Config: {}", e.getMessage());
         }
     }
+
     public static void saveServerConfig(File configDir) {
         File serverConfigFile = new File(configDir, "serverConfig.json");
         try (FileWriter writer = new FileWriter(serverConfigFile)) {

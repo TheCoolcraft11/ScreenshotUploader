@@ -14,7 +14,6 @@ import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -42,7 +41,7 @@ public class ScreenshotUploadHelper {
         for (String uploadUrl : uploadUrls) {
             if (uploadUrl.contains("mcserver://this")) {
                 sendScreenshotPacket(tempFile, jsonData);
-            }else {
+            } else {
                 JsonObject result = uploadToUrl(tempFile, jsonData, uploadUrl);
                 resultList.add(result);
             }
@@ -125,7 +124,6 @@ public class ScreenshotUploadHelper {
 
         return result;
     }
-
 
 
     public static void sendScreenshotPacket(File tempFile, String json) {
