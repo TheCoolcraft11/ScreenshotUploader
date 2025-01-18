@@ -77,7 +77,7 @@ jobs:
           release_name: "Release ${{ env.VERSION }}"
           body: |
             ## Changelog:
-            $(cat changelog.txt)
+            $(cat changelog.txt)  # Correctly interpolate the changelog contents
           draft: false
           prerelease: false
         env:
@@ -107,11 +107,12 @@ jobs:
         uses: modrinth/modrinth-upload@v1
         with:
           token: ${{ secrets.MODRINTH_TOKEN }}
-          project_id: w6ZC8JLF # Replace with your Modrinth project ID
+          project_id: <your-modrinth-project-id>  # Replace with your Modrinth project ID
           file: ./artifacts/screenshot-uploader-${{ env.VERSION }}.jar  # Dynamically use version
-          version_number: ${{ env.VERSION }}  # Using the dynamic version
+          version_number: ${{ env.VERSION }}
           version_name: "Version ${{ env.VERSION }}"
-          changelog: "$(cat changelog.txt)"
+          changelog: |
+            $(cat changelog.txt)  # Ensure this works with the dynamic changelog content
           dependencies: "fabric-api"
 
   discord_notify:
