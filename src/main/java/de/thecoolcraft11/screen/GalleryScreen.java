@@ -55,7 +55,7 @@ public class GalleryScreen extends Screen {
     private final List<ButtonWidget> buttonsToHideOnOverlap = new ArrayList<>();
 
     public GalleryScreen() {
-        super(Text.literal("Screenshot Gallery"));
+        super(Text.translatable("gui.screenshot_uploader.screenshot_gallery.title"));
     }
 
     @Override
@@ -85,13 +85,13 @@ public class GalleryScreen extends Screen {
 
         int navigatorY = (int) (height * 0.01);
 
-        navigatorButtons.add(ButtonWidget.builder(Text.literal("Current"), button -> {
+        navigatorButtons.add(ButtonWidget.builder(Text.translatable("gui.screenshot_uploader.screenshot_gallery.current"), button -> {
         }).dimensions(xPosition, navigatorY, buttonWidth, buttonHeight).build());
 
         xPosition += buttonWidth + buttonSpacing;
 
         if (ReceivePackets.gallerySiteAddress != null) {
-            navigatorButtons.add(ButtonWidget.builder(Text.literal("Server Gallery"), button -> {
+            navigatorButtons.add(ButtonWidget.builder(Text.translatable("gui.screenshot_uploader.screenshot_gallery.server_gallery"), button -> {
                 String webserverUrl = ReceivePackets.gallerySiteAddress;
                 if (client != null) {
                     client.setScreen(new WebGalleryScreen(this, webserverUrl));
@@ -124,20 +124,20 @@ public class GalleryScreen extends Screen {
 
         navigatorButtons.forEach(this::addDrawableChild);
 
-        navigatorButtons.stream().filter(buttonWidget -> buttonWidget.getMessage().equals(Text.literal("Current"))).forEach(buttonWidget -> buttonWidget.active = false);
+        navigatorButtons.stream().filter(buttonWidget -> buttonWidget.getMessage().equals(Text.translatable("gui.screenshot_uploader.screenshot_gallery.current"))).forEach(buttonWidget -> buttonWidget.active = false);
 
         saveButton = ButtonWidget.builder(
-                Text.literal("Save"),
+                Text.translatable("gui.screenshot_uploader.screenshot_gallery.save"),
                 button -> saveImage()
         ).dimensions(5, buttonY, buttonWidth, buttonHeight).build();
 
         deleteButton = ButtonWidget.builder(
-                Text.literal("Delete"),
+                Text.translatable("gui.screenshot_uploader.screenshot_gallery.delete"),
                 button -> deleteImage()
         ).dimensions(buttonWidth + 10, buttonY, buttonWidth, buttonHeight).build();
 
         openInAppButton = ButtonWidget.builder(
-                Text.literal("Open in App"),
+                Text.translatable("gui.screenshot_uploader.screenshot_gallery.open_in_app"),
                 button -> openImageInApp()
         ).dimensions((2 * buttonWidth) + 15, buttonY, buttonWidth, buttonHeight).build();
 

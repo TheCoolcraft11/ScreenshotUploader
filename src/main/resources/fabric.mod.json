@@ -1,41 +1,41 @@
 {
-	"schemaVersion": 1,
-	"id": "screenshot-uploader",
-	"version": "${version}",
-	"name": "Screenshot Uploader",
-	"description": "This mods uploads your screenshots to a server! ",
-	"authors": [
-		"TheCoolcraft11"
-	],
-	"contact": {
-		"homepage": "https://modrinth.com/mod/screenshot-uploader/",
-		"sources": "https://github.com/TheCoolcraft11/ScreenshotUploader",
-		"issues": "https://github.com/TheCoolcraft11/ScreenshotUploader/issues"
-	},
-	"license": "MIT",
-	"icon": "assets/screenshot-uploader/icon.png",
-	"environment": "*",
-	"entrypoints": {
-		"main": [
-			"de.thecoolcraft11.ScreenshotUploader"
-		],
-		"client": [
-			"de.thecoolcraft11.ScreenshotUploaderClient"
-		],
-		"server": [
-			"de.thecoolcraft11.ScreenshotUploaderServer"
-		]
-	},
-	"mixins": [
-		"screenshot-uploader.mixins.json"
-	],
-	"depends": {
-		"fabricloader": ">=0.16.5",
-		"minecraft": "~1.21",
-		"java": ">=21",
-		"fabric-api": "*"
-	},
-	"suggests": {
-		"another-mod": "*"
-	}
+  "schemaVersion": 1,
+  "id": "screenshot-uploader",
+  "version": "${version}",
+  "name": "Screenshot Uploader",
+  "description": "This mods uploads your screenshots to a server! ",
+  "authors": [
+    "TheCoolcraft11"
+  ],
+  "contact": {
+    "homepage": "https://modrinth.com/mod/screenshot-uploader/",
+    "sources": "https://github.com/TheCoolcraft11/ScreenshotUploader",
+    "issues": "https://github.com/TheCoolcraft11/ScreenshotUploader/issues"
+  },
+  "license": "Apache 2.0",
+  "icon": "assets/screenshot-uploader/icon.png",
+  "environment": "*",
+  "entrypoints": {
+    "main": [
+      "de.thecoolcraft11.ScreenshotUploader"
+    ],
+    "client": [
+      "de.thecoolcraft11.ScreenshotUploaderClient"
+    ],
+    "server": [
+      "de.thecoolcraft11.ScreenshotUploaderServer"
+    ]
+  },
+  "mixins": [
+    "screenshot-uploader.mixins.json"
+  ],
+  "depends": {
+    "fabricloader": ">=0.16.5",
+    "minecraft": "~1.21",
+    "java": ">=21",
+    "fabric-api": "*"
+  },
+  "suggests": {
+    "another-mod": "*"
+  }
 }

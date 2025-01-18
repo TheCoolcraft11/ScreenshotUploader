@@ -5,6 +5,7 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import de.thecoolcraft11.ScreenshotData;
 import de.thecoolcraft11.config.ConfigManager;
+import de.thecoolcraft11.util.ErrorMessages;
 import de.thecoolcraft11.util.ReceivePackets;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
@@ -97,7 +98,7 @@ public class ScreenshotMixin {
                 StringBuilder messageBuilder = getStringBuilder(targets);
 
                 client.inGameHud.getChatHud().addMessage(
-                        Text.literal("Uploading Screenshots to ").append(Text.literal(messageBuilder.toString()).styled(style -> style.withColor(Formatting.AQUA))));
+                        Text.translatable("message.screenshot_uploader.uploading_to", Text.literal(messageBuilder.toString()).styled(style -> style.withColor(Formatting.AQUA))));
 
                 List<JsonObject> uploadResults = uploadScreenshot(nativeImage_1, jsonData, targets);
 
@@ -113,50 +114,39 @@ public class ScreenshotMixin {
                                     logger.error("Failed to parse responseBody", e);
                                 }
 
+                                String baseMessage = "message.screenshot_uploader.upload_success";
+                                Text clickableLink = Text.empty();
+                                Text clickableLink2 = Text.empty();
+
                                 if (responseBody != null) {
                                     String screenshotUrl = responseBody.has("url") && !responseBody.get("url").isJsonNull() ? responseBody.get("url").getAsString() : null;
                                     String galleryUrl = responseBody.has("gallery") && !responseBody.get("gallery").isJsonNull() ? responseBody.get("gallery").getAsString() : null;
 
-                                    Text fullMessage = Text.literal("Screenshot uploaded successfully! ");
-
 
                                     if (screenshotUrl != null) {
-                                        String linkText = "[OPEN]";
-                                        Text clickableLink = Text.literal(linkText)
+                                        clickableLink = Text.translatable("message.screenshot_uploader.open_link")
                                                 .styled(style -> style.withClickEvent(new ClickEvent(ClickEvent.Action.OPEN_URL, screenshotUrl))
-                                                        .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, Text.literal("Click To See Screenshot"))).withColor(Formatting.AQUA));
-                                        fullMessage = fullMessage.copy().append(clickableLink);
+                                                        .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, Text.translatable("message.screenshot_uploader.see_screenshot"))).withColor(Formatting.AQUA));
                                     }
 
                                     if (galleryUrl != null) {
-                                        String galleryText = "[ALL]";
-                                        Text clickableLink2 = Text.literal(galleryText)
+                                        clickableLink2 = Text.translatable("message.screenshot_uploader.open_all")
                                                 .styled(style -> style.withClickEvent(new ClickEvent(ClickEvent.Action.OPEN_URL, galleryUrl))
-                                                        .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, Text.literal("Click To See All Screenshots"))).withColor(Formatting.YELLOW));
-                                        fullMessage = fullMessage.copy().append(" ").append(clickableLink2);
+                                                        .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, Text.translatable("message.screenshot_uploader.see_screenshots"))).withColor(Formatting.YELLOW));
                                     }
 
                                     if (screenshotUrl == null && galleryUrl == null) {
-                                        fullMessage = Text.literal("Screenshot upload failed: The server did not return valid URLs.");
+                                        baseMessage = "message.screenshot_uploader_no_return_url";
                                     }
 
-                                    client.inGameHud.getChatHud().addMessage(fullMessage);
+                                    Text finalMessage = Text.translatable(baseMessage, clickableLink, clickableLink2);
+
+                                    client.inGameHud.getChatHud().addMessage(finalMessage);
                                 }
                             } else {
                                 String errorMessage = uploadResult.has("message") ? uploadResult.get("message").getAsString() : "Unknown error";
-
-                                String errorDetail = switch (errorMessage.split(":")[0].toUpperCase()) {
-                                    case "CONNECTION REFUSED" -> "The server could not be reached.\n" +
-                                            "What to do: Make sure the server is online and the address is correct.";
-                                    case "TIMEOUT" -> "The connection to the server took too long.\n" +
-                                            "What to do: Check your internet connection and try again.";
-                                    case "HOST UNREACHABLE" -> "The server address could not be found.\n" +
-                                            "What to do: Ensure the address is correct and the server is running.";
-                                    default -> "An unexpected error occurred. Please try again later.";
-                                };
-
-                                Text errorText = Text.literal("Screenshot upload failed: " + errorMessage.split(":")[0])
-                                        .styled(style -> style.withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, Text.literal(errorDetail))));
+                                Text errorText = Text.translatable("message.screenshot_uploader.upload_failed", errorMessage.split(":")[0])
+                                        .styled(style -> style.withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, Text.translatable(ErrorMessages.getErrorDescription(errorMessage.split(":")[0])))));
 
                                 client.inGameHud.getChatHud().addMessage(errorText);
                             }
@@ -304,4 +294,5 @@ public class ScreenshotMixin {
         return gson.toJson(data);
     }
 }
+
 

@@ -67,7 +67,7 @@ public class WebGalleryScreen extends Screen {
     private ButtonWidget openInAppButton;
 
     public WebGalleryScreen(Screen parent, String webserverUrl) {
-        super(Text.literal("Screenshot Gallery"));
+        super(Text.translatable("gui.screenshot_uploader.screenshot_gallery.web_title", webserverUrl));
         this.parent = parent;
         this.webserverUrl = webserverUrl;
     }
@@ -99,7 +99,7 @@ public class WebGalleryScreen extends Screen {
 
         int navigatorY = (int) (height * 0.01);
 
-        navigatorButtons.add(ButtonWidget.builder(Text.literal("My Gallery"), button -> {
+        navigatorButtons.add(ButtonWidget.builder(Text.translatable("gui.screenshot_uploader.screenshot_gallery.my_gallery"), button -> {
             if (client != null) {
                 client.setScreen(parent);
             } else {
@@ -110,7 +110,7 @@ public class WebGalleryScreen extends Screen {
 
         if (ReceivePackets.gallerySiteAddress != null) {
             if (!ReceivePackets.gallerySiteAddress.equals(webserverUrl)) {
-                navigatorButtons.add(ButtonWidget.builder(Text.literal("Server Gallery"), button -> {
+                navigatorButtons.add(ButtonWidget.builder(Text.translatable("gui.screenshot_uploader.screenshot_gallery.server_gallery"), button -> {
                     String webserverUrl = ReceivePackets.gallerySiteAddress;
                     if (client != null) {
                         client.setScreen(new WebGalleryScreen(this, webserverUrl));
@@ -119,7 +119,7 @@ public class WebGalleryScreen extends Screen {
                     }
                 }).dimensions(xPosition, navigatorY, buttonWidth, buttonHeight).build());
             } else {
-                navigatorButtons.add(ButtonWidget.builder(Text.literal("Current"), button -> {
+                navigatorButtons.add(ButtonWidget.builder(Text.translatable("gui.screenshot_uploader.screenshot_gallery.current"), button -> {
                 }).dimensions(xPosition, navigatorY, buttonWidth, buttonHeight).build());
             }
             xPosition += buttonWidth + buttonSpacing;
@@ -144,13 +144,13 @@ public class WebGalleryScreen extends Screen {
                         .build());
             } else {
                 navigatorButtons.add(ButtonWidget.builder(
-                                Text.literal("Current"),
+                                Text.translatable("gui.screenshot_uploader.screenshot_gallery.current"),
                                 button -> {
                                 })
                         .dimensions(xPosition, navigatorY, buttonWidth, buttonHeight).build());
 
                 openInBrowserButton = ButtonWidget.builder(
-                        Text.literal("Open In Browser"),
+                        Text.translatable("gui.screenshot_uploader.screenshot_gallery.open_in_browser"),
                         button -> openBrowser(webserverUrlHome)
                 ).dimensions(width - buttonWidth, buttonY, buttonWidth, buttonHeight).build();
             }
@@ -163,16 +163,16 @@ public class WebGalleryScreen extends Screen {
 
 
         navigatorButtons.forEach(buttonWidget -> buttonWidget.visible = true);
-        navigatorButtons.stream().filter(buttonWidget -> buttonWidget.getMessage().equals(Text.literal("Current"))).forEach(buttonWidget -> buttonWidget.active = false);
+        navigatorButtons.stream().filter(buttonWidget -> buttonWidget.getMessage().equals(Text.translatable("gui.screenshot_uploader.screenshot_gallery.current"))).forEach(buttonWidget -> buttonWidget.active = false);
 
 
         saveButton = ButtonWidget.builder(
-                Text.literal("Save"),
+                Text.translatable("gui.screenshot_uploader.screenshot_gallery.save"),
                 button -> downloadImage()
         ).dimensions(5, buttonY, buttonWidth, buttonHeight).build();
 
         openInAppButton = ButtonWidget.builder(
-                Text.literal("Open in Browser"),
+                Text.translatable("gui.screenshot_uploader.screenshot_gallery.open_sc_in_browser"),
                 button -> openInBrowser()
         ).dimensions(buttonWidth + 10, buttonY, buttonWidth, buttonHeight).build();
 

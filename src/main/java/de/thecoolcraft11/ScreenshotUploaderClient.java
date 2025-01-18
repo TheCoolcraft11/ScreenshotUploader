@@ -45,25 +45,22 @@ public class ScreenshotUploaderClient implements ClientModInitializer {
             ReceivePackets.homeSiteAddress = null;
         });
         ClientPlayConnectionEvents.JOIN.register((playNetworkHandler, packetSender, minecraftClient) -> {
-            Text uploadMessage = Text.literal("Next screenshots will be uploaded to ").append(Text.literal("[ ").styled(style -> style.withColor(Formatting.WHITE)));
+
+            Text uploadMessageString = Text.empty();
 
             Map<String, Map<String, String>> uploadUrls = getStringMapMap();
 
             int index = 0;
             int totalKeys = uploadUrls.size();
             for (String key : uploadUrls.keySet()) {
-                uploadMessage = uploadMessage.copy().append(Text.literal(key).styled(style -> style.withClickEvent(new ClickEvent(ClickEvent.Action.OPEN_URL, uploadUrls.get(key).get("home")))
+                uploadMessageString = uploadMessageString.copy().append(Text.literal(key).styled(style -> style.withClickEvent(new ClickEvent(ClickEvent.Action.OPEN_URL, uploadUrls.get(key).get("home")))
                         .withColor(Formatting.AQUA)
-                        .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, Text.literal("Screenshots will get uploaded to ")
-                                .append(Text.literal(key).styled(style2 -> style2.withColor(Formatting.AQUA)))
-                                .append("(" + uploadUrls.get(key).get("upload") + ")" + "." + "\n" + "You can view those screenshots at [" + uploadUrls.get(key).get("home") + "] or in your ingame Gallery(press [").append(Text.keybind("key.screenshot_uploader.gallery")).append("])")))));
+                        .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, Text.translatable("message.screenshot_uploader.next_upload_server_description", Text.literal(key).styled(style2 -> style2.withColor(Formatting.AQUA)), uploadUrls.get(key).get("upload"), uploadUrls.get(key).get("home"), Text.keybind("key.screenshot_uploader.gallery"))))));
                 if (++index < totalKeys) {
-                    uploadMessage = uploadMessage.copy().append(Text.literal(", ").styled(style -> style.withColor(Formatting.AQUA)));
-                } else {
-                    uploadMessage = uploadMessage.copy().append(Text.literal(" ]").styled(style -> style.withColor(Formatting.AQUA)));
+                    uploadMessageString = uploadMessageString.copy().append(Text.literal(", ").styled(style -> style.withColor(Formatting.AQUA)));
                 }
             }
-            minecraftClient.inGameHud.getChatHud().addMessage(uploadMessage);
+            minecraftClient.inGameHud.getChatHud().addMessage(Text.translatable("message.screenshot_uploader.next_upload", uploadMessageString));
         });
 
         File configDir = new File("config/screenshotUploader");
