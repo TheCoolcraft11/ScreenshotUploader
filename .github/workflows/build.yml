@@ -41,10 +41,11 @@ jobs:
           path: build/libs/
 
       - name: Capture Gradle version from gradle.properties
-        id: version
-        run: |
+      id: version
+      run: |
         VERSION=$(grep -oP 'mod-version=\K.*' gradle.properties)
         echo "VERSION=$VERSION" >> $GITHUB_ENV  
+
 
 
   release:
