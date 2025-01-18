@@ -58,6 +58,9 @@ java {
 }
 
 jar {
+    archiveBaseName.set('screenshot-uploader')
+    archiveVersion.set(project.version)
+
 	from("LICENSE") {
 		rename { "${it}_${project.base.archivesName.get()}"}
 	}
