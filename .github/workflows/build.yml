@@ -1,12 +1,6 @@
 name: Build and Release Minecraft Mod
 
-on:
-  push:
-    branches:
-      - main  # Or the branch you prefer
-  pull_request:
-    branches:
-      - main  # Or the branch you prefer
+on: [pull_request, push]
 
 permissions:
   contents: write
