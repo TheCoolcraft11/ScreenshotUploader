@@ -1,20 +1,19 @@
-name: Build and Release Minecraft Mod
+name: Build and Release Mod
 
-on: [pull_request, push]
+on: 
+  [push, pull_request]
 
 permissions:
-  contents: write
-  actions: read
-  issues: read
-  packages: write 
+  contents: write       # Required to upload assets to the release
+  actions: read         # Required for reading actions
+  issues: read          # Required for reading issues (if used)
+  packages: write       # Required for writing assets to packages (releases)
 
 jobs:
   build:
     strategy:
       matrix:
-        java: [
-          21,    # Current Java LTS
-        ]
+        java: [21]  # Java version for the build
     runs-on: ubuntu-22.04
     steps:
       - name: Checkout repository
@@ -32,18 +31,15 @@ jobs:
       - name: Make Gradle wrapper executable
         run: chmod +x ./gradlew
 
-      - name: Build with Gradle
+      - name: Build mod
         run: ./gradlew build --stacktrace
-
-      - name: List build/libs directory for debugging
-        run: ls -l build/libs  # Check the contents of the build/libs folder
 
       - name: Capture build artifacts
         if: ${{ matrix.java == '21' }}
         uses: actions/upload-artifact@v4
         with:
           name: Artifacts
-          path: build/libs/*.jar  # Ensure this matches the location of your .jar file
+          path: build/libs/*.jar  # Adjust path if necessary
 
   release:
     runs-on: ubuntu-22.04
@@ -56,7 +52,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: Artifacts
-          path: ./artifacts  # This is the directory where the artifact will be downloaded
+          path: ./artifacts
 
       - name: Capture Gradle version from gradle.properties
         id: version
@@ -82,15 +78,17 @@ jobs:
           draft: false
           prerelease: false
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}  # Use the personal access token here
 
       - name: Upload release assets to GitHub
         uses: actions/upload-release-asset@v1
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./artifacts/screenshot-uploader-1.6.jar  # Correct path to the downloaded artifact
+          asset_path: ./artifacts/*.jar  # Path to the downloaded artifact
           asset_name: mod-${{ env.VERSION }}.jar
           asset_content_type: application/java-archive
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}  # Use the personal access token here
 
   modrinth_upload:
     runs-on: ubuntu-22.04
@@ -100,18 +98,18 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: Artifacts
-          path: ./artifacts  # Download the artifact to the ./artifacts directory
+          path: ./artifacts
 
       - name: Upload to Modrinth
         uses: modrinth/modrinth-upload@v1
         with:
           token: ${{ secrets.MODRINTH_TOKEN }}
-          project_id: <your-modrinth-project-id>
-          file: ./artifacts/screenshot-uploader-1.6.jar  # Path to the downloaded artifact
+          project_id: <your-modrinth-project-id>  # Replace with your Modrinth project ID
+          file: ./artifacts/*.jar  # Path to the downloaded artifact
           version_number: "1.21-${{ env.VERSION }}"
           version_name: "Version 1.21-${{ env.VERSION }}"
           changelog: "$(cat changelog.txt)"
-          dependencies: "fabric-api"
+          dependencies: "fabric-api"  # Replace with your dependencies if necessary
 
   discord_notify:
     runs-on: ubuntu-22.04
