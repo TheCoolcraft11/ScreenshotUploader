@@ -5,65 +5,33 @@ permissions:
   contents: write
 
 jobs:
-  build:
+build:
     runs-on: ubuntu-22.04
     steps:
-      - name: Checkout repository
+      - name: checkout repository
         uses: actions/checkout@v4
 
-      - name: Validate Gradle wrapper
+      - name: validate gradle wrapper
         uses: gradle/wrapper-validation-action@v2
 
-      - name: Setup JDK
+      - name: setup jdk ${{ matrix.java }}
         uses: actions/setup-java@v4
         with:
-          java-version: 21
-          distribution: microsoft
+          java-version: ${{ matrix.java }}
+          distribution: 'microsoft'
 
-      - name: Make Gradle wrapper executable
+      - name: make gradle wrapper executable
         run: chmod +x ./gradlew
 
-      - name: Build the project
+      - name: build
         run: ./gradlew build
 
-      - name: Debug: Check build/libs directory
-        run: ls -R build/libs/
+      - name: debug build output
+        run: ls -R build/libs
 
-      - name: Upload build artifacts
+      - name: capture build artifacts
+        if: ${{ matrix.java == '21' }}
         uses: actions/upload-artifact@v4
         with:
           name: Artifacts
           path: build/libs/*.jar
-
-  release:
-    needs: build
-    runs-on: ubuntu-22.04
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Generate changelog
-        run: |
-          echo "Changelog for version ${{ github.sha }}" > changelog.txt
-          git log -1 --oneline --no-merges ${{ github.sha }} >> changelog.txt
-
-      - name: Create GitHub release
-        uses: actions/create-release@v1
-        with:
-          tag_name: "v1.21-${{ env.VERSION }}"
-          release_name: "Release v1.21-${{ env.VERSION }}"
-          body: |
-            ## Changelog:
-            $(cat changelog.txt)
-          draft: false
-          prerelease: false
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Upload release assets
-        uses: actions/upload-release-asset@v1
-        with:
-          upload_url: ${{ steps.create-release.outputs.upload_url }}
-          asset_path: build/libs/*.jar
-          asset_name: mod-${{ env.VERSION }}.jar
-          asset_content_type: application/java-archive
