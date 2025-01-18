@@ -1,6 +1,12 @@
 name: build
 on: [pull_request, push]
 
+permissions:
+  contents: write
+  actions: read 
+  issues: read  
+
+
 jobs:
   build:
     strategy:
