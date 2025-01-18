@@ -1,8 +1,3 @@
-# Automatically build the project and run any configured tests for every push
-# and submitted pull request. This can help catch issues that only occur on
-# certain platforms or Java versions, and provides a first line of defence
-# against bad commits.
-
 name: build
 on: [pull_request, push]
 
@@ -10,7 +5,6 @@ jobs:
   build:
     strategy:
       matrix:
-        # Use these Java versions
         java: [
           21,    # Current Java LTS
         ]
@@ -18,20 +12,89 @@ jobs:
     steps:
       - name: checkout repository
         uses: actions/checkout@v4
+
       - name: validate gradle wrapper
         uses: gradle/wrapper-validation-action@v2
+
       - name: setup jdk ${{ matrix.java }}
         uses: actions/setup-java@v4
         with:
           java-version: ${{ matrix.java }}
           distribution: 'microsoft'
+
       - name: make gradle wrapper executable
         run: chmod +x ./gradlew
+
       - name: build
         run: ./gradlew build
+
       - name: capture build artifacts
         if: ${{ matrix.java == '21' }} # Only upload artifacts built from latest java
         uses: actions/upload-artifact@v4
         with:
           name: Artifacts
           path: build/libs/
+
+  release:
+    runs-on: ubuntu-22.04
+    needs: build
+    steps:
+      - name: checkout repository
+        uses: actions/checkout@v4
+
+      - name: generate changelog
+        run: |
+          echo "Changelog for version ${{ github.sha }}" > changelog.txt
+          git log --oneline --no-merges ${{ github.event.before }}..${{ github.sha }} >> changelog.txt
+        # Fügt die Commit-Historie als Changelog hinzu
+
+      - name: create GitHub release
+        uses: actions/create-release@v1
+        with:
+          tag_name: ${{ github.sha }}
+          release_name: "Release ${{ github.sha }}"
+          body: |
+            ## Changelog:
+            $(cat changelog.txt)
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: upload release assets to GitHub
+        uses: actions/upload-release-asset@v1
+        with:
+          upload_url: ${{ steps.create-release.outputs.upload_url }}
+          asset_path: build/libs/*.jar
+          asset_name: mod-${{ github.sha }}.jar
+          asset_content_type: application/java-archive
+
+  modrinth_upload:
+    runs-on: ubuntu-22.04
+    needs: release
+    steps:
+      - name: Upload to Modrinth
+        uses: modrinth/modrinth-upload@v1
+        with:
+          token: ${{ secrets.MODRINTH_TOKEN }}
+          project_id: <your-modrinth-project-id>
+          file: build/libs/*.jar
+          version_number: ${{ github.sha }}
+          version_name: "Version ${{ github.sha }}"
+          changelog: "$(cat changelog.txt)"
+          dependencies: "fabric-api"
+
+  discord_notify:
+    runs-on: ubuntu-22.04
+    needs: [build, release, modrinth_upload]
+    steps:
+      - name: Notify Discord
+        uses: Ilshidur/action-discord@v2
+        with:
+          webhook: ${{ secrets.DISCORD_WEBHOOK }}
+          message: |
+            Build ${{ github.run_number }} completed successfully:
+            - Status: ${{ job.status }}
+            - Commit: ${{ github.sha }}
+            - Branch: ${{ github.ref_name }}
+            - Version: ${{ github.sha }}
