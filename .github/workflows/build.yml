@@ -1,19 +1,19 @@
 name: Build and Release Mod
 
-on: 
+on:
   [push, pull_request]
 
 permissions:
-  contents: write       # Required to upload assets to the release
-  actions: read         # Required for reading actions
-  issues: read          # Required for reading issues (if used)
-  packages: write       # Required for writing assets to packages (releases)
+  contents: write
+  actions: read
+  issues: read
+  packages: write
 
 jobs:
   build:
     strategy:
       matrix:
-        java: [21]  # Java version for the build
+        java: [21]  # Using Java 21 as the matrix
     runs-on: ubuntu-22.04
     steps:
       - name: Checkout repository
@@ -39,7 +39,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: Artifacts
-          path: build/libs/*.jar  # Adjust path if necessary
+          path: build/libs/*.jar  # The built jar file
 
   release:
     runs-on: ubuntu-22.04
@@ -51,11 +51,11 @@ jobs:
       - name: Download build artifacts
         uses: actions/download-artifact@v4
         with:
-          name: Artifacts  # Ensure this matches the artifact name from the build job
+          name: Artifacts
           path: ./artifacts
 
       - name: List contents of ./artifacts directory
-        run: ls -l ./artifacts  # Check what files are in the artifacts folder
+        run: ls -l ./artifacts  # To verify the file is present
 
       - name: Capture Gradle version from gradle.properties
         id: version
@@ -73,25 +73,25 @@ jobs:
         id: create_release
         uses: actions/create-release@v1
         with:
-          tag_name: "v1.21-${{ env.VERSION }}"
-          release_name: "Release 1.21-${{ env.VERSION }}"
+          tag_name: "v${{ env.VERSION }}"
+          release_name: "Release ${{ env.VERSION }}"
           body: |
             ## Changelog:
             $(cat changelog.txt)
           draft: false
           prerelease: false
         env:
-          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}  # Use the personal access token here
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
 
       - name: Upload release assets to GitHub
         uses: actions/upload-release-asset@v1
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./artifacts/*.jar  # Ensure this matches the path where the .jar is located
+          asset_path: ./artifacts/screenshot-uploader-${{ env.VERSION }}.jar  # Dynamically use version
           asset_name: mod-${{ env.VERSION }}.jar
           asset_content_type: application/java-archive
         env:
-          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}  # Use the personal access token here
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
 
   modrinth_upload:
     runs-on: ubuntu-22.04
@@ -107,12 +107,12 @@ jobs:
         uses: modrinth/modrinth-upload@v1
         with:
           token: ${{ secrets.MODRINTH_TOKEN }}
-          project_id: <your-modrinth-project-id>  # Replace with your Modrinth project ID
-          file: ./artifacts/*.jar  # Path to the downloaded artifact
-          version_number: "1.21-${{ env.VERSION }}"
-          version_name: "Version 1.21-${{ env.VERSION }}"
+          project_id: w6ZC8JLF # Replace with your Modrinth project ID
+          file: ./artifacts/screenshot-uploader-${{ env.VERSION }}.jar  # Dynamically use version
+          version_number: ${{ env.VERSION }}  # Using the dynamic version
+          version_name: "Version ${{ env.VERSION }}"
           changelog: "$(cat changelog.txt)"
-          dependencies: "fabric-api"  # Replace with your dependencies if necessary
+          dependencies: "fabric-api"
 
   discord_notify:
     runs-on: ubuntu-22.04
@@ -127,4 +127,4 @@ jobs:
             - Status: ${{ job.status }}
             - Commit: ${{ github.sha }}
             - Branch: ${{ github.ref_name }}
-            - Version: 1.21-${{ env.VERSION }}
+            - Version: ${{ env.VERSION }}
