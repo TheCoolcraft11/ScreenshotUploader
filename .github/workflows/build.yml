@@ -51,7 +51,7 @@ jobs:
         id: version
         run: |
           VERSION=$(grep -oP 'mod_version=\K.*' gradle.properties)
-          echo "VERSION=$VERSION" >> $GITHUB_ENV | ls -all build/libs
+          echo "VERSION=$VERSION" >> $GITHUB_ENV | ls -all 
 
       - name: generate changelog
         id: changelog
