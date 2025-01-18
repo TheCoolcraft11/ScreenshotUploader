@@ -4,7 +4,7 @@ on: [pull_request, push]
 permissions:
   contents: write
   actions: read
-  issues: read  
+  issues: read
 
 jobs:
   build:
@@ -34,19 +34,11 @@ jobs:
         run: ./gradlew build
 
       - name: capture build artifacts
-        if: ${{ matrix.java == '21' }} 
+        if: ${{ matrix.java == '21' }}
         uses: actions/upload-artifact@v4
         with:
           name: Artifacts
           path: build/libs/
-
-      - name: Capture Gradle version from gradle.properties
-      id: version
-      run: |
-        VERSION=$(grep -oP 'mod-version=\K.*' gradle.properties)
-        echo "VERSION=$VERSION" >> $GITHUB_ENV  
-
-
 
   release:
     runs-on: ubuntu-22.04
@@ -55,6 +47,11 @@ jobs:
       - name: checkout repository
         uses: actions/checkout@v4
 
+      - name: Capture Gradle version from gradle.properties
+        id: version
+        run: |
+          VERSION=$(grep -oP 'mod-version=\K.*' gradle.properties)
+          echo "VERSION=$VERSION" >> $GITHUB_ENV 
       - name: generate changelog
         run: |
           echo "Changelog for version ${{ github.sha }}" > changelog.txt
@@ -63,8 +60,8 @@ jobs:
       - name: create GitHub release
         uses: actions/create-release@v1
         with:
-          tag_name: "v1.21-${{ env.VERSION }}"  
-          release_name: "Release v1.21-${{ env.VERSION }}"
+          tag_name: "v1.21-${{ env.VERSION }}"
+          release_name: "Release 1.21-${{ env.VERSION }}"
           body: |
             ## Changelog:
             $(cat changelog.txt)
