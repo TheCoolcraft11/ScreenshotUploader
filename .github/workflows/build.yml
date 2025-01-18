@@ -50,7 +50,7 @@ jobs:
       - name: Capture Gradle version from gradle.properties
         id: version
         run: |
-          VERSION=$(grep -oP 'version=\K.*' gradle.properties)
+          VERSION=$(grep -oP 'mod_version=\K.*' gradle.properties)
           echo "VERSION=$VERSION" >> $GITHUB_ENV
 
       - name: generate changelog
