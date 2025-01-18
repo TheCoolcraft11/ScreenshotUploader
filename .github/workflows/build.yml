@@ -45,8 +45,7 @@ jobs:
       - name: generate changelog
         run: |
           echo "Changelog for version ${{ github.sha }}" > changelog.txt
-          git log --oneline --no-merges ${{ github.event.before }}..${{ github.sha }} >> changelog.txt
-        # Fügt die Commit-Historie als Changelog hinzu
+          git log -1 --oneline --no-merges ${{ github.sha }} >> changelog.txt
 
       - name: create GitHub release
         uses: actions/create-release@v1
