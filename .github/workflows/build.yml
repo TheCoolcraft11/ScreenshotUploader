@@ -42,7 +42,10 @@ jobs:
 
       - name: Capture Gradle version from gradle.properties
         id: version
-        run: echo "VERSION=$(grep -oP 'version=\K.*' gradle.properties)" >> $GITHUB_ENV 
+        run: |
+        VERSION=$(grep -oP 'mod-version=\K.*' gradle.properties)
+        echo "VERSION=$VERSION" >> $GITHUB_ENV  
+
 
   release:
     runs-on: ubuntu-22.04
