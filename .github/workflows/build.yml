@@ -31,7 +31,7 @@ jobs:
         run: chmod +x ./gradlew
 
       - name: build
-        run: ./gradlew build
+        run: ./gradlew build --info
 
       - name: capture build artifacts
         if: ${{ matrix.java == '21' }}
@@ -51,7 +51,7 @@ jobs:
         id: version
         run: |
           VERSION=$(grep -oP 'mod_version=\K.*' gradle.properties)
-          echo "VERSION=$VERSION" >> $GITHUB_ENV | ls -all 
+          echo "VERSION=$VERSION" >> $GITHUB_ENV | find . -type f
 
       - name: generate changelog
         id: changelog
