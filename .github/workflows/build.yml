@@ -50,14 +50,17 @@ jobs:
       - name: Capture Gradle version from gradle.properties
         id: version
         run: |
-          VERSION=$(grep -oP 'mod_version=\K.*' gradle.properties)
-          echo "VERSION=$VERSION" >> $GITHUB_ENV 
+          VERSION=$(grep -oP 'version=\K.*' gradle.properties)
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+
       - name: generate changelog
+        id: changelog
         run: |
-          echo "Changelog for version ${{ github.sha }}" > changelog.txt
+          echo "Changelog for version ${{ env.VERSION }}" > changelog.txt
           git log -1 --oneline --no-merges ${{ github.sha }} >> changelog.txt
 
       - name: create GitHub release
+        id: create_release
         uses: actions/create-release@v1
         with:
           tag_name: "v1.21-${{ env.VERSION }}"
@@ -73,9 +76,9 @@ jobs:
       - name: upload release assets to GitHub
         uses: actions/upload-release-asset@v1
         with:
-          upload_url: ${{ steps.create-release.outputs.upload_url }}
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: build/libs/*.jar
-          asset_name: mod-${{ github.sha }}.jar
+          asset_name: mod-${{ env.VERSION }}.jar
           asset_content_type: application/java-archive
 
   modrinth_upload:
@@ -88,8 +91,8 @@ jobs:
           token: ${{ secrets.MODRINTH_TOKEN }}
           project_id: <your-modrinth-project-id>
           file: build/libs/*.jar
-          version_number: ${{ github.sha }}
-          version_name: "Version ${{ github.sha }}"
+          version_number: "1.21-${{ env.VERSION }}"
+          version_name: "Version 1.21-${{ env.VERSION }}"
           changelog: "$(cat changelog.txt)"
           dependencies: "fabric-api"
 
@@ -106,4 +109,4 @@ jobs:
             - Status: ${{ job.status }}
             - Commit: ${{ github.sha }}
             - Branch: ${{ github.ref_name }}
-            - Version: ${{ github.sha }}
+            - Version: 1.21-${{ env.VERSION }}
