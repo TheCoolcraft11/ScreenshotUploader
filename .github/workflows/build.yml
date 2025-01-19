@@ -67,12 +67,16 @@ jobs:
         run: |
           echo "Changelog for version ${{ env.VERSION }}" > changelog.txt
           git log -1 --oneline --no-merges ${{ github.sha }} >> changelog.txt
+          cat changelog.txt  # Add this to output the changelog file contents for debugging
           echo "CHANGES<<EOF" >> $GITHUB_ENV
           cat changelog.txt >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
           # Ensure artifacts directory exists
           mkdir -p ./artifacts
           mv changelog.txt ./artifacts/changelog.txt
+
+      - name: List contents of ./artifacts again (after moving changelog.txt)
+        run: ls -l ./artifacts
 
       - name: Create GitHub release
         id: create_release
@@ -97,7 +101,7 @@ jobs:
           asset_content_type: application/java-archive
         env:
           GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
-  
+
 
   modrinth_upload:
     runs-on: ubuntu-22.04
