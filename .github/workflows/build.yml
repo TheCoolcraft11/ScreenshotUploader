@@ -73,29 +73,21 @@ jobs:
           # Move changelog.txt to artifacts for use in the next job
           mv changelog.txt ./artifacts/changelog.txt
 
-      - name: Create GitHub release
-        id: create_release
-        uses: actions/create-release@v1
-        with:
-          tag_name: "v${{ env.VERSION }}"
-          release_name: "Release ${{ env.VERSION }}"
-          body: |
-            ## Changelog:
-            ${{ env.CHANGES }}
-          draft: false
-          prerelease: false
-        env:
-          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
-
       - name: Upload release assets to GitHub
         uses: actions/upload-release-asset@v1
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: ./artifacts/screenshot-uploader-${{ env.VERSION }}.jar
-          asset_name: mod-${{ env.VERSION }}.jar
+          asset_name: screenshot-uploader-${{ env.VERSION }}.jar
           asset_content_type: application/java-archive
         env:
           GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+
+      - name: Upload changelog to artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: changelog
+          path: ./artifacts/changelog.txt
 
   modrinth_upload:
     runs-on: ubuntu-22.04
@@ -107,6 +99,12 @@ jobs:
           name: Artifacts
           path: ./artifacts
 
+      - name: Download changelog.txt
+        uses: actions/download-artifact@v4
+        with:
+          name: changelog
+          path: ./artifacts
+
       - name: Upload to Modrinth
         uses: Kir-Antipov/mc-publish@v3.3
         with:
@@ -116,7 +114,7 @@ jobs:
             ./artifacts/screenshot-uploader-${{ env.VERSION }}.jar
           name: Screenshot Uploader ${{ env.VERSION }}
           version: ${{ env.VERSION }}
-          changelog-file: ./artifacts/changelog.txt  # Now the file path is correct
+          changelog-file: ./artifacts/changelog.txt
           loaders: |
             fabric
           game-versions: |
