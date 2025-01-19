@@ -142,11 +142,11 @@ jobs:
           game-versions: |
             1.21.x
 
-discord_notify:
-  runs-on: ubuntu-22.04
-  needs: [ build, release, modrinth_upload ]
-  steps:
-    - name: Notify Discord
+    discord_notify:
+      runs-on: ubuntu-22.04
+      needs: [ build, release, modrinth_upload ]
+      steps:
+        - name: Notify Discord
       env:
         DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
         CHANGES: ${{ needs.release.outputs.CHANGES }}
