@@ -69,13 +69,12 @@ jobs:
       - name: Generate changelog
         id: changelog
         run: |
-          echo "Changelog for version ${{ env.VERSION }}" > changelog.txt
+          echo "## Changelog for version ${{ env.VERSION }}: " > changelog.txt
           git log -1 --oneline --no-merges ${{ github.sha }} >> changelog.txt
-          cat changelog.txt  # Output changelog contents for debugging
+          cat changelog.txt 
           echo "CHANGES<<EOF" >> $GITHUB_ENV
           cat changelog.txt >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
-          # Ensure artifacts directory exists
           mkdir -p ./artifacts
           mv changelog.txt ./artifacts/changelog.txt
 
@@ -148,12 +147,14 @@ jobs:
     needs: [ build, release, modrinth_upload ]
     steps:
       - name: Notify Discord
-        uses: Ilshidur/action-discord@v2
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+        uses: Ilshidur/action-discord
         with:
-          webhook: ${{ secrets.DISCORD_WEBHOOK }}
-          message: |
+          args: |
             Build ${{ github.run_number }} completed successfully:
             - Status: ${{ job.status }}
             - Commit: ${{ github.sha }}
             - Branch: ${{ github.ref_name }}
-            - Version: ${{ needs.release.outputs.version }}  # Pass version from release job
+            - Version: ${{ needs.release.outputs.version }}
+            - Download: https://modrinth.com/mod/screenshot-uploader
