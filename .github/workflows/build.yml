@@ -147,16 +147,16 @@ jobs:
     needs: [ build, release, modrinth_upload ]
     steps:
       - name: Notify Discord
-    env:
-    DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
-    CHANGES: ${{ needs.release.outputs.CHANGES }}
-    uses: Ilshidur/action-discord@master
-    with:
-    args: |
-      Build #${{ github.run_number }} completed successfully:
-      - Status: ${{ job.status }}
-      - Commit: ${{ github.sha }}
-      - Branch: ${{ github.ref_name }}
-      - Version: ${{ needs.release.outputs.version }}
-      - Download: https://modrinth.com/mod/screenshot-uploader
-      - Changelog: ${{ env.CHANGES }}
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+          CHANGES: ${{ needs.release.outputs.CHANGES }}
+        uses: Ilshidur/action-discord@master
+        with:
+          args: |
+            Build #${{ github.run_number }} completed successfully:
+            - Status: ${{ job.status }}
+            - Commit: ${{ github.sha }}
+            - Branch: ${{ github.ref_name }}
+            - Version: ${{ needs.release.outputs.version }}
+            - Download: https://modrinth.com/mod/screenshot-uploader
+            - Changelog: ${{ env.CHANGES }}
