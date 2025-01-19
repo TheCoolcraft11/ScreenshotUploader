@@ -149,7 +149,7 @@ jobs:
       - name: Notify Discord
         env:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
-        uses: Ilshidur/action-discord
+        uses: Ilshidur/action-discord@master
         with:
           args: |
             Build ${{ github.run_number }} completed successfully:
