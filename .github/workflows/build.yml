@@ -152,9 +152,10 @@ jobs:
         uses: Ilshidur/action-discord@master
         with:
           args: |
-            Build ${{ github.run_number }} completed successfully:
+            Build #${{ github.run_number }} completed successfully:
             - Status: ${{ job.status }}
             - Commit: ${{ github.sha }}
             - Branch: ${{ github.ref_name }}
             - Version: ${{ needs.release.outputs.version }}
             - Download: https://modrinth.com/mod/screenshot-uploader
+            - Changelog: ${{ env.CHANGES }}
