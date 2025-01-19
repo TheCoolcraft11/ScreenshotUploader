@@ -92,39 +92,39 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
 
 
-modrinth_upload:
-  runs-on: ubuntu-22.04
-  needs: release
-  steps:
-    - name: Download build artifacts
-      uses: actions/download-artifact@v4
-      with:
-        name: Artifacts
-        path: ./artifacts
+  modrinth_upload:
+    runs-on: ubuntu-22.04
+    needs: release
+    steps:
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: Artifacts
+          path: ./artifacts
 
-    - name: Download changelog artifact
-      uses: actions/download-artifact@v4
-      with:
-        name: changelog
-        path: ./artifacts
+      - name: Download changelog artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: changelog
+          path: ./artifacts
 
-    - name: List contents of ./artifacts directory
-      run: ls -l ./artifacts
+      - name: List contents of ./artifacts directory
+        run: ls -l ./artifacts
 
-    - name: Upload to Modrinth
-      uses: Kir-Antipov/mc-publish@v3.3
-      with:
-        modrinth-id: AANobbMI
-        modrinth-token: ${{ secrets.MODRINTH_TOKEN }}
-        files: |
-          ./artifacts/screenshot-uploader-${{ env.VERSION }}.jar
-        name: Screenshot Uploader ${{ env.VERSION }}
-        version: ${{ env.VERSION }}
-        changelog-file: ./artifacts/changelog.txt
-        loaders: |
-          fabric
-        game-versions: |
-          1.21.x
+      - name: Upload to Modrinth
+        uses: Kir-Antipov/mc-publish@v3.3
+        with:
+          modrinth-id: AANobbMI
+          modrinth-token: ${{ secrets.MODRINTH_TOKEN }}
+          files: |
+            ./artifacts/screenshot-uploader-${{ env.VERSION }}.jar
+          name: Screenshot Uploader ${{ env.VERSION }}
+          version: ${{ env.VERSION }}
+          changelog-file: ./artifacts/changelog.txt
+          loaders: |
+            fabric
+          game-versions: |
+            1.21.x
 
   discord_notify:
     runs-on: ubuntu-22.04
