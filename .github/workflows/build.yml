@@ -70,7 +70,8 @@ jobs:
           echo "CHANGES<<EOF" >> $GITHUB_ENV
           cat changelog.txt >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
-          # Move changelog.txt to artifacts for use in the next job
+          # Ensure artifacts directory exists
+          mkdir -p ./artifacts
           mv changelog.txt ./artifacts/changelog.txt
 
       - name: Create GitHub release
@@ -96,6 +97,7 @@ jobs:
           asset_content_type: application/java-archive
         env:
           GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+  
 
   modrinth_upload:
     runs-on: ubuntu-22.04
