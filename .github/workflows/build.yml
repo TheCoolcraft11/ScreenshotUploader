@@ -62,9 +62,9 @@ jobs:
         id: version
         run: |
           VERSION=$(grep -oP 'mod_version=\K.*' gradle.properties)
-          echo "VERSION=$VERSION" >> $GITHUB_ENV
-          echo "::set-output name=version::$VERSION"  # Set the output variable for passing
-          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          echo "VERSION=$VERSION" >> $GITHUB_ENV  
+          echo "version=$VERSION"
+
 
       - name: Generate changelog
         id: changelog
@@ -142,20 +142,21 @@ jobs:
           game-versions: |
             1.21.x
 
-  discord_notify:
-    runs-on: ubuntu-22.04
-    needs: [ build, release, modrinth_upload ]
-    steps:
-      - name: Notify Discord
-        env:
-          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
-        uses: Ilshidur/action-discord@master
-        with:
-          args: |
-            Build #${{ github.run_number }} completed successfully:
-            - Status: ${{ job.status }}
-            - Commit: ${{ github.sha }}
-            - Branch: ${{ github.ref_name }}
-            - Version: ${{ needs.release.outputs.version }}
-            - Download: https://modrinth.com/mod/screenshot-uploader
-            - Changelog: ${{ env.CHANGES }}
+discord_notify:
+  runs-on: ubuntu-22.04
+  needs: [ build, release, modrinth_upload ]
+  steps:
+    - name: Notify Discord
+      env:
+        DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+        CHANGES: ${{ needs.release.outputs.CHANGES }}
+      uses: Ilshidur/action-discord@master
+      with:
+        args: |
+          Build #${{ github.run_number }} completed successfully:
+          - Status: ${{ job.status }}
+          - Commit: ${{ github.sha }}
+          - Branch: ${{ github.ref_name }}
+          - Version: ${{ needs.release.outputs.version }}
+          - Download: https://modrinth.com/mod/screenshot-uploader
+          - Changelog: ${{ env.CHANGES }}
