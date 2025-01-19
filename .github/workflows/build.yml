@@ -1,92 +1,125 @@
-name: build
-on: [pull_request, push]
+name: Build and Release Mod
+
+on: [ push, pull_request ]
+
+permissions:
+  contents: write
+  actions: read
+  issues: read
+  packages: write
 
 jobs:
   build:
     strategy:
       matrix:
-        java: [
-          21,    # Current Java LTS
-        ]
+        java: [ 21 ]
     runs-on: ubuntu-22.04
     steps:
-      - name: checkout repository
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: validate gradle wrapper
+      - name: Validate Gradle wrapper
         uses: gradle/wrapper-validation-action@v2
 
-      - name: setup jdk ${{ matrix.java }}
+      - name: Setup JDK ${{ matrix.java }}
         uses: actions/setup-java@v4
         with:
           java-version: ${{ matrix.java }}
           distribution: 'microsoft'
 
-      - name: make gradle wrapper executable
+      - name: Make Gradle wrapper executable
         run: chmod +x ./gradlew
 
-      - name: build
-        run: ./gradlew build
+      - name: Build mod
+        run: ./gradlew build --stacktrace
 
-      - name: capture build artifacts
-        if: ${{ matrix.java == '21' }} # Only upload artifacts built from latest java
+      - name: Capture build artifacts
+        if: ${{ matrix.java == '21' }}
         uses: actions/upload-artifact@v4
         with:
           name: Artifacts
-          path: build/libs/
+          path: build/libs/*.jar
 
   release:
     runs-on: ubuntu-22.04
     needs: build
     steps:
-      - name: checkout repository
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: generate changelog
-        run: |
-          echo "Changelog for version ${{ github.sha }}" > changelog.txt
-          git log --oneline --no-merges ${{ github.event.before }}..${{ github.sha }} >> changelog.txt
-        # Fügt die Commit-Historie als Changelog hinzu
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: Artifacts
+          path: ./artifacts
 
-      - name: create GitHub release
+      - name: List contents of ./artifacts directory
+        run: ls -l ./artifacts
+
+      - name: Capture Gradle version from gradle.properties
+        id: version
+        run: |
+          VERSION=$(grep -oP 'mod_version=\K.*' gradle.properties)
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+
+      - name: Generate changelog
+        id: changelog
+        run: |
+          echo "Changelog for version ${{ env.VERSION }}" > changelog.txt
+          git log -1 --oneline --no-merges ${{ github.sha }} >> changelog.txt
+          echo "CHANGES<<EOF" >> $GITHUB_ENV
+          cat changelog.txt >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+
+      - name: Create GitHub release
+        id: create_release
         uses: actions/create-release@v1
         with:
-          tag_name: ${{ github.sha }}
-          release_name: "Release ${{ github.sha }}"
+          tag_name: "v${{ env.VERSION }}"
+          release_name: "Release ${{ env.VERSION }}"
           body: |
             ## Changelog:
-            $(cat changelog.txt)
+            ${{ env.CHANGES }}
           draft: false
           prerelease: false
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
 
-      - name: upload release assets to GitHub
+      - name: Upload release assets to GitHub
         uses: actions/upload-release-asset@v1
         with:
-          upload_url: ${{ steps.create-release.outputs.upload_url }}
-          asset_path: build/libs/*.jar
-          asset_name: mod-${{ github.sha }}.jar
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./artifacts/screenshot-uploader-${{ env.VERSION }}.jar
+          asset_name: mod-${{ env.VERSION }}.jar
           asset_content_type: application/java-archive
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
 
   modrinth_upload:
     runs-on: ubuntu-22.04
     needs: release
     steps:
-      - name: Upload to Modrinth
-        uses: modrinth/modrinth-upload@v1
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
         with:
-          token: ${{ secrets.MODRINTH_TOKEN }}
-          project_id: <your-modrinth-project-id>
-          file: build/libs/*.jar
-          version_number: ${{ github.sha }}
-          version_name: "Version ${{ github.sha }}"
-          changelog: "$(cat changelog.txt)"
-          dependencies: "fabric-api"
+          name: Artifacts
+          path: ./artifacts
+
+      - name: Upload to Modrinth
+        run: |
+          curl -X POST \
+            -H "Authorization: Bearer ${{ secrets.MODRINTH_TOKEN }}" \
+            -F "file=@./artifacts/screenshot-uploader-${{ env.VERSION }}.jar" \
+            -F "project_id=<your-modrinth-project-id>" \
+            -F "version_number=${{ env.VERSION }}" \
+            -F "version_name=Version ${{ env.VERSION }}" \
+            -F "changelog=${{ env.CHANGES }}" \
+            -F "dependencies=fabric-api"
+  
 
   discord_notify:
     runs-on: ubuntu-22.04
-    needs: [build, release, modrinth_upload]
+    needs: [ build, release, modrinth_upload ]
     steps:
       - name: Notify Discord
         uses: Ilshidur/action-discord@v2
@@ -97,4 +130,4 @@ jobs:
             - Status: ${{ job.status }}
             - Commit: ${{ github.sha }}
             - Branch: ${{ github.ref_name }}
-            - Version: ${{ github.sha }}
+            - Version: ${{ env.VERSION }}
