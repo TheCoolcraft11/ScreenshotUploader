@@ -40,93 +40,91 @@ jobs:
           name: Artifacts
           path: build/libs/*.jar
 
-  release:
-    runs-on: ubuntu-22.04
-    needs: build
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+release:
+  runs-on: ubuntu-22.04
+  needs: build
+  steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
 
-      - name: Download build artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: Artifacts
-          path: ./artifacts
+    - name: Download build artifacts
+      uses: actions/download-artifact@v4
+      with:
+        name: Artifacts
+        path: ./artifacts
 
-      - name: List contents of ./artifacts directory
-        run: ls -l ./artifacts
+    - name: List contents of ./artifacts directory
+      run: ls -l ./artifacts
 
-      - name: Capture Gradle version from gradle.properties
-        id: version
-        run: |
-          VERSION=$(grep -oP 'mod_version=\K.*' gradle.properties)
-          echo "VERSION=$VERSION" >> $GITHUB_ENV
+    - name: Capture Gradle version from gradle.properties
+      id: version
+      run: |
+        VERSION=$(grep -oP 'mod_version=\K.*' gradle.properties)
+        echo "VERSION=$VERSION" >> $GITHUB_ENV
 
-      - name: Generate changelog
-        id: changelog
-        run: |
-          echo "Changelog for version ${{ env.VERSION }}" > changelog.txt
-          git log -1 --oneline --no-merges ${{ github.sha }} >> changelog.txt
-          cat changelog.txt  # Add this to output the changelog file contents for debugging
-          echo "CHANGES<<EOF" >> $GITHUB_ENV
-          cat changelog.txt >> $GITHUB_ENV
-          echo "EOF" >> $GITHUB_ENV
-          # Ensure artifacts directory exists
-          mkdir -p ./artifacts
-          mv changelog.txt ./artifacts/changelog.txt
+    - name: Generate changelog
+      id: changelog
+      run: |
+        echo "Changelog for version ${{ env.VERSION }}" > changelog.txt
+        git log -1 --oneline --no-merges ${{ github.sha }} >> changelog.txt
+        cat changelog.txt  # Output changelog contents for debugging
+        echo "CHANGES<<EOF" >> $GITHUB_ENV
+        cat changelog.txt >> $GITHUB_ENV
+        echo "EOF" >> $GITHUB_ENV
+        # Ensure artifacts directory exists
+        mkdir -p ./artifacts
+        mv changelog.txt ./artifacts/changelog.txt
 
-      - name: List contents of ./artifacts again (after moving changelog.txt)
-        run: ls -l ./artifacts
+    - name: Upload changelog.txt as artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: changelog
+        path: ./artifacts/changelog.txt
 
-      - name: Create GitHub release
-        id: create_release
-        uses: actions/create-release@v1
-        with:
-          tag_name: "v${{ env.VERSION }}"
-          release_name: "Release ${{ env.VERSION }}"
-          body: |
-            ## Changelog:
-            ${{ env.CHANGES }}
-          draft: false
-          prerelease: false
-        env:
-          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
-
-      - name: Upload release assets to GitHub
-        uses: actions/upload-release-asset@v1
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./artifacts/screenshot-uploader-${{ env.VERSION }}.jar
-          asset_name: screenshot-uploader-${{ env.VERSION }}.jar
-          asset_content_type: application/java-archive
-        env:
-          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+    - name: Upload other build assets to GitHub
+      uses: actions/upload-release-asset@v1
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./artifacts/screenshot-uploader-${{ env.VERSION }}.jar
+        asset_name: screenshot-uploader-${{ env.VERSION }}.jar
+        asset_content_type: application/java-archive
+      env:
+        GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
 
 
-  modrinth_upload:
-    runs-on: ubuntu-22.04
-    needs: release
-    steps:
-      - name: Download build artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: Artifacts
-          path: ./artifacts
+modrinth_upload:
+  runs-on: ubuntu-22.04
+  needs: release
+  steps:
+    - name: Download build artifacts
+      uses: actions/download-artifact@v4
+      with:
+        name: Artifacts
+        path: ./artifacts
 
-      - name: Upload to Modrinth
-        uses: Kir-Antipov/mc-publish@v3.3
-        with:
-          modrinth-id: AANobbMI
-          modrinth-token: ${{ secrets.MODRINTH_TOKEN }}
-          files: |
-            ./artifacts/screenshot-uploader-${{ env.VERSION }}.jar
-          name: Screenshot Uploader ${{ env.VERSION }}
-          version: ${{ env.VERSION }}
-          changelog-file: ./artifacts/changelog.txt
-          loaders: |
-            fabric
-          game-versions: |
-            1.21.x
+    - name: Download changelog artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: changelog
+        path: ./artifacts
+
+    - name: List contents of ./artifacts directory
+      run: ls -l ./artifacts
+
+    - name: Upload to Modrinth
+      uses: Kir-Antipov/mc-publish@v3.3
+      with:
+        modrinth-id: AANobbMI
+        modrinth-token: ${{ secrets.MODRINTH_TOKEN }}
+        files: |
+          ./artifacts/screenshot-uploader-${{ env.VERSION }}.jar
+        name: Screenshot Uploader ${{ env.VERSION }}
+        version: ${{ env.VERSION }}
+        changelog-file: ./artifacts/changelog.txt
+        loaders: |
+          fabric
+        game-versions: |
+          1.21.x
 
   discord_notify:
     runs-on: ubuntu-22.04
