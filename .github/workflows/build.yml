@@ -70,6 +70,8 @@ jobs:
           echo "CHANGES<<EOF" >> $GITHUB_ENV
           cat changelog.txt >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
+          # Move changelog.txt to artifacts for use in the next job
+          mv changelog.txt ./artifacts/changelog.txt
 
       - name: Create GitHub release
         id: create_release
@@ -105,35 +107,21 @@ jobs:
           name: Artifacts
           path: ./artifacts
 
-      - name: Generate Changelog
-        id: changelog
-        run: |
-          echo "Changelog for version ${{ env.VERSION }}" > changelog.txt
-          git log -1 --oneline --no-merges ${{ github.sha }} >> changelog.txt
-          echo "CHANGES<<EOF" >> $GITHUB_ENV
-          cat changelog.txt >> $GITHUB_ENV
-          echo "EOF" >> $GITHUB_ENV
-          mv changelog.txt ./artifacts/changelog.txt
-
-
       - name: Upload to Modrinth
         uses: Kir-Antipov/mc-publish@v3.3
         with:
           modrinth-id: AANobbMI
           modrinth-token: ${{ secrets.MODRINTH_TOKEN }}
-
           files: |
             ./artifacts/screenshot-uploader-${{ env.VERSION }}.jar
-
           name: Screenshot Uploader ${{ env.VERSION }}
           version: ${{ env.VERSION }}
-          changelog-file: changelog.txt
+          changelog-file: ./artifacts/changelog.txt  # Now the file path is correct
           loaders: |
             fabric
           game-versions: |
             1.21.x
-  
-  
+
   discord_notify:
     runs-on: ubuntu-22.04
     needs: [ build, release, modrinth_upload ]
