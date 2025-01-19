@@ -105,7 +105,7 @@ jobs:
           name: Artifacts
           path: ./artifacts
 
-      - name: Generate changelog
+      - name: Generate Changelog
         id: changelog
         run: |
           echo "Changelog for version ${{ env.VERSION }}" > changelog.txt
