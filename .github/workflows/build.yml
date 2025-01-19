@@ -96,15 +96,20 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
 
   modrinth_upload:
-
-    permissions:
-      contents: write
+    runs-on: ubuntu-22.04
+    needs: release
     steps:
-      - uses: Kir-Antipov/mc-publish@v3.3
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: Artifacts
+          path: ./artifacts
+
+
+      - name: Upload to Modrinth
+        uses: Kir-Antipov/mc-publish@v3.3
         with:
           modrinth-id: AANobbMI
-          modrinth-featured: true
-          modrinth-unfeature-mode: subset
           modrinth-token: ${{ secrets.MODRINTH_TOKEN }}
 
           files: |
@@ -112,23 +117,13 @@ jobs:
 
           name: Screenshot Uploader ${{ env.VERSION }}
           version: ${{ env.VERSION }}
-          version-type: release
-          changelog-file: changelog.*
-
+          changelog-file: changelog.txt
           loaders: |
             fabric
           game-versions: |
             1.21.x
-          game-version-filter: none
-          java: |
-            Java 1.8
-            17
-
-          retry-attempts: 2
-          retry-delay: 10000
-          fail-mode: fail
-
-
+  
+  
   discord_notify:
     runs-on: ubuntu-22.04
     needs: [ build, release, modrinth_upload ]
