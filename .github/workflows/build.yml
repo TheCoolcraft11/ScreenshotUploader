@@ -105,6 +105,16 @@ jobs:
           name: Artifacts
           path: ./artifacts
 
+      - name: Generate changelog
+        id: changelog
+        run: |
+          echo "Changelog for version ${{ env.VERSION }}" > changelog.txt
+          git log -1 --oneline --no-merges ${{ github.sha }} >> changelog.txt
+          echo "CHANGES<<EOF" >> $GITHUB_ENV
+          cat changelog.txt >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+          mv changelog.txt ./artifacts/changelog.txt
+
 
       - name: Upload to Modrinth
         uses: Kir-Antipov/mc-publish@v3.3
