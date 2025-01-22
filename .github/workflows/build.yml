@@ -149,7 +149,6 @@ jobs:
       - name: Notify Discord
         env:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
-          CHANGES: ${{ needs.release.outputs.CHANGES }}
         uses: Ilshidur/action-discord@master
         with:
           args: |
@@ -159,4 +158,3 @@ jobs:
             - Branch: ${{ github.ref_name }}
             - Version: ${{ needs.release.outputs.version }}
             - Download: https://modrinth.com/mod/screenshot-uploader
-            - Changelog: ${{ env.CHANGES }}

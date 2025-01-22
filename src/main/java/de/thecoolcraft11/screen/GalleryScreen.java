@@ -94,7 +94,7 @@ public class GalleryScreen extends Screen {
             navigatorButtons.add(ButtonWidget.builder(Text.translatable("gui.screenshot_uploader.screenshot_gallery.server_gallery"), button -> {
                 String webserverUrl = ReceivePackets.gallerySiteAddress;
                 if (client != null) {
-                    client.setScreen(new WebGalleryScreen(this, webserverUrl));
+                    client.setScreen(new WebGalleryScreen(this, webserverUrl, null));
                 } else {
                     logger.error("Failed to get client trying to open Server Gallery with URL {}", webserverUrl);
                 }
@@ -111,7 +111,7 @@ public class GalleryScreen extends Screen {
                             Text.literal(buttonLabel),
                             button -> {
                                 if (client != null) {
-                                    client.setScreen(new WebGalleryScreen(this, webserverUrl));
+                                    client.setScreen(new WebGalleryScreen(this, webserverUrl, null));
                                 } else {
                                     logger.error("Failed to get client trying to open Gallery for {}", webserverUrl);
                                 }

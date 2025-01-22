@@ -13,6 +13,7 @@ public class ClientConfig {
     public String limitedServerAddr = "some-fake-minecraft-server-ip.com";
     public boolean sendWorldData = true;
     public boolean sendSystemInfo = true;
+    public String shareText = "Look at this screenshot: ";
 
     public ClientConfig() {
         Map<String, String> map = new HashMap<>();

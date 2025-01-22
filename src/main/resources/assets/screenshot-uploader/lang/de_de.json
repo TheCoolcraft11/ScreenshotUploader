@@ -9,6 +9,11 @@
   "message.screenshot_uploader.open_all": "[ALLE]",
   "message.screenshot_uploader.see_screenshot": "Klicken Sie hier, um den Screenshot anzusehen",
   "message.screenshot_uploader.see_screenshots": "Klicken Sie hier, um alle Screenshots anzusehen",
+  "message.screenshot_uploader.seconds_ago": "vor %s Sekunden",
+  "message.screenshot_uploader.minutes_ago": "vor %s Minuten",
+  "message.screenshot_uploader.hours_ago": "vor %s Stunden und %s Minuten",
+  "message.screenshot_uploader.days_ago": "vor %s Tage",
+  "message.screenshot_uploader.shared_saved": "Du hast diese Gallerie gespeichert: Klicke hier um den Screenshot zu öffnen",
   "message.screenshot_uploader.next_upload": "Die nächsten Screenshots werden hochgeladen nach [%s]",
   "message.screenshot_uploader.next_upload_description": "Ihre Screenshots werden auf diesen Server hochgeladen. Sie können die Screenshots unter [ %s ] oder in Ihrer Galerie ansehen (drücken Sie [%s])",
   "message.screenshot_uploader.next_upload_server_description": "Ihre Screenshots werden auf [%s](%s) hochgeladen. Sie können die Screenshots unter [%s] oder in Ihrer Galerie (drücken Sie [%s]) ansehen.",
@@ -44,5 +49,6 @@
   "gui.screenshot_uploader.screenshot_gallery.open_in_app": "In App öffnen",
   "gui.screenshot_uploader.screenshot_gallery.web_title": "Web-Screenshot-Galerie: %s",
   "gui.screenshot_uploader.screenshot_gallery.open_in_browser": "Galerie im Browser öffnen",
-  "gui.screenshot_uploader.screenshot_gallery.open_sc_in_browser": "Im Browser öffnen"
+  "gui.screenshot_uploader.screenshot_gallery.open_sc_in_browser": "Im Browser öffnen",
+  "gui.screenshot_uploader.screenshot_gallery.share_screenshot": "Screenshot teilen"
 }

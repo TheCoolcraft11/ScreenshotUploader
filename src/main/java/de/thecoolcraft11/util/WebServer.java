@@ -2,25 +2,28 @@ package de.thecoolcraft11.util;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
-import com.sun.net.httpserver.HttpServer;
+import com.google.gson.JsonParser;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
+import com.sun.net.httpserver.HttpServer;
 import de.thecoolcraft11.config.ConfigManager;
 import net.fabricmc.loader.api.FabricLoader;
 
-import java.io.*;
+import java.io.File;
+import java.io.FileReader;
+import java.io.IOException;
+import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.*;
+import java.util.Random;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class WebServer {
 
     public static void startWebServer(String ipAddress, int port, String urlString) throws Exception {
-
 
 
         HttpServer server = HttpServer.create(new InetSocketAddress(ipAddress, port), 0);
@@ -177,6 +180,7 @@ public class WebServer {
 
     private static class ScreenshotListHandler implements HttpHandler {
         private static String urlString;
+
         public ScreenshotListHandler(String urlString) {
             ScreenshotListHandler.urlString = urlString;
         }
@@ -193,10 +197,12 @@ public class WebServer {
             String jsonResponse = getString(files);
 
             exchange.getResponseHeaders().add("Content-Type", "application/json; charset=UTF-8");
-            exchange.sendResponseHeaders(200, jsonResponse.getBytes().length);
+            exchange.sendResponseHeaders(200, jsonResponse != null ? jsonResponse.getBytes().length : 0);
 
             try (OutputStream os = exchange.getResponseBody()) {
-                os.write(jsonResponse.getBytes());
+                if (jsonResponse != null) {
+                    os.write(jsonResponse.getBytes());
+                }
             }
         }
 
@@ -206,13 +212,41 @@ public class WebServer {
                 for (File file : files) {
                     JsonObject fileObject = new JsonObject();
                     fileObject.addProperty("filename", file.getName());
-                    fileObject.addProperty("url", urlString+ "/screenshots/" + file.getName());
-                    fileObject.addProperty("username",file.getName().split("-")[1].split("_")[0]);
+                    fileObject.addProperty("url", urlString + "/screenshots/" + file.getName());
+                    fileObject.addProperty("username", getUsername(file.getName()));
+                    fileObject.addProperty("date", file.lastModified());
+
+                    String fileName = file.getName();
+                    String jsonFileName = fileName.contains(".")
+                            ? fileName.substring(0, fileName.lastIndexOf('.')) + ".json"
+                            : fileName + ".json";
+                    File jsonFile = new File(file.getParent(), jsonFileName);
+
+                    if (jsonFile.exists() && jsonFile.isFile()) {
+                        try (FileReader reader = new FileReader(jsonFile)) {
+                            JsonObject metaData = JsonParser.parseReader(reader).getAsJsonObject();
+                            fileObject.add("metaData", metaData);
+                        } catch (IOException e) {
+                            fileObject.add("metaData", null);
+                        }
+                    } else {
+                        fileObject.add("metaData", null);
+                    }
+
                     fileArray.add(fileObject);
                 }
             }
 
             return fileArray.toString();
+        }
+
+        private String getUsername(String name) {
+            if (name.split("-").length > 1) {
+                if (name.split("-")[1].split("_").length > 1) {
+                    return name.split("-")[1].split("_")[0];
+                }
+            }
+            return "Unknown";
         }
     }
 }

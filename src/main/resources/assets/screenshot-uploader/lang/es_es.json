@@ -9,6 +9,11 @@
   "message.screenshot_uploader.open_all": "[TODOS]",
   "message.screenshot_uploader.see_screenshot": "Haz clic para ver la captura de pantalla",
   "message.screenshot_uploader.see_screenshots": "Haz clic para ver todas las capturas de pantalla",
+  "message.screenshot_uploader.seconds_ago": "hace %s segundos",
+  "message.screenshot_uploader.minutes_ago": "hace %s minutos",
+  "message.screenshot_uploader.hours_ago": "hace %s horas y %s minutos",
+  "message.screenshot_uploader.days_ago": "hace %s días",
+  "message.screenshot_uploader.shared_saved": "Has guardado esta galería: Haz clic aquí para abrir la captura de pantalla",
   "message.screenshot_uploader.next_upload": "Las próximas capturas de pantalla se subirán a [%s]",
   "message.screenshot_uploader.next_upload_description": "Tus capturas de pantalla se subirán a este servidor. Puedes ver las capturas en [ %s ] o en tu galería del juego (pulsa [%s])",
   "message.screenshot_uploader.next_upload_server_description": "Tus capturas de pantalla se subirán a [%s](%s). Puedes ver las capturas en [%s] o en tu galería del juego (pulsa [%s])",
@@ -44,5 +49,6 @@
   "gui.screenshot_uploader.screenshot_gallery.open_in_app": "Abrir en la aplicación",
   "gui.screenshot_uploader.screenshot_gallery.web_title": "Galería web de capturas de pantalla: %s",
   "gui.screenshot_uploader.screenshot_gallery.open_in_browser": "Abrir galería en el navegador",
-  "gui.screenshot_uploader.screenshot_gallery.open_sc_in_browser": "Abrir en el navegador"
+  "gui.screenshot_uploader.screenshot_gallery.open_sc_in_browser": "Abrir en el navegador",
+  "gui.screenshot_uploader.screenshot_gallery.share_screenshot": "Compartir captura de pantalla"
 }

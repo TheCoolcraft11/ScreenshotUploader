@@ -9,6 +9,11 @@
   "message.screenshot_uploader.open_all": "[ALL]",
   "message.screenshot_uploader.see_screenshot": "Click To See Screenshot",
   "message.screenshot_uploader.see_screenshots": "Click To See All Screenshots",
+  "message.screenshot_uploader.seconds_ago": "%s seconds ago",
+  "message.screenshot_uploader.minutes_ago": "%s minutes ago",
+  "message.screenshot_uploader.hours_ago": "%s hours and %s minutes ago",
+  "message.screenshot_uploader.days_ago": "%s days ago",
+  "message.screenshot_uploader.shared_saved": "You have saved this Gallery: Click Here to open the screenshot",
   "message.screenshot_uploader.next_upload": "Next screenshots will be uploaded to [%s]",
   "message.screenshot_uploader.next_upload_description": "Your screenshots will be uploaded to this server, you can see those screenshots at [ %s ] or in your ingame Gallery(press [%s])",
   "message.screenshot_uploader.next_upload_server_description": "Your screenshots will be uploaded to [%s](%s), you can see those screenshots at [%s] or in your ingame Gallery(press [%s])",
@@ -44,5 +49,6 @@
   "gui.screenshot_uploader.screenshot_gallery.open_in_app": "Open in App",
   "gui.screenshot_uploader.screenshot_gallery.web_title": "Web Screenshot Gallery: %s",
   "gui.screenshot_uploader.screenshot_gallery.open_in_browser": "Open Gallery In Browser",
-  "gui.screenshot_uploader.screenshot_gallery.open_sc_in_browser": "Open In Browser"
+  "gui.screenshot_uploader.screenshot_gallery.open_sc_in_browser": "Open In Browser",
+  "gui.screenshot_uploader.screenshot_gallery.share_screenshot": "Share Screenshot"
 }

@@ -19,6 +19,7 @@ import javax.imageio.ImageIO;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -93,16 +94,22 @@ public class ReceivePackets {
     public static void handleReceivedScreenshot(byte[] screenshotData, String jsonData, ServerPlayerEntity player) {
         try {
             String playerName = player.getName().getString();
-            String fileName = "screenshot-" + playerName + "_" + System.currentTimeMillis() + ".png";
-
-
-            File screenshotFile = new File("screenshotUploader/" + fileName);
+            String baseFileName = "screenshot-" + playerName + "_" + System.currentTimeMillis();
+            String screenshotFileName = baseFileName + ".png";
+            File screenshotFile = new File("screenshotUploader/" + screenshotFileName);
             Files.write(screenshotFile.toPath(), screenshotData);
-            logger.info("Screenshot received from {} and saved as {}", player.getName().getString(), fileName);
-            String uploadedFilePath = "screenshotUploader/" + fileName;
-            String outputFilePath = "screenshotUploader/screenshots/" + formatFileName(fileName, playerName);
-            convertToJpeg(uploadedFilePath, outputFilePath);
+            logger.info("Screenshot received from {} and saved as {}", player.getName().getString(), screenshotFileName);
+            String jsonFileName = "screenshotUploader/screenshots/" + baseFileName + ".json";
+            try (FileWriter fileWriter = new FileWriter(jsonFileName)) {
+                fileWriter.write(jsonData);
+                logger.info("JSON data saved as {}", jsonFileName);
+            } catch (IOException e) {
+                logger.error("Error saving JSON data: {}", e.getMessage());
+            }
 
+            String uploadedFilePath = "screenshotUploader/" + screenshotFileName;
+            String outputFilePath = "screenshotUploader/screenshots/" + formatFileName(screenshotFileName, playerName);
+            convertToJpeg(uploadedFilePath, outputFilePath);
 
             Files.delete(Paths.get(uploadedFilePath));
 
@@ -118,9 +125,18 @@ public class ReceivePackets {
             JsonObject jsonObject = getJsonObject(urlString, outputFilePath);
             try {
                 JsonObject webhookJson = JsonParser.parseString(jsonData).getAsJsonObject();
-                System.out.println(webhookJson);
                 if (ConfigManager.getServerConfig().sendDiscordWebhook) {
-                    DiscordWebhook.sendMessage(ConfigManager.getServerConfig().webhookUrl, playerName, webhookJson.get("server_address").getAsString(), webhookJson.get("dimension").getAsString(), webhookJson.get("coordinates").getAsString(), webhookJson.get("facing_direction").getAsString(), webhookJson.get("biome").getAsString(), jsonObject.get("url").getAsString(), webhookJson.get("world_info").getAsString());
+                    DiscordWebhook.sendMessage(
+                            ConfigManager.getServerConfig().webhookUrl,
+                            playerName,
+                            webhookJson.get("server_address").getAsString(),
+                            webhookJson.get("dimension").getAsString(),
+                            webhookJson.get("coordinates").getAsString(),
+                            webhookJson.get("facing_direction").getAsString(),
+                            webhookJson.get("biome").getAsString(),
+                            jsonObject.get("url").getAsString(),
+                            webhookJson.get("world_info").getAsString()
+                    );
                 }
             } catch (Exception e) {
                 throw new RuntimeException(e);
@@ -130,6 +146,7 @@ public class ReceivePackets {
             logger.error("Error handling uploaded screenshot: {}", e.getMessage());
         }
     }
+
 
     private static @NotNull JsonObject getJsonObject(String websiteAddress, String outputFilePath) {
 

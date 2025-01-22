@@ -48,8 +48,11 @@ public class ScreenshotData {
     @SerializedName("system_info")
     private final String systemInfo;
 
+    @SerializedName("current_time")
+    private final String currentTime;
+
     // Constructor
-    public ScreenshotData(String username, String uuid, String accountType, String worldName, String coordinates, String biome, String facingDirection, String dimension, String playerState, String chunkInfo, String entitiesInfo, String worldInfo, String serverAddress, String clientSettings, String systemInfo) {
+    public ScreenshotData(String username, String uuid, String accountType, String worldName, String coordinates, String biome, String facingDirection, String dimension, String playerState, String chunkInfo, String entitiesInfo, String worldInfo, String serverAddress, String clientSettings, String systemInfo, String currentTime) {
         this.username = username;
         this.uuid = uuid;
         this.accountType = accountType;
@@ -65,6 +68,7 @@ public class ScreenshotData {
         this.serverAddress = serverAddress;
         this.clientSettings = clientSettings;
         this.systemInfo = systemInfo;
+        this.currentTime = currentTime;
     }
 
 }

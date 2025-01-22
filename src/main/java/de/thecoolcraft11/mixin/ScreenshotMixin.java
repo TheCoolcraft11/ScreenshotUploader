@@ -79,8 +79,9 @@ public class ScreenshotMixin {
             String serverAddress = sendWorldData ? getServerAddress(client) : "N/A";
             String clientSettings = sendWorldData ? getClientSettings(client) : "N/A";
             String systemInfo = sendSystemData ? getSystemInfo() : "N/A";
+            String currentTime = System.currentTimeMillis() + "";
 
-            ScreenshotData data = new ScreenshotData(username, uuid, accountType, worldName, coordinates, biome, facingDirection, dimension, playerState, chunkInfo, entitiesInfo, worldInfo, serverAddress, clientSettings, systemInfo);
+            ScreenshotData data = new ScreenshotData(username, uuid, accountType, worldName, coordinates, biome, facingDirection, dimension, playerState, chunkInfo, entitiesInfo, worldInfo, serverAddress, clientSettings, systemInfo, currentTime);
 
             String jsonData = serializeToJson(data);
 

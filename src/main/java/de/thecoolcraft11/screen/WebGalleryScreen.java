@@ -15,6 +15,7 @@ import net.minecraft.client.texture.NativeImage;
 import net.minecraft.client.texture.NativeImageBackedTexture;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
+import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -28,10 +29,12 @@ import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.AbstractMap;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import java.time.Duration;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import java.util.*;
 
 public class WebGalleryScreen extends Screen {
     private static final Logger logger = LoggerFactory.getLogger(WebGalleryScreen.class);
@@ -55,6 +58,7 @@ public class WebGalleryScreen extends Screen {
 
     private final Screen parent;
     private final String webserverUrl;
+    private final String initialImageName;
 
     private ButtonWidget openInBrowserButton;
 
@@ -66,10 +70,14 @@ public class WebGalleryScreen extends Screen {
 
     private ButtonWidget openInAppButton;
 
-    public WebGalleryScreen(Screen parent, String webserverUrl) {
+    private ButtonWidget shareButton;
+
+    public WebGalleryScreen(Screen parent, String webserverUrl, String initialImageName) {
         super(Text.translatable("gui.screenshot_uploader.screenshot_gallery.web_title", webserverUrl));
         this.parent = parent;
         this.webserverUrl = webserverUrl;
+
+        this.initialImageName = initialImageName;
     }
 
     @Override
@@ -113,7 +121,7 @@ public class WebGalleryScreen extends Screen {
                 navigatorButtons.add(ButtonWidget.builder(Text.translatable("gui.screenshot_uploader.screenshot_gallery.server_gallery"), button -> {
                     String webserverUrl = ReceivePackets.gallerySiteAddress;
                     if (client != null) {
-                        client.setScreen(new WebGalleryScreen(this, webserverUrl));
+                        client.setScreen(new WebGalleryScreen(this, webserverUrl, null));
                     } else {
                         logger.error("Failed to get client trying to open Server Gallery with URL {}", webserverUrl);
                     }
@@ -135,7 +143,7 @@ public class WebGalleryScreen extends Screen {
                                 Text.literal(buttonLabel),
                                 button -> {
                                     if (client != null) {
-                                        client.setScreen(new WebGalleryScreen(this, webserverUrl));
+                                        client.setScreen(new WebGalleryScreen(this, webserverUrl, null));
                                     } else {
                                         logger.error("Failed to get client trying to open Gallery for {}", webserverUrl);
                                     }
@@ -176,14 +184,40 @@ public class WebGalleryScreen extends Screen {
                 button -> openInBrowser()
         ).dimensions(buttonWidth + 10, buttonY, buttonWidth, buttonHeight).build();
 
+        shareButton = ButtonWidget.builder(
+                Text.translatable("gui.screenshot_uploader.screenshot_gallery.share_screenshot"),
+                button -> shareScreenshot()
+        ).dimensions(buttonWidth * 2 + 15, buttonY, buttonWidth, buttonHeight).build();
+
         addDrawableChild(saveButton);
         addDrawableChild(openInAppButton);
+        addDrawableChild(shareButton);
 
         saveButton.visible = false;
         openInAppButton.visible = false;
+        shareButton.visible = false;
 
         buttonsToHideOnOverlap.add(saveButton);
         buttonsToHideOnOverlap.add(openInAppButton);
+        buttonsToHideOnOverlap.add(shareButton);
+
+        int initialImageIndex = imagePaths.indexOf(initialImageName);
+        if (initialImageIndex >= 0) {
+            isImageClicked = true;
+            clickedImageIndex = initialImageIndex;
+            zoomLevel = 1.0;
+            imageOffsetX = 0.0;
+            imageOffsetY = 0.0;
+        }
+    }
+
+    private void shareScreenshot() {
+        String message = ConfigManager.getClientConfig().shareText + imagePaths.get(clickedImageIndex);
+        MinecraftClient client = MinecraftClient.getInstance();
+        if (client.player != null && client.getNetworkHandler() != null) {
+            client.getNetworkHandler().sendChatMessage(message);
+            client.setScreen(null);
+        }
     }
 
     private void openBrowser(String url) {
@@ -300,12 +334,14 @@ public class WebGalleryScreen extends Screen {
         if (isImageClicked && clickedImageIndex >= 0) {
             saveButton.visible = true;
             openInAppButton.visible = true;
+            shareButton.visible = true;
             renderEnlargedImage(context);
             openInBrowserButton.visible = false;
             navigatorButtons.forEach(buttonWidget -> buttonWidget.visible = false);
         } else {
             saveButton.visible = false;
             openInAppButton.visible = false;
+            shareButton.visible = false;
             renderGallery(context, mouseX, mouseY);
             openInBrowserButton.visible = true;
             navigatorButtons.forEach(buttonWidget -> buttonWidget.visible = true);
@@ -377,7 +413,9 @@ public class WebGalleryScreen extends Screen {
                 context.fill(x, y, x + IMAGE_WIDTH, y + IMAGE_HEIGHT, 0x80FFFFFF);
             }
 
-            String username = usernames.get(i);
+            String username = getString(i);
+
+
             int textX;
             if (client != null) {
                 textX = x + 5;
@@ -386,6 +424,19 @@ public class WebGalleryScreen extends Screen {
                 context.drawText(client.textRenderer, username, textX, textY, 0xFFFFFF, false);
             }
         }
+    }
+
+    private static String getString(int i) {
+        String username = "Unknown";
+        if (metaDatas.get(i) != null) {
+            JsonObject metaData = metaDatas.get(i);
+            if (metaData.has("username") && !metaData.get("username").isJsonNull()) {
+                username = metaData.get("username").getAsString();
+            } else if (metaData.has("fileUsername") && !metaData.get("fileUsername").isJsonNull()) {
+                username = metaData.get("fileUsername").getAsString();
+            }
+        }
+        return username;
     }
 
 
@@ -410,14 +461,52 @@ public class WebGalleryScreen extends Screen {
 
         int borderWidth = 5;
         context.fill(x - borderWidth, y - borderWidth, x + imageWidth + borderWidth, y + imageHeight + borderWidth, 0xFFFFFFFF);
-
         RenderSystem.setShaderTexture(0, clickedImageId);
         RenderSystem.enableBlend();
-
         context.drawTexture(clickedImageId, x, y, 0, 0, imageWidth, imageHeight, imageWidth, imageHeight);
-
         RenderSystem.disableBlend();
+
+        int sidebarWidth = 300;
+        int sidebarHeight = imageHeight;
+
+        int sidebarX;
+        if (x - sidebarWidth > 0) {
+            sidebarX = x - sidebarWidth;
+        } else {
+            sidebarX = x + imageWidth;
+        }
+
+        context.fill(sidebarX, y, sidebarX + sidebarWidth, y + sidebarHeight, 0xCC000000);
+
+        if (clickedImageIndex >= 0 && clickedImageIndex < metaDatas.size()) {
+            Map<Text, Text> drawableInfo = getStringStringMap();
+
+            int textX = sidebarX + 10;
+            int textY = y + 20;
+            for (Text info : drawableInfo.keySet()) {
+                context.drawText(client.textRenderer, info.copy().append(drawableInfo.get(info)), textX, textY, 0xFFFFFF, false);
+                textY += 10;
+            }
+
+        }
     }
+
+    private @NotNull LinkedHashMap<Text, Text> getStringStringMap() {
+        JsonObject metaData = metaDatas.get(clickedImageIndex);
+        LinkedHashMap<Text, Text> drawableInfo = new LinkedHashMap<>();
+
+        drawableInfo.put(Text.literal("Username: "), metaData.has("username") && metaData.get("username").isJsonPrimitive() ? Text.literal(metaData.get("username").getAsString()) : metaData.has("fileUsername") && metaData.get("fileUsername").isJsonPrimitive() ? Text.literal(metaData.get("fileUsername").getAsString()) : Text.literal("N/A"));
+        drawableInfo.put(Text.literal("Server: "), metaData.has("server_address") && metaData.get("server_address").isJsonPrimitive() ? Text.literal(metaData.get("server_address").getAsString()) : Text.literal("N/A"));
+        drawableInfo.put(Text.literal("World: "), metaData.has("world_name") && metaData.get("world_name").isJsonPrimitive() ? Text.literal(metaData.get("world_name").getAsString()) : Text.literal("N/A"));
+        drawableInfo.put(Text.literal("Location: "), metaData.has("coordinates") && metaData.get("coordinates").isJsonPrimitive() ? Text.literal(metaData.get("coordinates").getAsString()) : Text.literal("N/A"));
+        drawableInfo.put(Text.literal("Biome: "), metaData.has("biome") && metaData.get("biome").isJsonPrimitive() ? Text.literal(metaData.get("biome").getAsString()) : Text.literal("N/A"));
+        drawableInfo.put(Text.literal(" "), Text.literal(" "));
+        drawableInfo.put(metaData.has("current_time") ? getTimestamp(metaData.get("current_time").getAsLong()) : metaData.has("date") ? getTimestamp(metaData.get("date").getAsLong()) : Text.literal("N/A"), Text.literal(""));
+        drawableInfo.put(metaData.has("current_time") ? getTimeAgo(metaData.get("current_time").getAsLong()) : metaData.has("date") ? getTimeAgo(metaData.get("date").getAsLong()) : Text.literal("N/A"), Text.literal(""));
+
+        return drawableInfo;
+    }
+
 
     private static void loadWebImage(String imageUrl) {
         String cacheFileName = "screenshots_cache/" + imageUrl.hashCode() + ".png";
@@ -498,25 +587,25 @@ public class WebGalleryScreen extends Screen {
         }
     }
 
-    private static final List<String> usernames = new ArrayList<>();
+    private static final List<JsonObject> metaDatas = new ArrayList<>();
 
     private static void loadScreenshotsFromServer(String server) {
-        usernames.clear();
-        List<AbstractMap.SimpleEntry<String, String>> screenshotData = requestScreenshotListFromServer(server);
+        metaDatas.clear();
+        List<AbstractMap.SimpleEntry<String, JsonObject>> screenshotData = requestScreenshotListFromServer(server);
 
         screenshotData.forEach(entry -> {
             String url = entry.getKey();
-            String username = entry.getValue();
+            JsonObject metaData = entry.getValue();
 
             imagePaths.add(url);
-            usernames.add(username);
+            metaDatas.add(metaData);
             loadWebImage(url);
         });
     }
 
 
-    private static List<AbstractMap.SimpleEntry<String, String>> requestScreenshotListFromServer(String server) {
-        List<AbstractMap.SimpleEntry<String, String>> screenshotData = new ArrayList<>();
+    private static List<AbstractMap.SimpleEntry<String, JsonObject>> requestScreenshotListFromServer(String server) {
+        List<AbstractMap.SimpleEntry<String, JsonObject>> screenshotData = new ArrayList<>();
         try {
             URI uri = new URI(server);
             URL url = uri.toURL();
@@ -542,9 +631,12 @@ public class WebGalleryScreen extends Screen {
                 for (int i = 0; i < jsonArray.size(); i++) {
                     JsonObject screenshot = jsonArray.get(i).getAsJsonObject();
                     String urlStr = screenshot.get("url").getAsString();
-                    String username = screenshot.has("username") ? screenshot.get("username").getAsString() : "Unknown";
+                    JsonObject metaData = screenshot.get("metaData").isJsonObject() ? screenshot.get("metaData").getAsJsonObject() : new JsonObject();
+                    metaData.add("fileUsername", screenshot.get("username"));
+                    metaData.add("date", screenshot.get("date"));
 
-                    screenshotData.add(new AbstractMap.SimpleEntry<>(urlStr, username));
+
+                    screenshotData.add(new AbstractMap.SimpleEntry<>(urlStr, metaData));
                 }
             } else {
                 logger.error("Failed to fetch data. HTTP Status: {}", status);
@@ -604,6 +696,40 @@ public class WebGalleryScreen extends Screen {
             logger.warn("Invalid image index while opening: {}", clickedImageIndex);
         }
     }
+    
+
+    public static Text getTimestamp(long millis) {
+
+        Instant timestampInstant = Instant.ofEpochMilli(millis);
+
+        LocalDateTime timestampDateTime = LocalDateTime.ofInstant(timestampInstant, ZoneId.systemDefault());
+
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm:ss");
+
+        return Text.literal(timestampDateTime.format(formatter)).styled(style -> style.withUnderline(true));
+    }
+
+    private static Text getTimeAgo(long millis) {
+        Instant timestampInstant = Instant.ofEpochMilli(millis);
+        Instant nowInstant = Instant.now();
+        Duration duration = Duration.between(timestampInstant, nowInstant);
+        long seconds = duration.getSeconds();
+
+        if (seconds < 60) {
+            return Text.literal("(").append(Text.translatable("message.screenshot_uploader.seconds_ago", seconds).append(")"));
+        } else if (seconds < 3600) {
+            long minutes = seconds / 60;
+            return Text.literal("(").append(Text.translatable("message.screenshot_uploader.minutes_ago", minutes).append(")"));
+        } else if (seconds < 86400) {
+            long hours = seconds / 3600;
+            long minutes = (seconds % 3600) / 60;
+            return Text.literal("(").append(Text.translatable("message.screenshot_uploader.hours_ago", hours, minutes).append(")"));
+        } else {
+            long days = seconds / 86400;
+            return Text.literal("(").append(Text.translatable("message.screenshot_uploader.days_ago", days).append(")"));
+        }
+    }
+
 
     @Override
     public void resize(MinecraftClient client, int width, int height) {
