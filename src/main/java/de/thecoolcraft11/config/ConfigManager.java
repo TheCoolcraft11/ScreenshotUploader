@@ -125,5 +125,25 @@ public class ConfigManager {
             logger.error("Failed to save Server config: {}", e.getMessage());
         }
     }
+    
+    public static void reloadConfig(File configDir, boolean isClient) {
+        if (isClient) {
+            File clientConfigFile = new File(configDir, "config.json");
+            if (clientConfigFile.exists()) {
+                loadConfig(clientConfigFile, true);
+                logger.info("Client configuration reloaded successfully.");
+            } else {
+                logger.warn("Client config file does not exist. Reload ignored.");
+            }
+        } else {
+            File serverConfigFile = new File(configDir, "serverConfig.json");
+            if (serverConfigFile.exists()) {
+                loadConfig(serverConfigFile, false);
+                logger.info("Server configuration reloaded successfully.");
+            } else {
+                logger.warn("Server config file does not exist. Reload ignored.");
+            }
+        }
+    }
 
 }

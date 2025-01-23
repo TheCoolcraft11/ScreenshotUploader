@@ -14,6 +14,10 @@ public class ClientConfig {
     public boolean sendWorldData = true;
     public boolean sendSystemInfo = true;
     public String shareText = "Look at this screenshot: ";
+    public int imagesPerRow = 5;
+    public int imageGap = 10;
+    public int imageTopPadding = 35;
+
 
     public ClientConfig() {
         Map<String, String> map = new HashMap<>();

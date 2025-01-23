@@ -1,6 +1,9 @@
 name: Build and Release Mod
 
-on: [ push, pull_request ]
+on:
+  push:
+    branches:
+      - release
 
 permissions:
   contents: write

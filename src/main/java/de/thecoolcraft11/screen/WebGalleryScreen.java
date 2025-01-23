@@ -74,7 +74,7 @@ public class WebGalleryScreen extends Screen {
 
     public WebGalleryScreen(Screen parent, String webserverUrl, String initialImageName) {
         super(Text.translatable("gui.screenshot_uploader.screenshot_gallery.web_title", webserverUrl));
-        this.parent = parent;
+        this.parent = Objects.requireNonNullElseGet(parent, GalleryScreen::new);
         this.webserverUrl = webserverUrl;
 
         this.initialImageName = initialImageName;
@@ -132,11 +132,16 @@ public class WebGalleryScreen extends Screen {
             }
             xPosition += buttonWidth + buttonSpacing;
         }
-
         for (Map.Entry<String, Map<String, String>> entry : ConfigManager.getClientConfig().upload_urls.entrySet()) {
             String webserverUrl = entry.getValue().get("gallery");
             String webserverUrlHome = entry.getValue().get("home");
             String buttonLabel = entry.getKey();
+
+            System.out.println(webserverUrl);
+            System.out.println(webserverUrlHome);
+            if (webserverUrl == null || webserverUrl.isEmpty() || webserverUrlHome == null || webserverUrlHome.isEmpty()) {
+                continue;
+            }
 
             if (!this.webserverUrl.equals(webserverUrl)) {
                 navigatorButtons.add(ButtonWidget.builder(
@@ -259,7 +264,7 @@ public class WebGalleryScreen extends Screen {
                 }
 
                 for (Element buttonWidget : this.children()) {
-                    if (buttonWidget.isMouseOver(mouseX, mouseY)) {
+                    if (buttonWidget != null && buttonWidget.isMouseOver(mouseX, mouseY)) {
                         return super.mouseClicked(mouseX, mouseY, button);
                     }
                 }
@@ -696,7 +701,7 @@ public class WebGalleryScreen extends Screen {
             logger.warn("Invalid image index while opening: {}", clickedImageIndex);
         }
     }
-    
+
 
     public static Text getTimestamp(long millis) {
 

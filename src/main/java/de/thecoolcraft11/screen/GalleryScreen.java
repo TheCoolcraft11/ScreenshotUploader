@@ -31,17 +31,17 @@ public class GalleryScreen extends Screen {
     private static final List<Identifier> imageIds = new ArrayList<>();
     private static final List<Path> imagePaths = new ArrayList<>();
 
-    private static final int IMAGES_PER_ROW = 5;
+    private static final int IMAGES_PER_ROW = ConfigManager.getClientConfig().imagesPerRow;
     private static int IMAGE_WIDTH = 192;
     private static int IMAGE_HEIGHT = 108;
-    private static int GAP = 10;
-    private static int TOP_PADDING = 35;
+    private static int GAP = ConfigManager.getClientConfig().imageGap;
+    private static int TOP_PADDING = ConfigManager.getClientConfig().imageTopPadding;
 
     private boolean isImageClicked = false;
     private int clickedImageIndex = -1;
     private int scrollOffset = 0;
 
-    private double zoomLevel = 1.0;
+    private double zoomLevel = 2.0;
     private double imageOffsetX = 0.0;
     private double imageOffsetY = 0.0;
 
@@ -49,6 +49,8 @@ public class GalleryScreen extends Screen {
     private ButtonWidget saveButton;
     private ButtonWidget deleteButton;
     private ButtonWidget openInAppButton;
+
+    private ButtonWidget configButton;
 
     private final List<ButtonWidget> navigatorButtons = new ArrayList<>();
 
@@ -141,13 +143,25 @@ public class GalleryScreen extends Screen {
                 button -> openImageInApp()
         ).dimensions((2 * buttonWidth) + 15, buttonY, buttonWidth, buttonHeight).build();
 
+        configButton = ButtonWidget.builder(
+                Text.translatable("gui.screenshot_uploader.screenshot_gallery.config"),
+                button -> {
+                    if (client != null) {
+                        client.setScreen(new ConfigScreen());
+                    }
+                }
+        ).dimensions(5, buttonY, buttonWidth, buttonHeight).build();
+
+
         addDrawableChild(saveButton);
         addDrawableChild(deleteButton);
         addDrawableChild(openInAppButton);
+        addDrawableChild(configButton);
 
         saveButton.visible = false;
         deleteButton.visible = false;
         openInAppButton.visible = false;
+        configButton.visible = true;
 
         buttonsToHideOnOverlap.add(saveButton);
         buttonsToHideOnOverlap.add(deleteButton);
@@ -174,7 +188,7 @@ public class GalleryScreen extends Screen {
                 }
 
                 for (Element buttonWidget : this.children()) {
-                    if (buttonWidget.isMouseOver(mouseX, mouseY)) {
+                    if (buttonWidget != null && buttonWidget.isMouseOver(mouseX, mouseY)) {
                         return super.mouseClicked(mouseX, mouseY, button);
                     }
                 }
@@ -252,6 +266,7 @@ public class GalleryScreen extends Screen {
             saveButton.visible = true;
             deleteButton.visible = true;
             openInAppButton.visible = true;
+            configButton.visible = false;
             navigatorButtons.forEach(buttonWidget -> buttonWidget.visible = false);
         } else {
             renderGallery(context, mouseX, mouseY);
@@ -259,6 +274,7 @@ public class GalleryScreen extends Screen {
             saveButton.visible = false;
             deleteButton.visible = false;
             openInAppButton.visible = false;
+            configButton.visible = true;
 
             navigatorButtons.forEach(buttonWidget -> buttonWidget.visible = true);
         }

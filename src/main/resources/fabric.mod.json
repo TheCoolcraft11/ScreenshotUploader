@@ -3,7 +3,7 @@
   "id": "screenshot-uploader",
   "version": "${version}",
   "name": "Screenshot Uploader",
-  "description": "This mods uploads your screenshots to a server! ",
+  "description": "Uploads your screenshot to a server so you can show it your friends!",
   "authors": [
     "TheCoolcraft11"
   ],
@@ -24,6 +24,9 @@
     ],
     "server": [
       "de.thecoolcraft11.ScreenshotUploaderServer"
+    ],
+    "modmenu": [
+      "de.thecoolcraft11.compat.ModMenuCompat"
     ]
   },
   "mixins": [
@@ -37,5 +40,15 @@
   },
   "suggests": {
     "another-mod": "*"
+  },
+  "custom": {
+    "modmenu": {
+      "links": {
+        "modmenu.discord": "https://discord.gg/XkJYNtcm",
+        "modmenu.modrinth": "https://modrinth.com/mod/screenshot-uploader/",
+        "modmenu.source": "https://github.com/TheCoolcraft11/ScreenshotUploader/"
+      },
+      "update_checker": true
+    }
   }
 }
