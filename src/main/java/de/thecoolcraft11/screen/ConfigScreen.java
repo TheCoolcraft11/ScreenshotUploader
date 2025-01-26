@@ -36,7 +36,7 @@ public class ConfigScreen extends Screen {
     private ButtonWidget saveButton;
 
     public ConfigScreen() {
-        super(Text.literal("Config"));
+        super(Text.translatable("gui.screenshot_uploader.config.title"));
         loadConfig();
     }
 
@@ -75,16 +75,16 @@ public class ConfigScreen extends Screen {
             } else if (value.isJsonPrimitive() && value.getAsJsonPrimitive().isBoolean()) {
 
                 boolean currentValue = value.getAsBoolean();
-                ButtonWidget widget = ButtonWidget.builder(Text.literal(currentValue ? "True" : "False"), button -> {
+                ButtonWidget widget = ButtonWidget.builder(Text.translatable(currentValue ? "gui.screenshot_uploader.config.true" : "gui.screenshot_uploader.config.false"), button -> {
                     isConfigSaved = false;
                     boolean newValue = !config.get(key).getAsBoolean();
                     config.addProperty(key, newValue);
-                    button.setMessage(Text.literal(newValue ? "True" : "False"));
+                    button.setMessage(Text.translatable(newValue ? "gui.screenshot_uploader.config.true" : "gui.screenshot_uploader.config.false"));
                 }).dimensions(inputXOffset, currentYOffset, 200, 20).tooltip(Tooltip.of(Text.of(key))).build();
                 addDrawableChild(widget);
                 scrollableButtons.put(key, widget);
             } else if (value.isJsonNull() || value.isJsonArray() || value.isJsonObject()) {
-                ButtonWidget widget = ButtonWidget.builder(Text.literal("Head to /config/screenshotUploader/config.json to edit servers"), button -> {
+                ButtonWidget widget = ButtonWidget.builder(Text.translatable("gui.screenshot_uploader.config.not_edit"), button -> {
                 }).dimensions(inputXOffset, currentYOffset, 200, 20).tooltip(Tooltip.of(Text.of(key + "\nHead to /config/screenshotUploader/config.json to edit servers"))).build();
                 widget.active = false;
                 addDrawableChild(widget);
@@ -95,12 +95,12 @@ public class ConfigScreen extends Screen {
         }
 
         int buttonYOffset = Math.max(currentYOffset + 10, this.height - 60);
-        saveButton = ButtonWidget.builder(Text.literal("Save"), button -> saveConfig())
+        saveButton = ButtonWidget.builder(Text.translatable("gui.screenshot_uploader.config.save"), button -> saveConfig())
                 .dimensions(this.width / 2, buttonYOffset, 200, 20).build();
         saveButton.active = !isConfigSaved;
-        saveButton.setTooltip(Tooltip.of(Text.of("Nothing changed. No need to save.")));
+        saveButton.setTooltip(Tooltip.of(Text.translatable("gui.screenshot_uploader.config.nothing_changed")));
         addDrawableChild(saveButton);
-        ButtonWidget backButton = ButtonWidget.builder(Text.literal("Close"), button -> close())
+        ButtonWidget backButton = ButtonWidget.builder(Text.translatable("gui.screenshot_uploader.config.close"), button -> close())
                 .dimensions(this.width / 2, buttonYOffset + 30, 200, 20).build();
         addDrawableChild(saveButton);
         addDrawableChild(backButton);
@@ -141,7 +141,7 @@ public class ConfigScreen extends Screen {
             currentYOffset += entryHeight;
         }
         saveButton.active = !isConfigSaved;
-        saveButton.setTooltip(!isConfigSaved ? Tooltip.of(Text.of("In order for the changed config values to take effect, please restart the game")) : Tooltip.of(Text.of("Nothing changed. No need to save.")));
+        saveButton.setTooltip(!isConfigSaved ? Tooltip.of(Text.of("In order for the changed config values to take effect, please restart the game")) : Tooltip.of(Text.translatable("gui.screenshot_uploader.config.nothing_changed")));
     }
 
     @Override
@@ -237,8 +237,8 @@ public class ConfigScreen extends Screen {
                             this.client.setScreen(this);
                         }
                     },
-                    Text.literal("Unsaved Changes"),
-                    Text.literal("You have unsaved changes. Do you want to discard them?")
+                    Text.translatable("gui.screenshot_uploader.config.unsaved"),
+                    Text.translatable("gui.screenshot_uploader.config.unsaved_detail")
             ));
         }
     }

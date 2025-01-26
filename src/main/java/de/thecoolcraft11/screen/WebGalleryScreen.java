@@ -129,6 +129,10 @@ public class WebGalleryScreen extends Screen {
             } else {
                 navigatorButtons.add(ButtonWidget.builder(Text.translatable("gui.screenshot_uploader.screenshot_gallery.current"), button -> {
                 }).dimensions(xPosition, navigatorY, buttonWidth, buttonHeight).build());
+                openInBrowserButton = ButtonWidget.builder(
+                        Text.translatable("gui.screenshot_uploader.screenshot_gallery.open_in_browser"),
+                        button -> openBrowser(ReceivePackets.homeSiteAddress)
+                ).dimensions(width - buttonWidth, buttonY, buttonWidth, buttonHeight).build();
             }
             xPosition += buttonWidth + buttonSpacing;
         }
@@ -137,8 +141,6 @@ public class WebGalleryScreen extends Screen {
             String webserverUrlHome = entry.getValue().get("home");
             String buttonLabel = entry.getKey();
 
-            System.out.println(webserverUrl);
-            System.out.println(webserverUrlHome);
             if (webserverUrl == null || webserverUrl.isEmpty() || webserverUrlHome == null || webserverUrlHome.isEmpty()) {
                 continue;
             }
@@ -162,11 +164,15 @@ public class WebGalleryScreen extends Screen {
                                 })
                         .dimensions(xPosition, navigatorY, buttonWidth, buttonHeight).build());
 
+            }
+
+            if (openInBrowserButton == null) {
                 openInBrowserButton = ButtonWidget.builder(
                         Text.translatable("gui.screenshot_uploader.screenshot_gallery.open_in_browser"),
                         button -> openBrowser(webserverUrlHome)
                 ).dimensions(width - buttonWidth, buttonY, buttonWidth, buttonHeight).build();
             }
+
 
             xPosition += buttonWidth + buttonSpacing;
         }
@@ -193,6 +199,7 @@ public class WebGalleryScreen extends Screen {
                 Text.translatable("gui.screenshot_uploader.screenshot_gallery.share_screenshot"),
                 button -> shareScreenshot()
         ).dimensions(buttonWidth * 2 + 15, buttonY, buttonWidth, buttonHeight).build();
+
 
         addDrawableChild(saveButton);
         addDrawableChild(openInAppButton);

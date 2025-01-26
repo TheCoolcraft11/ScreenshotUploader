@@ -49,6 +49,7 @@ public class GalleryScreen extends Screen {
     private ButtonWidget saveButton;
     private ButtonWidget deleteButton;
     private ButtonWidget openInAppButton;
+    private ButtonWidget editButton;
 
     private ButtonWidget configButton;
 
@@ -143,6 +144,16 @@ public class GalleryScreen extends Screen {
                 button -> openImageInApp()
         ).dimensions((2 * buttonWidth) + 15, buttonY, buttonWidth, buttonHeight).build();
 
+        editButton = ButtonWidget.builder(
+                Text.translatable("gui.screenshot_uploader.screenshot_gallery.edit"),
+                button -> {
+                    if (clickedImageIndex >= 0 && clickedImageIndex < imagePaths.size()) {
+                        Path imagePath = imagePaths.get(clickedImageIndex);
+                        if (client != null) client.setScreen(new EditScreen(this, imagePath));
+                    }
+                }
+        ).dimensions((3 * buttonWidth) + 20, buttonY, buttonWidth, buttonHeight).build();
+
         configButton = ButtonWidget.builder(
                 Text.translatable("gui.screenshot_uploader.screenshot_gallery.config"),
                 button -> {
@@ -150,22 +161,25 @@ public class GalleryScreen extends Screen {
                         client.setScreen(new ConfigScreen());
                     }
                 }
-        ).dimensions(5, buttonY, buttonWidth, buttonHeight).build();
+        ).dimensions(5, 5, buttonWidth / 2, buttonHeight).build();
 
 
         addDrawableChild(saveButton);
         addDrawableChild(deleteButton);
         addDrawableChild(openInAppButton);
         addDrawableChild(configButton);
+        addDrawableChild(editButton);
 
         saveButton.visible = false;
         deleteButton.visible = false;
         openInAppButton.visible = false;
+        editButton.visible = false;
         configButton.visible = true;
 
         buttonsToHideOnOverlap.add(saveButton);
         buttonsToHideOnOverlap.add(deleteButton);
         buttonsToHideOnOverlap.add(openInAppButton);
+        buttonsToHideOnOverlap.add(editButton);
     }
 
 
@@ -266,6 +280,7 @@ public class GalleryScreen extends Screen {
             saveButton.visible = true;
             deleteButton.visible = true;
             openInAppButton.visible = true;
+            editButton.visible = true;
             configButton.visible = false;
             navigatorButtons.forEach(buttonWidget -> buttonWidget.visible = false);
         } else {
@@ -274,6 +289,7 @@ public class GalleryScreen extends Screen {
             saveButton.visible = false;
             deleteButton.visible = false;
             openInAppButton.visible = false;
+            editButton.visible = false;
             configButton.visible = true;
 
             navigatorButtons.forEach(buttonWidget -> buttonWidget.visible = true);

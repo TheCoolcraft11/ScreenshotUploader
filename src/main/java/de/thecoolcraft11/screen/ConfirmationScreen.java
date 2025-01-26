@@ -13,7 +13,7 @@ public class ConfirmationScreen extends Screen {
     private final Text title;
 
     public ConfirmationScreen(Consumer<Boolean> callback, Text title, Text message) {
-        super(Text.literal("Confirmation"));
+        super(Text.translatable("gui.screenshot_uploader.confirmation.title"));
         this.callback = callback;
         this.message = message;
         this.title = title;
@@ -24,9 +24,9 @@ public class ConfirmationScreen extends Screen {
         int midX = this.width / 2;
         int midY = this.height / 2;
 
-        this.addDrawableChild(ButtonWidget.builder(Text.literal("YES"), button -> callback.accept(true)).dimensions(midX - 100, midY, 200, 20).build());
+        this.addDrawableChild(ButtonWidget.builder(Text.translatable("gui.screenshot_uploader.confirmation.yes"), button -> callback.accept(true)).dimensions(midX - 100, midY, 200, 20).build());
 
-        this.addDrawableChild(ButtonWidget.builder(Text.literal("NO"), button -> callback.accept(false)).dimensions(midX - 100, midY + 30, 200, 20).build());
+        this.addDrawableChild(ButtonWidget.builder(Text.translatable("gui.screenshot_uploader.confirmation.no"), button -> callback.accept(false)).dimensions(midX - 100, midY + 30, 200, 20).build());
     }
 
     @Override
