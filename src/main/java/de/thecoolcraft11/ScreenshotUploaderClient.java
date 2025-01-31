@@ -107,12 +107,14 @@ public class ScreenshotUploaderClient implements ClientModInitializer {
 
         if (extractUrl(message.getString()) != null) {
             try {
-                URI savedEntry = new URI(ReceivePackets.homeSiteAddress);
-                URI messageEntry = new URI(Objects.requireNonNull(extractUrl(message.getString())));
+                if (ReceivePackets.homeSiteAddress != null) {
+                    URI savedEntry = new URI(ReceivePackets.homeSiteAddress);
+                    URI messageEntry = new URI(Objects.requireNonNull(extractUrl(message.getString())));
 
-                if (savedEntry.getHost().equals(messageEntry.getHost())) {
-                    serverName = ReceivePackets.gallerySiteAddress;
-                    hasServerSaved = true;
+                    if (savedEntry.getHost().equals(messageEntry.getHost())) {
+                        serverName = ReceivePackets.gallerySiteAddress;
+                        hasServerSaved = true;
+                    }
                 }
             } catch (URISyntaxException ignored) {
             }

@@ -3,20 +3,19 @@ package de.thecoolcraft11.util;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import com.google.gson.JsonPrimitive;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpServer;
 import de.thecoolcraft11.config.ConfigManager;
 import net.fabricmc.loader.api.FabricLoader;
 
-import java.io.File;
-import java.io.FileReader;
-import java.io.IOException;
-import java.io.OutputStream;
+import java.io.*;
 import java.net.InetSocketAddress;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.Instant;
 import java.util.Random;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -34,6 +33,8 @@ public class WebServer {
         server.createContext("/static", new StaticFileHandler());
         server.createContext("/screenshots", new ScreenshotFileHandler());
         server.createContext("/screenshot-list", new ScreenshotListHandler(urlString));
+        server.createContext("/comment", new CommentHandler());
+        server.createContext("/comments", new GetCommentsHandler());
 
         server.start();
     }
@@ -249,5 +250,130 @@ public class WebServer {
             return "Unknown";
         }
     }
+
+
+    private static class CommentHandler implements HttpHandler {
+        private static final Pattern COMMENT_PATTERN = Pattern.compile("/comment/([^/]+)");
+
+        @Override
+        public void handle(HttpExchange exchange) throws IOException {
+            if (!"POST".equals(exchange.getRequestMethod())) {
+                exchange.sendResponseHeaders(405, -1);
+                return;
+            }
+
+            String requestURI = exchange.getRequestURI().toString();
+            Matcher matcher = COMMENT_PATTERN.matcher(requestURI);
+
+            if (matcher.matches()) {
+                String filename = matcher.group(1);
+                Path gameDir = FabricLoader.getInstance().getGameDir();
+                Path targetFile = gameDir.resolve("./screenshotUploader/screenshots/" + filename);
+                Path commentFile = gameDir.resolve("./screenshotUploader/screenshots/" + filename.replace(".png", ".json"));
+
+                try {
+                    if (Files.exists(targetFile)) {
+                        InputStreamReader reader = new InputStreamReader(exchange.getRequestBody());
+                        BufferedReader bufferedReader = new BufferedReader(reader);
+                        StringBuilder requestBody = new StringBuilder();
+                        String line;
+                        while ((line = bufferedReader.readLine()) != null) {
+                            requestBody.append(line);
+                        }
+
+                        String comment;
+                        String author;
+
+                        try {
+                            JsonObject jsonInput = JsonParser.parseString(requestBody.toString()).getAsJsonObject();
+                            comment = jsonInput.get("comment").getAsString();
+                            author = jsonInput.get("author").getAsString();
+                        } catch (Exception e) {
+                            exchange.sendResponseHeaders(400, -1);
+                            return;
+                        }
+
+                        JsonObject newComment = new JsonObject();
+                        newComment.add("comment", new JsonPrimitive(comment));
+                        newComment.add("author", new JsonPrimitive(author));
+                        newComment.add("timestamp", new JsonPrimitive(Instant.now().toString()));
+
+                        JsonObject existingJson = new JsonObject();
+                        if (Files.exists(commentFile)) {
+                            String existingContent = new String(Files.readAllBytes(commentFile));
+                            existingJson = JsonParser.parseString(existingContent).getAsJsonObject();
+                        }
+
+                        JsonArray commentsArray;
+                        if (existingJson.has("comments")) {
+                            commentsArray = existingJson.getAsJsonArray("comments");
+                        } else {
+                            commentsArray = new JsonArray();
+                            existingJson.add("comments", commentsArray);
+                        }
+
+                        commentsArray.add(newComment);
+
+                        Files.createDirectories(commentFile.getParent());
+                        Files.write(commentFile, existingJson.toString().getBytes());
+
+                        exchange.sendResponseHeaders(200, -1);
+                    } else {
+                        exchange.sendResponseHeaders(404, -1);
+                    }
+                } catch (IOException e) {
+                    exchange.sendResponseHeaders(500, -1);
+                } finally {
+                    exchange.getResponseBody().close();
+                }
+            } else {
+                exchange.sendResponseHeaders(400, -1);
+            }
+        }
+    }
+
+    private static class GetCommentsHandler implements HttpHandler {
+        private static final Pattern COMMENT_PATTERN = Pattern.compile("/comments/([^/]+)");
+
+        @Override
+        public void handle(HttpExchange exchange) throws IOException {
+            if (!"GET".equals(exchange.getRequestMethod())) {
+                exchange.sendResponseHeaders(405, -1);
+                return;
+            }
+
+            String requestURI = exchange.getRequestURI().toString();
+            Matcher matcher = COMMENT_PATTERN.matcher(requestURI);
+
+            if (matcher.matches()) {
+                String filename = matcher.group(1);
+                Path gameDir = FabricLoader.getInstance().getGameDir();
+                Path commentFile = gameDir.resolve("./screenshotUploader/screenshots/" + filename.replace(".png", ".json"));
+
+                try {
+                    if (Files.exists(commentFile)) {
+                        String existingContent = new String(Files.readAllBytes(commentFile));
+                        JsonObject existingJson = JsonParser.parseString(existingContent).getAsJsonObject();
+
+                        JsonArray commentsArray = existingJson.has("comments") ? existingJson.getAsJsonArray("comments") : new JsonArray();
+
+                        String jsonResponse = commentsArray.toString();
+                        exchange.getResponseHeaders().set("Content-Type", "application/json");
+                        exchange.sendResponseHeaders(200, jsonResponse.getBytes().length);
+                        exchange.getResponseBody().write(jsonResponse.getBytes());
+                    } else {
+                        exchange.sendResponseHeaders(404, -1);
+                    }
+                } catch (IOException e) {
+                    exchange.sendResponseHeaders(500, -1);
+                } finally {
+                    exchange.getResponseBody().close();
+                }
+            } else {
+                exchange.sendResponseHeaders(400, -1);
+            }
+        }
+    }
+
 }
 

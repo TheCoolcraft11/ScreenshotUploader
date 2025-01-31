@@ -224,7 +224,8 @@ public class WebGalleryScreen extends Screen {
     }
 
     private void shareScreenshot() {
-        String message = ConfigManager.getClientConfig().shareText + imagePaths.get(clickedImageIndex);
+        StringBuilder template = new StringBuilder(ConfigManager.getClientConfig().shareText);
+        String message = template.toString().contains("{sharedLink}") ? template.replace(template.indexOf("{sharedLink}"), "{sharedLink}".length(), imagePaths.get(clickedImageIndex)).toString() : template.toString();
         MinecraftClient client = MinecraftClient.getInstance();
         if (client.player != null && client.getNetworkHandler() != null) {
             client.getNetworkHandler().sendChatMessage(message);

@@ -149,7 +149,8 @@ public class GalleryScreen extends Screen {
                 button -> {
                     if (clickedImageIndex >= 0 && clickedImageIndex < imagePaths.size()) {
                         Path imagePath = imagePaths.get(clickedImageIndex);
-                        if (client != null) client.setScreen(new EditScreen(this, imagePath));
+                        if (client != null) client.setScreen(new EditScreen(this, imagePath, null, (image) -> {
+                        }));
                     }
                 }
         ).dimensions((3 * buttonWidth) + 20, buttonY, buttonWidth, buttonHeight).build();

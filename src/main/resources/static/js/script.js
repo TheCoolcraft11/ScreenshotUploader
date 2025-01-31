@@ -18,6 +18,7 @@ function showModal(src) {
 
             stopSlideshow();
             document.addEventListener('keydown', keyNavigation);
+            fetchComments(src);
         }
 
         function loadImage(src) {
@@ -169,3 +170,52 @@ function showModal(src) {
              document.querySelector('h1').classList.add('dark-mode');
             }
         };
+
+        function fetchComments(imageSrc) {
+            const filename = imageSrc.split('/').pop();
+            fetch(`/comments/${filename}`)
+                .then(response => response.json())
+                .then(comments => {
+                    const commentsContainer = document.getElementById('commentsContainer');
+                    commentsContainer.innerHTML = '';
+                    comments.forEach(comment => {
+                        const commentDiv = document.createElement('div');
+                        commentDiv.classList.add('comment');
+                        commentDiv.textContent = `${comment.author}: ${comment.comment}`;
+                        commentsContainer.appendChild(commentDiv);
+                    });
+                })
+                .catch(error => console.error('Error fetching comments:', error));
+        }
+
+        function submitComment() {
+            const commentText = document.getElementById('newComment').value;
+            const commentAuthor = document.getElementById('commentAuthor').value || 'Anonymous';
+            if (!commentText) return alert('Comment cannot be empty');
+
+            const filename = currentSrc.split('/').pop();
+
+            const commentData = {
+                comment: commentText,
+                author: commentAuthor,
+                timestamp: new Date().toISOString()
+            };
+
+            fetch(`/comment/${filename}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(commentData)
+            })
+                .then(response => {
+                    if (response.ok) {
+                        fetchComments(currentSrc);
+                        document.getElementById('newComment').value = '';
+                        document.getElementById('commentAuthor').value = '';
+                    } else {
+                        alert('Failed to submit comment');
+                    }
+                })
+                .catch(error => console.error('Error submitting comment:', error));
+        }

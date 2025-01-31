@@ -13,10 +13,11 @@ public class ClientConfig {
     public String limitedServerAddr = "some-fake-minecraft-server-ip.com";
     public boolean sendWorldData = true;
     public boolean sendSystemInfo = true;
-    public String shareText = "Look at this screenshot: ";
+    public String shareText = "Look at this screenshot: {sharedLink}";
     public int imagesPerRow = 5;
     public int imageGap = 10;
     public int imageTopPadding = 35;
+    public String editImageFilePath = "{fileName}_edited";
 
 
     public ClientConfig() {

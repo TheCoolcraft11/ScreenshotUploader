@@ -20,6 +20,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Stack;
+import java.util.function.Consumer;
 
 @SuppressWarnings({"ReassignedVariable", "SuspiciousNameCombination"})
 public class EditScreen extends Screen {
@@ -43,12 +44,17 @@ public class EditScreen extends Screen {
     int previewY;
     int previewSize;
     TextFieldWidget colorField;
+    Consumer<NativeImage> onClose;
 
 
-    public EditScreen(Screen parent, Path imagePath) {
+    public EditScreen(Screen parent, Path imagePath, NativeImage nativeImage, Consumer<NativeImage> onClose) {
         super(Text.translatable("gui.screenshot_uploader.editor.title"));
         this.parent = parent;
+        if (imagePath == null) {
+            allocateImage(nativeImage);
+        }
         this.imagePath = imagePath;
+        this.onClose = onClose;
     }
 
     @Override
@@ -78,6 +84,9 @@ public class EditScreen extends Screen {
                 .build());
         addDrawableChild(ButtonWidget.builder(Text.translatable("gui.screenshot_uploader.editor.back"), button -> {
                     if (client != null) client.setScreen(parent);
+                    if (onClose != null) {
+                        onClose.accept(image);
+                    }
                 }).dimensions(startX + 3 * (buttonWidth + padding), startY, buttonWidth, buttonHeight)
                 .build());
 
@@ -235,11 +244,13 @@ public class EditScreen extends Screen {
 
 
     private void loadImage() {
-        try {
-            image = NativeImage.read(Files.newInputStream(imagePath));
-        } catch (IOException e) {
-            logger.error("Failed to load image for editing: {}", e.getMessage());
-            if (client != null) client.setScreen(parent);
+        if (imagePath != null) {
+            try {
+                image = NativeImage.read(Files.newInputStream(imagePath));
+            } catch (IOException e) {
+                logger.error("Failed to load image for editing: {}", e.getMessage());
+                if (client != null) client.setScreen(parent);
+            }
         }
     }
 
@@ -362,15 +373,22 @@ public class EditScreen extends Screen {
     }
 
     private void saveImage() {
-        try {
-            image.writeTo(imagePath);
-            logger.info("Image saved: {}", imagePath);
+        if (imagePath != null) {
+            try {
+                image.writeTo(imagePath);
+                logger.info("Image saved: {}", imagePath);
+                textureId = null;
+                if (client != null) {
+                    client.getTextureManager().destroyTexture(textureId);
+                }
+            } catch (IOException e) {
+                logger.error("Failed to save edited image: {}", e.getMessage());
+            }
+        } else {
             textureId = null;
             if (client != null) {
                 client.getTextureManager().destroyTexture(textureId);
             }
-        } catch (IOException e) {
-            logger.error("Failed to save edited image: {}", e.getMessage());
         }
     }
 
@@ -383,6 +401,18 @@ public class EditScreen extends Screen {
                 }
             }
             editHistory.push(imageCopy);
+        }
+    }
+
+    private void allocateImage(NativeImage newImage) {
+        if (newImage != null) {
+            NativeImage imageCopy = new NativeImage(newImage.getWidth(), newImage.getHeight(), false);
+            for (int y = 0; y < newImage.getHeight(); y++) {
+                for (int x = 0; x < newImage.getWidth(); x++) {
+                    imageCopy.setColor(x, y, newImage.getColor(x, y));
+                }
+            }
+            image = imageCopy;
         }
     }
 
@@ -872,7 +902,11 @@ public class EditScreen extends Screen {
 
     @Override
     public void close() {
+        if (onClose != null) {
+            onClose.accept(image);
+        }
         if (image != null) image.close();
         if (client != null) client.setScreen(parent);
+
     }
 }

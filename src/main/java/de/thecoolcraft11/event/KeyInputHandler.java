@@ -10,21 +10,30 @@ import org.lwjgl.glfw.GLFW;
 public class KeyInputHandler {
     public static final String KEY_CATEGORY = "key.category.screenshot_uploader.screenshots";
     public static final String KEY_OPEN_GALLERY = "key.screenshot_uploader.gallery";
+    public static final String KEY_EDIT_IMAGE = "key.screenshot_uploader.edit_image";
 
     public static KeyBinding galleryKey;
+    public static KeyBinding editKey;
 
     public static void registerKeyInputs() {
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
-            if(galleryKey.wasPressed()) {
+            if (galleryKey.wasPressed()) {
                 client.setScreen(new GalleryScreen());
             }
         });
     }
+
     public static void register() {
         galleryKey = KeyBindingHelper.registerKeyBinding(new KeyBinding(
                 KEY_OPEN_GALLERY,
                 InputUtil.Type.KEYSYM,
-                GLFW.GLFW_KEY_GRAVE_ACCENT,
+                GLFW.GLFW_KEY_G,
+                KEY_CATEGORY
+        ));
+        editKey = KeyBindingHelper.registerKeyBinding(new KeyBinding(
+                KEY_EDIT_IMAGE,
+                InputUtil.Type.KEYSYM,
+                GLFW.GLFW_KEY_V,
                 KEY_CATEGORY
         ));
         registerKeyInputs();
