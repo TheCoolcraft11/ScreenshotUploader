@@ -3,6 +3,7 @@ package de.thecoolcraft11.screen;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import com.mojang.authlib.yggdrasil.ProfileResult;
 import com.mojang.blaze3d.systems.RenderSystem;
 import de.thecoolcraft11.config.ConfigManager;
 import de.thecoolcraft11.util.ReceivePackets;
@@ -441,17 +442,18 @@ public class WebGalleryScreen extends Screen {
 
     private static String getString(int i) {
         String username = "Unknown";
-        if (metaDatas.get(i) != null) {
-            JsonObject metaData = metaDatas.get(i);
-            if (metaData.has("username") && !metaData.get("username").isJsonNull()) {
-                username = metaData.get("username").getAsString();
-            } else if (metaData.has("fileUsername") && !metaData.get("fileUsername").isJsonNull()) {
-                username = metaData.get("fileUsername").getAsString();
+        if (metaDatas.size() > i) {
+            if (metaDatas.get(i) != null) {
+                JsonObject metaData = metaDatas.get(i);
+                if (metaData.has("username") && !metaData.get("username").isJsonNull()) {
+                    username = metaData.get("username").getAsString();
+                } else if (metaData.has("fileUsername") && !metaData.get("fileUsername").isJsonNull()) {
+                    username = metaData.get("fileUsername").getAsString();
+                }
             }
         }
         return username;
     }
-
 
     private void renderEnlargedImage(DrawContext context) {
         if (clickedImageIndex < 0 || clickedImageIndex >= imageIds.size()) {
@@ -482,27 +484,83 @@ public class WebGalleryScreen extends Screen {
         int sidebarWidth = 300;
         int sidebarHeight = imageHeight;
 
-        int sidebarX;
-        if (x - sidebarWidth > 0) {
-            sidebarX = x - sidebarWidth;
-        } else {
-            sidebarX = x + imageWidth;
-        }
+        int sidebarXLeft = x - sidebarWidth;
 
-        context.fill(sidebarX, y, sidebarX + sidebarWidth, y + sidebarHeight, 0xCC000000);
+        context.fill(sidebarXLeft, y, sidebarXLeft + sidebarWidth, y + sidebarHeight, 0xCC000000);
 
         if (clickedImageIndex >= 0 && clickedImageIndex < metaDatas.size()) {
             Map<Text, Text> drawableInfo = getStringStringMap();
 
-            int textX = sidebarX + 10;
-            int textY = y + 20;
+            int textXLeft = sidebarXLeft + 10;
+            int textYLeft = y + 20;
             for (Text info : drawableInfo.keySet()) {
-                context.drawText(client.textRenderer, info.copy().append(drawableInfo.get(info)), textX, textY, 0xFFFFFF, false);
-                textY += 10;
+                context.drawText(client.textRenderer, info.copy().append(drawableInfo.get(info)), textXLeft, textYLeft, 0xFFFFFF, false);
+                textYLeft += 10;
+            }
+        }
+
+        int sidebarXRight = x + imageWidth;
+
+        context.fill(sidebarXRight, y, sidebarXRight + sidebarWidth, y + sidebarHeight, 0x80000000);
+
+        Map<String, UUID> comments = getComments(metaDatas.get(clickedImageIndex));
+        int commentListY = y + 20;
+        for (String comment : comments.keySet()) {
+            String[] commentParts = comment.split(": ", 2);
+            if (commentParts.length > 1) {
+                String playerName = commentParts[0];
+                String playerComment = commentParts[1];
+
+
+                String playerHead = getPlayerHeadTexture(comments.get(comment));
+                Identifier playerHeadId = null;
+                if (playerHead != null && !playerHead.isEmpty()) {
+
+                    playerHeadId = loadHeadImage(playerHead);
+                }
+
+                int headSize = 20;
+                int headX = sidebarXRight + 10;
+                int headY = commentListY - 10;
+
+                if (playerHeadId != null) {
+
+                    RenderSystem.setShaderTexture(0, playerHeadId);
+                    context.drawTexture(playerHeadId, (int) (headX + ((headSize - headSize * 0.25) / 2)), (int) (headY + ((headSize - headSize * 0.25) / 2)), 0, 0, (int) (headSize - headSize * 0.25), (int) (headSize - headSize * 0.25), (int) (headSize - headSize * 0.25), (int) (headSize - headSize * 0.25));
+                }
+                context.drawText(client.textRenderer, Text.literal(playerName + ": " + playerComment), headX + headSize + 5, commentListY, 0xFFFFFF, false);
             }
 
+            commentListY += 20;
         }
     }
+
+    private String getPlayerHeadTexture(UUID playerUUID) {
+        try {
+            ProfileResult result = MinecraftClient.getInstance().getSessionService().fetchProfile(playerUUID, false);
+
+            if (result != null && result.profile() != null) {
+
+                if (result.profile().getProperties().containsKey("textures")) {
+                    Iterator<com.mojang.authlib.properties.Property> textures = result.profile().getProperties().get("textures").iterator();
+
+                    if (textures.hasNext()) {
+                        String textureValue = textures.next().value();
+
+                        String decodedJson = new String(java.util.Base64.getDecoder().decode(textureValue));
+
+
+                        return decodedJson.split("\"url\" : \"")[1].split("\"")[0];
+                    }
+                }
+            }
+
+        } catch (Exception e) {
+            logger.error("Error while downloading player head image: {}", e.getMessage());
+        }
+        return "";
+    }
+
 
     private @NotNull LinkedHashMap<Text, Text> getStringStringMap() {
         JsonObject metaData = metaDatas.get(clickedImageIndex);
@@ -516,8 +574,20 @@ public class WebGalleryScreen extends Screen {
         drawableInfo.put(Text.literal(" "), Text.literal(" "));
         drawableInfo.put(metaData.has("current_time") ? getTimestamp(metaData.get("current_time").getAsLong()) : metaData.has("date") ? getTimestamp(metaData.get("date").getAsLong()) : Text.literal("N/A"), Text.literal(""));
         drawableInfo.put(metaData.has("current_time") ? getTimeAgo(metaData.get("current_time").getAsLong()) : metaData.has("date") ? getTimeAgo(metaData.get("date").getAsLong()) : Text.literal("N/A"), Text.literal(""));
-
         return drawableInfo;
+    }
+
+    private Map<String, UUID> getComments(JsonObject metaData) {
+        Map<String, UUID> commentList = new LinkedHashMap<>();
+        if (!metaData.has("comments")) return commentList;
+        JsonArray comments = metaData.get("comments").getAsJsonArray();
+
+        comments.forEach(comment -> {
+            JsonObject commentObject = comment.getAsJsonObject();
+            commentList.put(commentObject.get("author").getAsString() + ": " + commentObject.get("comment").getAsString(), commentObject.get("authorUUID") != null ? UUID.fromString(commentObject.get("authorUUID").getAsString()) : UUID.randomUUID());
+        });
+
+        return commentList;
     }
 
 
@@ -598,6 +668,90 @@ public class WebGalleryScreen extends Screen {
                 logger.error("Failed to download web screenshots: {}", e.getMessage());
             }
         }
+    }
+
+    public static Identifier loadHeadImage(String imageUrl) {
+        if (imageUrl == null || imageUrl.isEmpty()) return null;
+        String cacheFileName = "screenshots_heads_cache/" + imageUrl.hashCode() + ".png";
+        File cachedImage = new File(cacheFileName);
+
+        if (cachedImage.exists()) {
+            try {
+                try (InputStream fileInputStream = Files.newInputStream(cachedImage.toPath());
+                     NativeImage loadedImage = NativeImage.read(fileInputStream)) {
+                    Identifier textureId = Identifier.of("webimage", "head/" + imageUrl.hashCode());
+                    if (MinecraftClient.getInstance() != null) {
+                        MinecraftClient.getInstance().getTextureManager().registerTexture(textureId, new NativeImageBackedTexture(loadedImage));
+                    } else {
+                        System.err.println("Failed to get client while loading web image!");
+                    }
+                    return textureId;
+                }
+            } catch (IOException e) {
+                System.err.println("Failed to load cached head image: " + e.getMessage());
+            }
+        } else {
+            try {
+                URI uri = new URI(imageUrl);
+                URL url = uri.toURL();
+
+                HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+                connection.setRequestMethod("GET");
+                connection.connect();
+
+                if (connection.getResponseCode() == HttpURLConnection.HTTP_OK) {
+                    try (InputStream inputStream = connection.getInputStream()) {
+                        BufferedImage bufferedImage = ImageIO.read(inputStream);
+
+                        if (bufferedImage != null) {
+                            int headSize = 8;
+                            BufferedImage headImage = bufferedImage.getSubimage(8, 8, headSize, headSize);
+
+                            File cacheFolder = new File("screenshots_heads_cache");
+                            if (!cacheFolder.exists()) {
+                                if (cacheFolder.mkdirs()) {
+                                    System.out.println("Created web screenshots cache folder");
+                                }
+                            }
+
+                            ImageIO.write(headImage, "PNG", cachedImage);
+                            System.out.println("Head image saved to cache: " + cachedImage.getAbsolutePath());
+
+                            try (NativeImage nativeImage = new NativeImage(headImage.getWidth(), headImage.getHeight(), false)) {
+                                for (int y = 0; y < headImage.getHeight(); y++) {
+                                    for (int x = 0; x < headImage.getWidth(); x++) {
+                                        int rgb = headImage.getRGB(x, y);
+                                        int alpha = (rgb >> 24) & 0xFF;
+                                        int red = (rgb >> 16) & 0xFF;
+                                        int green = (rgb >> 8) & 0xFF;
+                                        int blue = rgb & 0xFF;
+
+                                        int argb = (alpha << 24) | (red << 16) | (green << 8) | blue;
+                                        nativeImage.setColor(x, y, argb);
+                                    }
+                                }
+
+                                try (InputStream fileInputStream = Files.newInputStream(cachedImage.toPath());
+                                     NativeImage loadedImage = NativeImage.read(fileInputStream)) {
+                                    Identifier textureId = Identifier.of("webimage", "head/" + imageUrl.hashCode());
+                                    if (MinecraftClient.getInstance() != null) {
+                                        MinecraftClient.getInstance().getTextureManager().registerTexture(textureId, new NativeImageBackedTexture(loadedImage));
+                                    } else {
+                                        System.err.println("Failed to get client while saving the web image!");
+                                    }
+                                    return textureId;
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    System.err.println("Failed to load image from URL: " + imageUrl);
+                }
+            } catch (Exception e) {
+                System.err.println("Failed to download web screenshots: " + e.getMessage());
+            }
+        }
+        return null;
     }
 
     private static final List<JsonObject> metaDatas = new ArrayList<>();
