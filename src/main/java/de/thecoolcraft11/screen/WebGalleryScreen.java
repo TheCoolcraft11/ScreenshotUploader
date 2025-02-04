@@ -3,6 +3,7 @@ package de.thecoolcraft11.screen;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import com.mojang.authlib.properties.Property;
 import com.mojang.authlib.yggdrasil.ProfileResult;
 import com.mojang.blaze3d.systems.RenderSystem;
 import de.thecoolcraft11.config.ConfigManager;
@@ -226,7 +227,13 @@ public class WebGalleryScreen extends Screen {
 
     private void shareScreenshot() {
         StringBuilder template = new StringBuilder(ConfigManager.getClientConfig().shareText);
-        String message = template.toString().contains("{sharedLink}") ? template.replace(template.indexOf("{sharedLink}"), "{sharedLink}".length(), imagePaths.get(clickedImageIndex)).toString() : template.toString();
+        int placeholderIndex = template.indexOf("{sharedLink}");
+        if (placeholderIndex != -1) {
+            int endIndex = placeholderIndex + "{sharedLink}".length();
+            template.replace(placeholderIndex, endIndex, imagePaths.get(clickedImageIndex));
+        }
+        String message = template.toString();
+
         MinecraftClient client = MinecraftClient.getInstance();
         if (client.player != null && client.getNetworkHandler() != null) {
             client.getNetworkHandler().sendChatMessage(message);
@@ -430,12 +437,30 @@ public class WebGalleryScreen extends Screen {
             String username = getString(i);
 
 
-            int textX;
+            int textX = 0;
             if (client != null) {
                 textX = x + 5;
 
                 int textY = y + IMAGE_HEIGHT - 10;
                 context.drawText(client.textRenderer, username, textX, textY, 0xFFFFFF, false);
+            }
+            if (metaDatas.get(i) != null && metaDatas.get(i).has("uuid")) {
+                String playerHead = getPlayerHeadTexture(UUID.fromString(metaDatas.get(i).get("uuid").getAsString()));
+                Identifier playerHeadId = null;
+                if (playerHead != null && !playerHead.isEmpty()) {
+                    playerHeadId = loadHeadImage(playerHead);
+                }
+
+                int headSize = 20;
+                int headX = textX - 20;
+                int headY = y + IMAGE_HEIGHT - 10;
+
+                if (playerHeadId != null) {
+
+
+                    RenderSystem.setShaderTexture(0, playerHeadId);
+                    context.drawTexture(playerHeadId, (int) (headX + ((headSize - headSize * 0.25) / 2)), (int) (headY + ((headSize - headSize * 0.25) / 2)), 0, 0, (int) (headSize - headSize * 0.25), (int) (headSize - headSize * 0.25), (int) (headSize - headSize * 0.25), (int) (headSize - headSize * 0.25));
+                }
             }
         }
     }
@@ -542,12 +567,12 @@ public class WebGalleryScreen extends Screen {
             if (result != null && result.profile() != null) {
 
                 if (result.profile().getProperties().containsKey("textures")) {
-                    Iterator<com.mojang.authlib.properties.Property> textures = result.profile().getProperties().get("textures").iterator();
+                    Iterator<Property> textures = result.profile().getProperties().get("textures").iterator();
 
                     if (textures.hasNext()) {
                         String textureValue = textures.next().value();
 
-                        String decodedJson = new String(java.util.Base64.getDecoder().decode(textureValue));
+                        String decodedJson = new String(Base64.getDecoder().decode(textureValue));
 
 
                         return decodedJson.split("\"url\" : \"")[1].split("\"")[0];
