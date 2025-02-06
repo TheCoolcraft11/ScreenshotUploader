@@ -1,8 +1,12 @@
 package de.thecoolcraft11;
 
+import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
+import com.google.gson.JsonPrimitive;
 import de.thecoolcraft11.config.ConfigManager;
 import de.thecoolcraft11.packet.AddressPayload;
+import de.thecoolcraft11.packet.CommentPayload;
 import de.thecoolcraft11.packet.ScreenshotPayload;
 import de.thecoolcraft11.util.WebServer;
 import net.fabricmc.api.DedicatedServerModInitializer;
@@ -13,6 +17,7 @@ import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerPlayNetworkHandler;
+import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -21,7 +26,10 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.time.Instant;
+import java.util.UUID;
 
 import static de.thecoolcraft11.util.ReceivePackets.handleReceivedScreenshot;
 
@@ -42,26 +50,7 @@ public class ScreenshotUploaderServer implements DedicatedServerModInitializer {
     private void registerJoinEvent(ServerPlayNetworkHandler serverPlayNetworkHandler, PacketSender player, MinecraftServer minecraftServer) {
         {
             if (ConfigManager.getServerConfig().sendUrlToClient) {
-                JsonObject jsonObject = new JsonObject();
-                jsonObject.addProperty("upload", "mcserver://this");
-                if (ConfigManager.getServerConfig().senGalleryUrlToClient) {
-                    String urlString = getServerIp();
-                    if (!urlString.matches("^https?://.*")) {
-                        urlString = "http://" + urlString;
-                    }
-
-                    if (!urlString.matches(".*:\\d+.*")) {
-                        urlString = urlString.replaceFirst("^(https?://[^/]+)", "$1:" + ConfigManager.getServerConfig().port);
-                    }
-                    jsonObject.addProperty("home", urlString);
-                    urlString = urlString + "/screenshot-list";
-                    jsonObject.addProperty("gallery", urlString);
-
-                }
-                if (ConfigManager.getServerConfig().useCustomWebURL) {
-                    jsonObject.remove("upload");
-                    jsonObject.addProperty("upload", ConfigManager.getServerConfig().customWebURL);
-                }
+                JsonObject jsonObject = getJsonObject();
                 ServerPlayNetworking.send(serverPlayNetworkHandler.getPlayer(), new AddressPayload(jsonObject.toString()));
             }
             ServerPlayNetworking.registerGlobalReceiver(ScreenshotPayload.ID, (payload, context) -> {
@@ -71,6 +60,70 @@ public class ScreenshotUploaderServer implements DedicatedServerModInitializer {
                         handleReceivedScreenshot(bytes, json, context.player())
                 );
             });
+            ServerPlayNetworking.registerGlobalReceiver(CommentPayload.ID, (payload, context) -> {
+
+                String comment = payload.comment();
+                String screenshot = payload.screenshot();
+                context.server().execute(() -> applyCommentToScreenshot(comment, screenshot, String.valueOf(context.player().getName().getString()), context.player().getUuid())
+                );
+            });
+        }
+    }
+
+    private static @NotNull JsonObject getJsonObject() {
+        JsonObject jsonObject = new JsonObject();
+        jsonObject.addProperty("upload", "mcserver://this");
+        if (ConfigManager.getServerConfig().senGalleryUrlToClient) {
+            String urlString = getServerIp();
+            if (!urlString.matches("^https?://.*")) {
+                urlString = "http://" + urlString;
+            }
+
+            if (!urlString.matches(".*:\\d+.*")) {
+                urlString = urlString.replaceFirst("^(https?://[^/]+)", "$1:" + ConfigManager.getServerConfig().port);
+            }
+            jsonObject.addProperty("home", urlString);
+            urlString = urlString + "/screenshot-list";
+            jsonObject.addProperty("gallery", urlString);
+
+        }
+        if (ConfigManager.getServerConfig().useCustomWebURL) {
+            jsonObject.remove("upload");
+            jsonObject.addProperty("upload", ConfigManager.getServerConfig().customWebURL);
+        }
+        return jsonObject;
+    }
+
+    public void applyCommentToScreenshot(String comment, String filename, String author, UUID uuid) {
+        Path BASE_DIR = Paths.get("./screenshotUploader/screenshots/");
+        Path targetFile = BASE_DIR.resolve(filename);
+        Path commentFile = BASE_DIR.resolve(filename.replace(".png", ".json"));
+
+        try {
+            if (!Files.exists(targetFile)) {
+                return;
+            }
+
+            JsonObject newComment = new JsonObject();
+            newComment.add("comment", new JsonPrimitive(comment));
+            newComment.add("author", new JsonPrimitive(author));
+            newComment.add("timestamp", new JsonPrimitive(Instant.now().toString()));
+            newComment.add("authorUUID", new JsonPrimitive(uuid.toString()));
+
+            JsonObject existingJson = new JsonObject();
+            if (Files.exists(commentFile)) {
+                String existingContent = new String(Files.readAllBytes(commentFile));
+                existingJson = JsonParser.parseString(existingContent).getAsJsonObject();
+            }
+
+            JsonArray commentsArray = existingJson.has("comments") ? existingJson.getAsJsonArray("comments") : new JsonArray();
+            commentsArray.add(newComment);
+            existingJson.add("comments", commentsArray);
+
+            Files.createDirectories(commentFile.getParent());
+            Files.write(commentFile, existingJson.toString().getBytes());
+
+        } catch (IOException ignored) {
         }
     }
 

@@ -51,6 +51,7 @@
   "gui.screenshot_uploader.screenshot_gallery.open_in_browser": "Open Gallery In Browser",
   "gui.screenshot_uploader.screenshot_gallery.open_sc_in_browser": "Open In Browser",
   "gui.screenshot_uploader.screenshot_gallery.share_screenshot": "Share Screenshot",
+  "gui.screenshot_uploader.screenshot_gallery.send_comment": "Send Comment",
   "gui.screenshot_uploader.screenshot_gallery.config": "Config",
   "gui.screenshot_uploader.screenshot_gallery.edit": "Edit",
   "gui.screenshot_uploader.config.title": "Config",

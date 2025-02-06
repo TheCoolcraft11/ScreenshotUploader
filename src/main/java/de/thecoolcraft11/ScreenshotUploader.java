@@ -2,6 +2,7 @@ package de.thecoolcraft11;
 
 
 import de.thecoolcraft11.packet.AddressPayload;
+import de.thecoolcraft11.packet.CommentPayload;
 import de.thecoolcraft11.packet.ScreenshotPayload;
 import de.thecoolcraft11.packet.ScreenshotResponsePayload;
 import net.fabricmc.api.ModInitializer;
@@ -20,6 +21,7 @@ public class ScreenshotUploader implements ModInitializer {
         PayloadTypeRegistry.playS2C().register(AddressPayload.ID, AddressPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(ScreenshotPayload.ID, ScreenshotPayload.CODEC);
         PayloadTypeRegistry.playS2C().register(ScreenshotResponsePayload.ID, ScreenshotResponsePayload.CODEC);
+        PayloadTypeRegistry.playC2S().register(CommentPayload.ID, CommentPayload.CODEC);
 
         logger.info("Screenshot Uploader initialized.");
     }

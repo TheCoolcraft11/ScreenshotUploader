@@ -7,12 +7,15 @@ import com.mojang.authlib.properties.Property;
 import com.mojang.authlib.yggdrasil.ProfileResult;
 import com.mojang.blaze3d.systems.RenderSystem;
 import de.thecoolcraft11.config.ConfigManager;
+import de.thecoolcraft11.packet.CommentPayload;
 import de.thecoolcraft11.util.ReceivePackets;
+import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.Element;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.widget.ButtonWidget;
+import net.minecraft.client.gui.widget.TextFieldWidget;
 import net.minecraft.client.texture.NativeImage;
 import net.minecraft.client.texture.NativeImageBackedTexture;
 import net.minecraft.text.Text;
@@ -73,6 +76,10 @@ public class WebGalleryScreen extends Screen {
     private ButtonWidget openInAppButton;
 
     private ButtonWidget shareButton;
+
+    private ButtonWidget sendCommentButton;
+
+    private TextFieldWidget commentWidget;
 
     public WebGalleryScreen(Screen parent, String webserverUrl, String initialImageName) {
         super(Text.translatable("gui.screenshot_uploader.screenshot_gallery.web_title", webserverUrl));
@@ -203,13 +210,25 @@ public class WebGalleryScreen extends Screen {
         ).dimensions(buttonWidth * 2 + 15, buttonY, buttonWidth, buttonHeight).build();
 
 
+        commentWidget = new TextFieldWidget(textRenderer, 0, 0, 100, 20, Text.of(""));
+        addSelectableChild(commentWidget);
+
+        sendCommentButton = ButtonWidget.builder(Text.translatable("gui.screenshot_uploader.screenshot_gallery.send_comment"),
+                button -> sendComment()
+        ).dimensions(buttonWidth * 3 + 20, buttonY, buttonWidth, buttonHeight).build();
+
+
         addDrawableChild(saveButton);
         addDrawableChild(openInAppButton);
         addDrawableChild(shareButton);
+        addDrawableChild(sendCommentButton);
 
         saveButton.visible = false;
         openInAppButton.visible = false;
         shareButton.visible = false;
+        commentWidget.setMaxLength(1024);
+        commentWidget.visible = false;
+        sendCommentButton.visible = false;
 
         buttonsToHideOnOverlap.add(saveButton);
         buttonsToHideOnOverlap.add(openInAppButton);
@@ -223,6 +242,8 @@ public class WebGalleryScreen extends Screen {
             imageOffsetX = 0.0;
             imageOffsetY = 0.0;
         }
+
+
     }
 
     private void shareScreenshot() {
@@ -352,12 +373,16 @@ public class WebGalleryScreen extends Screen {
         renderBackground(context, mouseX, mouseY, delta);
         super.render(context, mouseX, mouseY, delta);
 
+        commentWidget.render(context, mouseX, mouseY, delta);
+
         if (isImageClicked && clickedImageIndex >= 0) {
             saveButton.visible = true;
             openInAppButton.visible = true;
             shareButton.visible = true;
             renderEnlargedImage(context);
             openInBrowserButton.visible = false;
+            commentWidget.visible = true;
+            sendCommentButton.visible = true;
             navigatorButtons.forEach(buttonWidget -> buttonWidget.visible = false);
         } else {
             saveButton.visible = false;
@@ -365,6 +390,8 @@ public class WebGalleryScreen extends Screen {
             shareButton.visible = false;
             renderGallery(context, mouseX, mouseY);
             openInBrowserButton.visible = true;
+            commentWidget.visible = false;
+            sendCommentButton.visible = false;
             navigatorButtons.forEach(buttonWidget -> buttonWidget.visible = true);
         }
         boolean isImageOverlappingButtons = clickedImageIndex >= 0 && isImageOverlappingButtons();
@@ -398,14 +425,31 @@ public class WebGalleryScreen extends Screen {
         int y = (height - imageHeight) / 2 + (int) imageOffsetY;
 
         for (Element button : this.children()) {
-            if (isButtonCoveredByImage((ButtonWidget) button, x, y, imageWidth, imageHeight)) {
-                return true;
+            if (button instanceof ButtonWidget) {
+                if (isButtonCoveredByImage((ButtonWidget) button, x, y, imageWidth, imageHeight)) {
+                    return true;
+                }
+            }
+            if (button instanceof TextFieldWidget) {
+                if (isTextFieldCoveredByImage((TextFieldWidget) button, x, y, imageWidth, imageHeight)) {
+                    return true;
+                }
             }
         }
         return false;
     }
 
     private boolean isButtonCoveredByImage(ButtonWidget button, int imageX, int imageY, int imageWidth, int imageHeight) {
+        int buttonX = button.getX();
+        int buttonY = button.getY();
+        int buttonWidth = button.getWidth();
+        int buttonHeight = button.getHeight();
+
+        return !(buttonX + buttonWidth < imageX || buttonX > imageX + imageWidth ||
+                buttonY + buttonHeight < imageY || buttonY > imageY + imageHeight);
+    }
+
+    private boolean isTextFieldCoveredByImage(TextFieldWidget button, int imageX, int imageY, int imageWidth, int imageHeight) {
         int buttonX = button.getX();
         int buttonY = button.getY();
         int buttonWidth = button.getWidth();
@@ -529,6 +573,7 @@ public class WebGalleryScreen extends Screen {
         context.fill(sidebarXRight, y, sidebarXRight + sidebarWidth, y + sidebarHeight, 0x80000000);
 
         Map<String, UUID> comments = getComments(metaDatas.get(clickedImageIndex));
+        System.out.println(comments);
         int commentListY = y + 20;
         for (String comment : comments.keySet()) {
             String[] commentParts = comment.split(": ", 2);
@@ -536,8 +581,8 @@ public class WebGalleryScreen extends Screen {
                 String playerName = commentParts[0];
                 String playerComment = commentParts[1];
 
-
                 String playerHead = getPlayerHeadTexture(comments.get(comment));
+                System.out.println(playerHead);
                 Identifier playerHeadId = null;
                 if (playerHead != null && !playerHead.isEmpty()) {
 
@@ -558,6 +603,18 @@ public class WebGalleryScreen extends Screen {
 
             commentListY += 20;
         }
+        int textFieldX = sidebarXRight + 10;
+        int textFieldY = Math.min(commentListY + 10, y + imageHeight - 20 - 10);
+
+        commentWidget.setX(textFieldX);
+        commentWidget.setY(textFieldY);
+        commentWidget.setMaxLength(200);
+        commentWidget.setVisible(true);
+        commentWidget.setEditable(true);
+
+        sendCommentButton.setX(textFieldX + commentWidget.getWidth() + 5);
+        sendCommentButton.setY(textFieldY);
+
     }
 
     private String getPlayerHeadTexture(UUID playerUUID) {
@@ -889,6 +946,16 @@ public class WebGalleryScreen extends Screen {
         }
     }
 
+    private void sendComment() {
+        String comment = commentWidget.getText();
+        String screenshot = imagePaths.get(clickedImageIndex);
+        int lastSlash = screenshot.lastIndexOf("/");
+        screenshot = (lastSlash != -1) ? screenshot.substring(lastSlash + 1) : null;
+        if (comment != null && !comment.isEmpty() && screenshot != null && !screenshot.isEmpty()) {
+            ClientPlayNetworking.send(new CommentPayload(comment, screenshot));
+        }
+
+    }
 
     public static Text getTimestamp(long millis) {
 
