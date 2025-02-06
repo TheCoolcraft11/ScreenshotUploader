@@ -6,7 +6,6 @@ import java.util.*;
 public class GalleryBuilder {
 
     public static String buildGallery(File[] files, boolean allowDelete) {
-        // Prepare a list of images with their associated usernames and player head URLs
         List<Map<String, String>> imagesWithUsernames = files != null
                 ? Arrays.stream(files).map(file -> {
             String filename = file.getName();
@@ -20,7 +19,6 @@ public class GalleryBuilder {
         }).toList()
                 : new ArrayList<>();
 
-        // Start building the HTML content
         StringBuilder htmlContent = new StringBuilder();
         htmlContent.append("<!DOCTYPE html>")
                 .append("<html lang=\"en\">")
@@ -35,7 +33,6 @@ public class GalleryBuilder {
                 .append("<h1 class='header' id='header'>Screenshots</h1>")
                 .append("<div class='gallery'>");
 
-        // Add each image to the gallery
         for (Map<String, String> imageData : imagesWithUsernames) {
             htmlContent.append("<div class='gallery-item'>")
                     .append("<div class='image-container'>")
@@ -72,39 +69,29 @@ public class GalleryBuilder {
         }
 
         htmlContent.append("</div>")
-                .append("</div>") // Close modal-left
-
-                // Right side of the modal
+                .append("</div>")
                 .append("<div id='modal-right'>")
                 .append("<div id='commentsContainer'>")
-                .append("</div>") // Comments will be dynamically added
-                .append("<textarea id='newComment' placeholder='Add a comment...'></textarea>")
-                .append("<input type='text' id='commentAuthor' placeholder='Your Name'>")
-                .append("<button id='submitComment' onclick='submitComment()'>Submit Comment</button>")
-                .append("</div>") // Close modal-right
 
-                .append("</div>") // Close modal-content-wrapper
-                .append("</div>"); // Close modal
-
-        // Add JavaScript logic
+                .append("</div>")
+                .append("</div>");
         htmlContent.append("</div>")
                 .append("<div id='thumbnails'></div>")
                 .append("</div>");
         htmlContent.append("<script>")
                 .append("let currentSrc = '';")
-                .append("let currentFilename = '';") // Track the filename
+                .append("let currentFilename = '';")
                 .append("let currentIndex = 1;")
                 .append("let intervalId;")
                 .append("let slideshowActive = false;")
                 .append("const images = [");
 
-        // Add all image filenames to the JS array
         for (Map<String, String> imageData : imagesWithUsernames) {
             htmlContent.append("'/screenshots/").append(imageData.get("filename")).append("',");
         }
 
         if (!imagesWithUsernames.isEmpty()) {
-            htmlContent.deleteCharAt(htmlContent.length() - 1); // Remove trailing comma
+            htmlContent.deleteCharAt(htmlContent.length() - 1);
         }
 
         htmlContent.append("];")
