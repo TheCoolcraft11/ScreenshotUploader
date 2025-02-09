@@ -1,5 +1,7 @@
 package de.thecoolcraft11.config.data;
 
+import net.minecraft.item.Items;
+
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -18,6 +20,17 @@ public class ClientConfig {
     public int imageGap = 10;
     public int imageTopPadding = 35;
     public String editImageFilePath = "{fileName}_edited";
+    public boolean highlightScreenshotSigns = true;
+    public boolean hideSign = false;
+    public boolean highlightOscillation = true;
+    public boolean rotateHighlightSign = false;
+    public boolean rotateHighlightItem = true;
+    public String highlightItem = Items.PAINTING.toString();
+    public float highlightColorA = 0.75f;
+    public int highlightColorR = 255;
+    public int highlightColorG = 127;
+    public int highlightColorB = 0;
+    public float highlightRotationSpeed = 0.55f;
 
 
     public ClientConfig() {

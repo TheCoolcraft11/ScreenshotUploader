@@ -87,5 +87,8 @@
   "gui.screenshot_uploader.editor.apply_text": "Aplicar texto",
   "gui.screenshot_uploader.editor.set_text_pos": "Establecer posición del texto",
   "gui.screenshot_uploader.editor.fill_image": "Rellenar selección con color",
-  "gui.screenshot_uploader.editor.blur": "Desenfoque"
+  "gui.screenshot_uploader.editor.blur": "Desenfoque",
+  "gui.screenshot_uploader.screenshot_sign.set_text": "Pegar enlace",
+  "gui.screenshot_uploader.screenshot_sign.close": "Cerrar",
+  "gui.screenshot_uploader.screenshot_sign.tooltip": "Necesitas encerar el cartel para abrir la captura de pantalla"
 }

@@ -5,7 +5,9 @@
   "mixins": [
   ],
   "client": [
-    "ScreenshotMixin"
+    "ScreenshotMixin",
+    "SignBlockEntityRendererMixin",
+    "SignEditorOpenMixin"
   ],
   "injectors": {
     "defaultRequire": 1

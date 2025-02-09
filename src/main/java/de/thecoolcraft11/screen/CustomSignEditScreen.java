@@ -2,17 +2,23 @@ package de.thecoolcraft11.screen;
 
 import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.block.entity.SignBlockEntity;
-import net.minecraft.block.entity.SignText;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.screen.ingame.SignEditScreen;
+import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.tooltip.Tooltip;
 import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.client.gui.widget.TextFieldWidget;
+import net.minecraft.client.network.ClientPlayNetworkHandler;
 import net.minecraft.client.texture.NativeImage;
 import net.minecraft.client.texture.NativeImageBackedTexture;
+import net.minecraft.network.packet.c2s.play.PlayerInteractBlockC2SPacket;
+import net.minecraft.network.packet.c2s.play.UpdateSignC2SPacket;
 import net.minecraft.text.Text;
+import net.minecraft.util.Hand;
 import net.minecraft.util.Identifier;
+import net.minecraft.util.hit.BlockHitResult;
+import net.minecraft.util.math.Direction;
+import net.minecraft.util.math.Vec3d;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -27,15 +33,16 @@ import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.file.Files;
 
-public class CustomSignEditScreen extends SignEditScreen {
+public class CustomSignEditScreen extends Screen {
 
     private static final Logger logger = LoggerFactory.getLogger(CustomSignEditScreen.class);
     private final SignBlockEntity sign;
     private static Identifier screenshotIdentifier;
     TextFieldWidget urlField;
+    public static int customEditsLeft = 0;
 
-    public CustomSignEditScreen(SignBlockEntity sign, boolean filtered, boolean bl) {
-        super(sign, filtered, bl);
+    public CustomSignEditScreen(SignBlockEntity sign) {
+        super(Text.of("Sign"));
         this.sign = sign;
     }
 
@@ -49,17 +56,23 @@ public class CustomSignEditScreen extends SignEditScreen {
         int buttonY = this.height / 2 + this.height / 4;
         int textFieldWidth = this.width / 3;
         int textFieldX = (this.width - textFieldWidth) / 2;
-        int textFieldY = this.height / 2 - 50;
+        int textFieldY = this.height / 2 + this.height / 8;
         urlField = new TextFieldWidget(textRenderer, textFieldX, textFieldY, textFieldWidth, 20, Text.literal(""));
         urlField.setMaxLength(15 * 8);
         addDrawableChild(urlField);
 
         addDrawableChild(ButtonWidget.builder(Text.translatable("gui.screenshot_uploader.screenshot_sign.set_text"), buttonWidget -> pasteTextToSign()).dimensions(buttonX, buttonY, buttonWidth, buttonHeight).tooltip(Tooltip.of(Text.translatable("gui.screenshot_uploader.screenshot_sign.tooltip"))).build());
+        addDrawableChild(ButtonWidget.builder(Text.translatable("gui.screenshot_uploader.screenshot_sign.close"), buttonWidget -> {
+            if (client != null) {
+                client.setScreen(null);
+            }
+        }).dimensions(buttonX, buttonY + buttonHeight + 5, buttonWidth, buttonHeight).build());
 
         super.init();
     }
 
     private void pasteTextToSign() {
+        customEditsLeft = 2;
         String[] splitStrings = splitIntoChunks(urlField.getText(), 15, 8);
         String[] strings = new String[8];
 
@@ -67,13 +80,46 @@ public class CustomSignEditScreen extends SignEditScreen {
             strings[i] = splitStrings[i];
         }
 
+        ClientPlayNetworkHandler clientPlayNetworkHandler;
+        if (this.client != null) {
+            clientPlayNetworkHandler = this.client.getNetworkHandler();
 
-        SignText signTextFront = new SignText().withMessage(0, Text.of(strings[0])).withMessage(1, Text.of(strings[1])).withMessage(2, Text.of(strings[2])).withMessage(3, Text.of(strings[3]));
-        SignText signTextBack = new SignText().withMessage(0, Text.of(strings[4])).withMessage(1, Text.of(strings[5])).withMessage(2, Text.of(strings[6])).withMessage(3, Text.of(strings[7]));
-        sign.setText(signTextFront, true);
-        sign.setText(signTextBack, false);
-        if (client != null) {
-            client.setScreen(null);
+            if (clientPlayNetworkHandler != null) {
+                clientPlayNetworkHandler.sendPacket(new PlayerInteractBlockC2SPacket(
+                        Hand.MAIN_HAND,
+                        new BlockHitResult(
+                                Vec3d.ofCenter(sign.getPos()),
+                                Direction.UP,
+                                sign.getPos(),
+                                false
+                        ),
+                        0
+                ));
+                clientPlayNetworkHandler.sendPacket(
+                        new UpdateSignC2SPacket(sign.getPos(), true, strings[0], strings[1], strings[2], strings[3])
+                );
+                client.setScreen(null);
+                clientPlayNetworkHandler.sendPacket(new PlayerInteractBlockC2SPacket(
+                        Hand.MAIN_HAND,
+                        new BlockHitResult(
+                                Vec3d.ofCenter(sign.getPos()),
+                                Direction.UP,
+                                sign.getPos(),
+                                false
+                        ),
+                        0
+                ));
+                clientPlayNetworkHandler.sendPacket(
+                        new UpdateSignC2SPacket(sign.getPos(), false, strings[4], strings[5], strings[6], strings[7])
+                );
+            }
+            new Thread(() -> {
+                try {
+                    Thread.sleep(1000);
+                } catch (InterruptedException ignored) {
+                }
+                client.setScreen(null);
+            });
         }
     }
 
@@ -112,7 +158,10 @@ public class CustomSignEditScreen extends SignEditScreen {
         } else {
             try {
                 URI uri = new URI(imageUrl);
-                if (!uri.isAbsolute()) return;
+                if (!uri.isAbsolute()) {
+                    screenshotIdentifier = null;
+                    return;
+                }
                 URL url = uri.toURL();
 
                 HttpURLConnection connection = (HttpURLConnection) url.openConnection();
@@ -180,13 +229,13 @@ public class CustomSignEditScreen extends SignEditScreen {
         int imageWidth = width / 4;
         int imageHeight = height / 4;
         if (client != null) {
-            imageWidth = (int) ((double) client.getWindow().getWidth() / 12);
-            imageHeight = (int) ((double) client.getWindow().getHeight() / 12);
+            imageWidth = (int) ((double) client.getWindow().getWidth() / 8);
+            imageHeight = (int) ((double) client.getWindow().getHeight() / 8);
         }
 
 
-        int x = (width - imageWidth) / 12;
-        int y = (height - imageHeight) / 2;
+        int x = (width - imageWidth) / 2;
+        int y = (height - imageHeight) / 3;
 
         int borderWidth = 5;
         context.fill(x - borderWidth, y - borderWidth, x + imageWidth + borderWidth, y + imageHeight + borderWidth, 0xFFFFFFFF);
@@ -215,5 +264,6 @@ public class CustomSignEditScreen extends SignEditScreen {
 
         return super.charTyped(chr, keyCode);
     }
+
 
 }

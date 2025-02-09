@@ -87,5 +87,8 @@
   "gui.screenshot_uploader.editor.apply_text": "Text anwenden",
   "gui.screenshot_uploader.editor.set_text_pos": "Textposition setzen",
   "gui.screenshot_uploader.editor.fill_image": "Auswahl mit Farbe füllen",
-  "gui.screenshot_uploader.editor.blur": "Weichzeichnen"
+  "gui.screenshot_uploader.editor.blur": "Weichzeichnen",
+  "gui.screenshot_uploader.screenshot_sign.set_text": "Link einfügen",
+  "gui.screenshot_uploader.screenshot_sign.close": "Schließen",
+  "gui.screenshot_uploader.screenshot_sign.tooltip": "Du musst das Schild wachsen bevor du den Screenshot öffnen kannst"
 }

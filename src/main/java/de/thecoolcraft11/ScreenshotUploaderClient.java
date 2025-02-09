@@ -28,6 +28,7 @@ import net.minecraft.block.entity.SignBlockEntity;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.network.ClientPlayNetworkHandler;
 import net.minecraft.command.CommandRegistryAccess;
+import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.network.message.MessageType;
 import net.minecraft.network.message.SignedMessage;
 import net.minecraft.text.ClickEvent;
@@ -35,9 +36,11 @@ import net.minecraft.text.HoverEvent;
 import net.minecraft.text.Text;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.Formatting;
+import net.minecraft.util.Hand;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.hit.HitResult;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.world.World;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -68,43 +71,7 @@ public class ScreenshotUploaderClient implements ClientModInitializer {
         ClientReceiveMessageEvents.CHAT.register(this::regsiterChatEvent);
         ClientCommandRegistrationCallback.EVENT.register(this::regsiterCommands);
 
-        UseBlockCallback.EVENT.register((player, world, hand, hitResult) -> {
-
-            BlockPos pos = hitResult.getBlockPos();
-            BlockState blockState = world.getBlockState(pos);
-            if (!player.isSneaking()) {
-
-                if (blockState.getBlock() instanceof AbstractSignBlock) {
-                    var blockEntity = world.getBlockEntity(pos);
-                    if (blockEntity instanceof SignBlockEntity sign) {
-                        String frontText = sign.getFrontText().getMessage(0, false).getString() +
-                                sign.getFrontText().getMessage(1, false).getString() +
-                                sign.getFrontText().getMessage(2, false).getString() +
-                                sign.getFrontText().getMessage(3, false).getString();
-
-                        String backText = sign.getBackText().getMessage(0, false).getString() +
-                                sign.getBackText().getMessage(1, false).getString() +
-                                sign.getBackText().getMessage(2, false).getString() +
-                                sign.getBackText().getMessage(3, false).getString();
-
-                        MinecraftClient.getInstance().send(() -> MinecraftClient.getInstance().setScreen(new ScreenshotScreen(frontText + backText)));
-                    }
-
-                    return ActionResult.SUCCESS;
-                }
-                return ActionResult.PASS;
-            } else {
-                MinecraftClient client = MinecraftClient.getInstance();
-                HitResult hit = client.crosshairTarget;
-                if (hit instanceof BlockHitResult) {
-
-                    if (client.world != null && client.world.getBlockEntity(pos) instanceof SignBlockEntity sign) {
-                        client.send(() -> client.setScreen(new CustomSignEditScreen(sign, sign.isPlayerFacingFront(client.player), false)));
-                    }
-                }
-                return ActionResult.FAIL;
-            }
-        });
+        UseBlockCallback.EVENT.register(ScreenshotUploaderClient::signBlockClick);
     }
 
 
@@ -242,5 +209,44 @@ public class ScreenshotUploaderClient implements ClientModInitializer {
             return matcher.group();
         }
         return null;
+    }
+
+    private static ActionResult signBlockClick(PlayerEntity player, World world, Hand hand, BlockHitResult hitResult) {
+        BlockPos pos = hitResult.getBlockPos();
+        BlockState blockState = world.getBlockState(pos);
+        if (!player.isSneaking()) {
+
+            if (blockState.getBlock() instanceof AbstractSignBlock) {
+                var blockEntity = world.getBlockEntity(pos);
+                if (blockEntity instanceof SignBlockEntity sign) {
+                    String frontText = sign.getFrontText().getMessage(0, false).getString() +
+                            sign.getFrontText().getMessage(1, false).getString() +
+                            sign.getFrontText().getMessage(2, false).getString() +
+                            sign.getFrontText().getMessage(3, false).getString();
+
+                    String backText = sign.getBackText().getMessage(0, false).getString() +
+                            sign.getBackText().getMessage(1, false).getString() +
+                            sign.getBackText().getMessage(2, false).getString() +
+                            sign.getBackText().getMessage(3, false).getString();
+
+                    MinecraftClient.getInstance().send(() -> MinecraftClient.getInstance().setScreen(new ScreenshotScreen(frontText + backText)));
+                }
+
+                return ActionResult.SUCCESS;
+            }
+        } else {
+            MinecraftClient client = MinecraftClient.getInstance();
+            HitResult hit = client.crosshairTarget;
+            if (hit instanceof BlockHitResult) {
+
+                if (client.world != null && client.world.getBlockEntity(pos) instanceof SignBlockEntity sign) {
+                    if (!sign.isWaxed()) {
+                        client.send(() -> client.setScreen(new CustomSignEditScreen(sign)));
+                        return ActionResult.FAIL;
+                    }
+                }
+            }
+        }
+        return ActionResult.PASS;
     }
 }
