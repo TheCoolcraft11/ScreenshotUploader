@@ -9,6 +9,8 @@ import de.thecoolcraft11.config.ConfigManager;
 import de.thecoolcraft11.event.KeyInputHandler;
 import de.thecoolcraft11.packet.AddressPayload;
 import de.thecoolcraft11.packet.ScreenshotResponsePayload;
+import de.thecoolcraft11.screen.CustomSignEditScreen;
+import de.thecoolcraft11.screen.ScreenshotScreen;
 import de.thecoolcraft11.screen.WebGalleryScreen;
 import de.thecoolcraft11.util.ReceivePackets;
 import net.fabricmc.api.ClientModInitializer;
@@ -18,7 +20,11 @@ import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource;
 import net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
+import net.fabricmc.fabric.api.event.player.UseBlockCallback;
 import net.fabricmc.fabric.api.networking.v1.PacketSender;
+import net.minecraft.block.AbstractSignBlock;
+import net.minecraft.block.BlockState;
+import net.minecraft.block.entity.SignBlockEntity;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.network.ClientPlayNetworkHandler;
 import net.minecraft.command.CommandRegistryAccess;
@@ -27,7 +33,11 @@ import net.minecraft.network.message.SignedMessage;
 import net.minecraft.text.ClickEvent;
 import net.minecraft.text.HoverEvent;
 import net.minecraft.text.Text;
+import net.minecraft.util.ActionResult;
 import net.minecraft.util.Formatting;
+import net.minecraft.util.hit.BlockHitResult;
+import net.minecraft.util.hit.HitResult;
+import net.minecraft.util.math.BlockPos;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -46,6 +56,7 @@ import java.util.regex.Pattern;
 public class ScreenshotUploaderClient implements ClientModInitializer {
     private final Logger logger = LoggerFactory.getLogger(ScreenshotUploaderClient.class);
 
+
     @Override
     public void onInitializeClient() {
         ClientPlayNetworking.registerGlobalReceiver(AddressPayload.ID, this::registerAddressReceiver);
@@ -56,7 +67,46 @@ public class ScreenshotUploaderClient implements ClientModInitializer {
         KeyInputHandler.register();
         ClientReceiveMessageEvents.CHAT.register(this::regsiterChatEvent);
         ClientCommandRegistrationCallback.EVENT.register(this::regsiterCommands);
+
+        UseBlockCallback.EVENT.register((player, world, hand, hitResult) -> {
+
+            BlockPos pos = hitResult.getBlockPos();
+            BlockState blockState = world.getBlockState(pos);
+            if (!player.isSneaking()) {
+
+                if (blockState.getBlock() instanceof AbstractSignBlock) {
+                    var blockEntity = world.getBlockEntity(pos);
+                    if (blockEntity instanceof SignBlockEntity sign) {
+                        String frontText = sign.getFrontText().getMessage(0, false).getString() +
+                                sign.getFrontText().getMessage(1, false).getString() +
+                                sign.getFrontText().getMessage(2, false).getString() +
+                                sign.getFrontText().getMessage(3, false).getString();
+
+                        String backText = sign.getBackText().getMessage(0, false).getString() +
+                                sign.getBackText().getMessage(1, false).getString() +
+                                sign.getBackText().getMessage(2, false).getString() +
+                                sign.getBackText().getMessage(3, false).getString();
+
+                        MinecraftClient.getInstance().send(() -> MinecraftClient.getInstance().setScreen(new ScreenshotScreen(frontText + backText)));
+                    }
+
+                    return ActionResult.SUCCESS;
+                }
+                return ActionResult.PASS;
+            } else {
+                MinecraftClient client = MinecraftClient.getInstance();
+                HitResult hit = client.crosshairTarget;
+                if (hit instanceof BlockHitResult) {
+
+                    if (client.world != null && client.world.getBlockEntity(pos) instanceof SignBlockEntity sign) {
+                        client.send(() -> client.setScreen(new CustomSignEditScreen(sign, sign.isPlayerFacingFront(client.player), false)));
+                    }
+                }
+                return ActionResult.FAIL;
+            }
+        });
     }
+
 
     private void createConfig() {
         File configDir = new File("config/screenshotUploader");

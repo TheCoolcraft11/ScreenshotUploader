@@ -87,5 +87,7 @@
   "gui.screenshot_uploader.editor.apply_text": "Apply Text",
   "gui.screenshot_uploader.editor.set_text_pos": "Set Text Position",
   "gui.screenshot_uploader.editor.fill_image": "Fill Selection with Color",
-  "gui.screenshot_uploader.editor.blur": "Blur"
+  "gui.screenshot_uploader.editor.blur": "Blur",
+  "gui.screenshot_uploader.screenshot_sign.set_text": "Write Text",
+  "gui.screenshot_uploader.screenshot_sign.tooltip": "You need to reopen the sign after clicking this button and wax it in order to open the screenshot"
 }

@@ -54,7 +54,7 @@ public class WebGalleryScreen extends Screen {
     private static int TOP_PADDING = 35;
 
     private boolean isImageClicked = false;
-    private int clickedImageIndex = -1;
+    private static int clickedImageIndex = -1;
     private int scrollOffset = 0;
 
     private double zoomLevel = 1.0;
@@ -76,6 +76,8 @@ public class WebGalleryScreen extends Screen {
     private ButtonWidget openInAppButton;
 
     private ButtonWidget shareButton;
+
+    private ButtonWidget likeButton;
 
     private ButtonWidget sendCommentButton;
 
@@ -208,6 +210,10 @@ public class WebGalleryScreen extends Screen {
                 Text.translatable("gui.screenshot_uploader.screenshot_gallery.share_screenshot"),
                 button -> shareScreenshot()
         ).dimensions(buttonWidth * 2 + 15, buttonY, buttonWidth, buttonHeight).build();
+        likeButton = ButtonWidget.builder(
+                Text.translatable("gui.screenshot_uploader.screenshot_gallery.like_screenshot"),
+                button -> likeScreenshot()
+        ).dimensions(buttonWidth * 3 + 20, buttonY, 20, 20).build();
 
 
         commentWidget = new TextFieldWidget(textRenderer, 0, 0, 100, 20, Text.of(""));
@@ -222,6 +228,7 @@ public class WebGalleryScreen extends Screen {
         addDrawableChild(openInAppButton);
         addDrawableChild(shareButton);
         addDrawableChild(sendCommentButton);
+        addDrawableChild(likeButton);
 
         saveButton.visible = false;
         openInAppButton.visible = false;
@@ -229,10 +236,12 @@ public class WebGalleryScreen extends Screen {
         commentWidget.setMaxLength(1024);
         commentWidget.visible = false;
         sendCommentButton.visible = false;
+        likeButton.visible = false;
 
         buttonsToHideOnOverlap.add(saveButton);
         buttonsToHideOnOverlap.add(openInAppButton);
         buttonsToHideOnOverlap.add(shareButton);
+        buttonsToHideOnOverlap.add(likeButton);
 
         int initialImageIndex = imagePaths.indexOf(initialImageName);
         if (initialImageIndex >= 0) {
@@ -245,6 +254,45 @@ public class WebGalleryScreen extends Screen {
 
 
     }
+
+
+    public static void likeScreenshot() {
+        String screenshotId = String.valueOf(imageIds.get(clickedImageIndex));
+        String FILE_PATH = "/config/screenshotUploader/data/local.json";
+        try {
+            File file = new File(FILE_PATH);
+            JsonArray jsonArray;
+
+            if (file.exists() && file.length() > 0) {
+                try (FileReader reader = new FileReader(file)) {
+                    char[] buffer = new char[(int) file.length()];
+                    int numCharsRead = reader.read(buffer);
+                    if (numCharsRead != buffer.length) {
+                        logger.error("Failed to read the like file.");
+                    }
+                    String content = new String(buffer, 0, numCharsRead);
+                    jsonArray = JsonParser.parseString(content).getAsJsonArray();
+                }
+            } else {
+                jsonArray = new JsonArray();
+            }
+
+            JsonObject newLike = new JsonObject();
+            newLike.addProperty("screenshotId", screenshotId);
+
+            jsonArray.add(newLike);
+
+            try (FileWriter writer = new FileWriter(FILE_PATH)) {
+                writer.write(jsonArray.toString());
+            }
+
+            System.out.println("Screenshot like added successfully.");
+
+        } catch (IOException e) {
+            logger.error("Error while saving likes: {}", e.getMessage());
+        }
+    }
+
 
     private void shareScreenshot() {
         StringBuilder template = new StringBuilder(ConfigManager.getClientConfig().shareText);
@@ -379,6 +427,7 @@ public class WebGalleryScreen extends Screen {
             saveButton.visible = true;
             openInAppButton.visible = true;
             shareButton.visible = true;
+            likeButton.visible = true;
             renderEnlargedImage(context);
             openInBrowserButton.visible = false;
             commentWidget.visible = true;
@@ -392,6 +441,7 @@ public class WebGalleryScreen extends Screen {
             openInBrowserButton.visible = true;
             commentWidget.visible = false;
             sendCommentButton.visible = false;
+            likeButton.visible = false;
             navigatorButtons.forEach(buttonWidget -> buttonWidget.visible = true);
         }
         boolean isImageOverlappingButtons = clickedImageIndex >= 0 && isImageOverlappingButtons();
