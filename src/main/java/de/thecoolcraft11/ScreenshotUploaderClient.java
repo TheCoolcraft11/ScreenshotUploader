@@ -215,7 +215,7 @@ public class ScreenshotUploaderClient implements ClientModInitializer {
     private static ActionResult signBlockClick(PlayerEntity player, World world, Hand hand, BlockHitResult hitResult) {
         BlockPos pos = hitResult.getBlockPos();
         BlockState blockState = world.getBlockState(pos);
-        if (!player.isSneaking()) {
+        if (!KeyInputHandler.editKey.isPressed()) {
 
             if (blockState.getBlock() instanceof AbstractSignBlock) {
                 var blockEntity = world.getBlockEntity(pos);
