@@ -29,6 +29,7 @@ import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.network.ClientPlayNetworkHandler;
 import net.minecraft.command.CommandRegistryAccess;
 import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.item.Items;
 import net.minecraft.network.message.MessageType;
 import net.minecraft.network.message.SignedMessage;
 import net.minecraft.text.ClickEvent;
@@ -219,20 +220,22 @@ public class ScreenshotUploaderClient implements ClientModInitializer {
             if (blockState.getBlock() instanceof AbstractSignBlock) {
                 var blockEntity = world.getBlockEntity(pos);
                 if (blockEntity instanceof SignBlockEntity sign) {
-                    String frontText = sign.getFrontText().getMessage(0, false).getString() +
-                            sign.getFrontText().getMessage(1, false).getString() +
-                            sign.getFrontText().getMessage(2, false).getString() +
-                            sign.getFrontText().getMessage(3, false).getString();
+                    if (sign.isWaxed()) {
+                        String frontText = sign.getFrontText().getMessage(0, false).getString() +
+                                sign.getFrontText().getMessage(1, false).getString() +
+                                sign.getFrontText().getMessage(2, false).getString() +
+                                sign.getFrontText().getMessage(3, false).getString();
 
-                    String backText = sign.getBackText().getMessage(0, false).getString() +
-                            sign.getBackText().getMessage(1, false).getString() +
-                            sign.getBackText().getMessage(2, false).getString() +
-                            sign.getBackText().getMessage(3, false).getString();
+                        String backText = sign.getBackText().getMessage(0, false).getString() +
+                                sign.getBackText().getMessage(1, false).getString() +
+                                sign.getBackText().getMessage(2, false).getString() +
+                                sign.getBackText().getMessage(3, false).getString();
 
-                    MinecraftClient.getInstance().send(() -> MinecraftClient.getInstance().setScreen(new ScreenshotScreen(frontText + backText)));
+                        MinecraftClient.getInstance().send(() -> MinecraftClient.getInstance().setScreen(new ScreenshotScreen(frontText + backText)));
+                    }
                 }
 
-                return ActionResult.SUCCESS;
+                return ActionResult.PASS;
             }
         } else {
             MinecraftClient client = MinecraftClient.getInstance();
@@ -240,7 +243,7 @@ public class ScreenshotUploaderClient implements ClientModInitializer {
             if (hit instanceof BlockHitResult) {
 
                 if (client.world != null && client.world.getBlockEntity(pos) instanceof SignBlockEntity sign) {
-                    if (!sign.isWaxed()) {
+                    if (client.player != null && !sign.isWaxed() && client.player.getMainHandStack().getItem().asItem() == Items.PAINTING) {
                         client.send(() -> client.setScreen(new CustomSignEditScreen(sign)));
                         return ActionResult.FAIL;
                     }
