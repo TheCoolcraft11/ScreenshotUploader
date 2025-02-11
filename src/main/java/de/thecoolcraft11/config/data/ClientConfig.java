@@ -22,6 +22,7 @@ public class ClientConfig {
     public String editImageFilePath = "{fileName}_edited";
     public boolean highlightScreenshotSigns = true;
     public boolean hideSign = false;
+    public boolean useCustomSign = false;
     public boolean highlightOscillation = true;
     public boolean rotateHighlightSign = false;
     public boolean rotateHighlightItem = true;

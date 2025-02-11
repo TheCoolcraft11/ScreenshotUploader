@@ -1,5 +1,6 @@
 package de.thecoolcraft11.screen;
 
+import com.google.gson.*;
 import com.mojang.blaze3d.systems.RenderSystem;
 import de.thecoolcraft11.config.ConfigManager;
 import de.thecoolcraft11.util.ReceivePackets;
@@ -15,13 +16,15 @@ import net.minecraft.util.Identifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.File;
+import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Stream;
 
@@ -37,8 +40,8 @@ public class GalleryScreen extends Screen {
     private static int GAP = ConfigManager.getClientConfig().imageGap;
     private static int TOP_PADDING = ConfigManager.getClientConfig().imageTopPadding;
 
-    private boolean isImageClicked = false;
-    private int clickedImageIndex = -1;
+    private static boolean isImageClicked = false;
+    private static int clickedImageIndex = -1;
     private int scrollOffset = 0;
 
     private double zoomLevel = 2.0;
@@ -50,8 +53,12 @@ public class GalleryScreen extends Screen {
     private ButtonWidget deleteButton;
     private ButtonWidget openInAppButton;
     private ButtonWidget editButton;
+    private static ButtonWidget likeButton;
 
     private ButtonWidget configButton;
+
+    private static final String FILE_PATH = "./config/screenshotUploader/data/local.json";
+    private static final LinkedHashMap<String, Boolean> likedScreenshots = new LinkedHashMap<>();
 
     private final List<ButtonWidget> navigatorButtons = new ArrayList<>();
 
@@ -155,6 +162,11 @@ public class GalleryScreen extends Screen {
                 }
         ).dimensions((3 * buttonWidth) + 20, buttonY, buttonWidth, buttonHeight).build();
 
+        likeButton = ButtonWidget.builder(
+                Text.translatable("gui.screenshot_uploader.screenshot_gallery.like_screenshot").withColor(0x2a2a2a),
+                button -> likeScreenshot()
+        ).dimensions((buttonWidth * 4) + 25, buttonY, 20, 20).build();
+
         configButton = ButtonWidget.builder(
                 Text.translatable("gui.screenshot_uploader.screenshot_gallery.config"),
                 button -> {
@@ -170,17 +182,20 @@ public class GalleryScreen extends Screen {
         addDrawableChild(openInAppButton);
         addDrawableChild(configButton);
         addDrawableChild(editButton);
+        addDrawableChild(likeButton);
 
         saveButton.visible = false;
         deleteButton.visible = false;
         openInAppButton.visible = false;
         editButton.visible = false;
         configButton.visible = true;
+        likeButton.visible = true;
 
         buttonsToHideOnOverlap.add(saveButton);
         buttonsToHideOnOverlap.add(deleteButton);
         buttonsToHideOnOverlap.add(openInAppButton);
         buttonsToHideOnOverlap.add(editButton);
+        buttonsToHideOnOverlap.add(likeButton);
     }
 
 
@@ -283,6 +298,7 @@ public class GalleryScreen extends Screen {
             openInAppButton.visible = true;
             editButton.visible = true;
             configButton.visible = false;
+            likeButton.visible = false;
             navigatorButtons.forEach(buttonWidget -> buttonWidget.visible = false);
         } else {
             renderGallery(context, mouseX, mouseY);
@@ -292,6 +308,7 @@ public class GalleryScreen extends Screen {
             openInAppButton.visible = false;
             editButton.visible = false;
             configButton.visible = true;
+            likeButton.visible = true;
 
             navigatorButtons.forEach(buttonWidget -> buttonWidget.visible = true);
         }
@@ -328,6 +345,11 @@ public class GalleryScreen extends Screen {
             if (mouseX > x && mouseX < x + IMAGE_WIDTH && mouseY > y && mouseY < y + IMAGE_HEIGHT) {
                 context.fill(x, y, x + IMAGE_WIDTH, y + IMAGE_HEIGHT, 0x80FFFFFF);
             }
+            if (client != null) {
+                if (likedScreenshots.containsKey(imagePaths.get(i).toString()) && likedScreenshots.get(imagePaths.get(i).toString())) {
+                    context.drawText(client.textRenderer, "❤", x + 5, y + IMAGE_HEIGHT - 10, 0xFFFFFF, false);
+                }
+            }
         }
     }
 
@@ -361,6 +383,9 @@ public class GalleryScreen extends Screen {
         context.drawTexture(clickedImageId, x, y, 0, 0, imageWidth, imageHeight, imageWidth, imageHeight);
 
         RenderSystem.disableBlend();
+
+        likeButton.setMessage(Text.translatable("gui.screenshot_uploader.screenshot_gallery.like_screenshot").withColor(likedScreenshots.containsKey(imagePaths.get(clickedImageIndex).toString()) && likedScreenshots.get(imagePaths.get(clickedImageIndex).toString()) ? 0xFFFFFF : 0x2a2a2a));
+
     }
 
     private void loadAllImagesAsync() {
@@ -368,8 +393,16 @@ public class GalleryScreen extends Screen {
 
         CompletableFuture.runAsync(() -> {
             try (Stream<Path> paths = Files.list(screenshotsDir)) {
-                paths.filter(path -> path.toString().endsWith(".png"))
-                        .forEach(imagePaths::add);
+                Set<String> likedScreenshotsSet = loadLikedScreenshots();
+
+                List<Path> sortedPaths = paths
+                        .filter(path -> path.toString().endsWith(".png"))
+                        .sorted(Comparator.comparing(path -> likedScreenshotsSet.contains(path.toString()) ? 0 : 1))
+                        .toList();
+
+                imagePaths.clear();
+                imagePaths.addAll(sortedPaths);
+
                 loadImagesAsync();
             } catch (IOException e) {
                 logger.error("Failed to load images: {}", e.getMessage());
@@ -377,19 +410,50 @@ public class GalleryScreen extends Screen {
         });
     }
 
+
     private void loadImagesAsync() {
         CompletableFuture.runAsync(() -> {
+            Set<String> likedScreenshotsSet = loadLikedScreenshots();
+
             for (Path path : imagePaths) {
                 try {
                     NativeImage image = NativeImage.read(Files.newInputStream(path));
                     Identifier textureId = Identifier.of("gallery", "textures/" + path.getFileName().toString());
                     MinecraftClient.getInstance().getTextureManager().registerTexture(textureId, new NativeImageBackedTexture(image));
                     imageIds.add(textureId);
+
+                    String imagePathString = path.toString();
+                    if (likedScreenshotsSet.contains(imagePathString)) {
+                        likedScreenshots.put(imagePathString, true);
+                    }
+
                 } catch (IOException e) {
                     logger.error("Failed to load image '{}': {}", path, e.getMessage());
                 }
             }
         });
+    }
+
+    private static Set<String> loadLikedScreenshots() {
+        Set<String> likedScreenshots = new HashSet<>();
+        File file = new File(FILE_PATH);
+
+        if (file.exists() && file.length() > 0) {
+            try (FileReader reader = new FileReader(file, StandardCharsets.UTF_8)) {
+                JsonArray jsonArray = JsonParser.parseReader(reader).getAsJsonArray();
+                for (JsonElement element : jsonArray) {
+                    JsonObject obj = element.getAsJsonObject();
+                    if (obj.has("screenshotUrl")) {
+                        likedScreenshots.add(obj.get("screenshotUrl").getAsString());
+                    }
+                }
+            } catch (JsonSyntaxException e) {
+                logger.error("Corrupt JSON file detected. Resetting it.", e);
+            } catch (IOException e) {
+                logger.error("Error reading the like file.", e);
+            }
+        }
+        return likedScreenshots;
     }
 
     private void saveImage() {
@@ -481,6 +545,65 @@ public class GalleryScreen extends Screen {
 
         return !(buttonX + buttonWidth < imageX || buttonX > imageX + imageWidth ||
                 buttonY + buttonHeight < imageY || buttonY > imageY + imageHeight);
+    }
+
+    private static void likeScreenshot() {
+
+        if (imageIds.isEmpty() || clickedImageIndex < 0 || clickedImageIndex >= imageIds.size()) {
+            System.err.println("Invalid image index or list is empty.");
+            return;
+        }
+
+        String screenshotId = String.valueOf(imageIds.get(clickedImageIndex));
+        String screenshotUrl = String.valueOf(imagePaths.get(clickedImageIndex));
+
+        File file = new File(FILE_PATH);
+        File parentDir = file.getParentFile();
+        if (parentDir != null && !parentDir.exists()) {
+            boolean dirsCreated = parentDir.mkdirs();
+            if (dirsCreated) {
+                logger.info("Created missing directories: {}", parentDir.getAbsolutePath());
+            }
+        }
+
+        JsonArray jsonArray = new JsonArray();
+
+        if (file.exists() && file.length() > 0) {
+            try (FileReader reader = new FileReader(file, StandardCharsets.UTF_8)) {
+                jsonArray = JsonParser.parseReader(reader).getAsJsonArray();
+            } catch (JsonSyntaxException e) {
+                logger.error("Corrupt JSON file detected. Resetting it.", e);
+                jsonArray = new JsonArray();
+            } catch (IOException e) {
+                logger.error("Error reading the like file.", e);
+                return;
+            }
+        }
+
+        boolean screenshotAlreadyLiked = false;
+        for (int i = 0; i < jsonArray.size(); i++) {
+            JsonObject existingLike = jsonArray.get(i).getAsJsonObject();
+            if (existingLike.has("screenshotId") && existingLike.get("screenshotId").getAsString().equals(screenshotId)) {
+                jsonArray.remove(i);
+                screenshotAlreadyLiked = true;
+                break;
+            }
+        }
+
+        if (!screenshotAlreadyLiked) {
+            JsonObject newLike = new JsonObject();
+            newLike.addProperty("screenshotId", screenshotId);
+            newLike.addProperty("screenshotUrl", screenshotUrl);
+            jsonArray.add(newLike);
+        }
+
+        try (FileWriter writer = new FileWriter(FILE_PATH, StandardCharsets.UTF_8)) {
+            writer.write(new GsonBuilder().setPrettyPrinting().create().toJson(jsonArray));
+        } catch (IOException e) {
+            logger.error("Error while saving likes.", e);
+        }
+        isImageClicked = false;
+        clickedImageIndex = -1;
     }
 
 

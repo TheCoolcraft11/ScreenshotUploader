@@ -1,8 +1,6 @@
 package de.thecoolcraft11.screen;
 
-import com.google.gson.JsonArray;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
+import com.google.gson.*;
 import com.mojang.authlib.properties.Property;
 import com.mojang.authlib.yggdrasil.ProfileResult;
 import com.mojang.blaze3d.systems.RenderSystem;
@@ -31,6 +29,7 @@ import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -46,6 +45,7 @@ public class WebGalleryScreen extends Screen {
 
     private static final List<Identifier> imageIds = new ArrayList<>();
     private static final List<String> imagePaths = new ArrayList<>();
+    private static final List<JsonObject> metaDatas = new ArrayList<>();
 
     private static final int IMAGES_PER_ROW = 5;
     private static int IMAGE_WIDTH = 192;
@@ -53,7 +53,7 @@ public class WebGalleryScreen extends Screen {
     private static int GAP = 10;
     private static int TOP_PADDING = 35;
 
-    private boolean isImageClicked = false;
+    private static boolean isImageClicked = false;
     private static int clickedImageIndex = -1;
     private int scrollOffset = 0;
 
@@ -77,11 +77,13 @@ public class WebGalleryScreen extends Screen {
 
     private ButtonWidget shareButton;
 
-    private ButtonWidget likeButton;
+    private static ButtonWidget likeButton;
 
     private ButtonWidget sendCommentButton;
 
     private TextFieldWidget commentWidget;
+
+    private static String FILE_PATH;
 
     public WebGalleryScreen(Screen parent, String webserverUrl, String initialImageName) {
         super(Text.translatable("gui.screenshot_uploader.screenshot_gallery.web_title", webserverUrl));
@@ -89,6 +91,7 @@ public class WebGalleryScreen extends Screen {
         this.webserverUrl = webserverUrl;
 
         this.initialImageName = initialImageName;
+        FILE_PATH = "./config/screenshotUploader/data/" + webserverUrl.hashCode() + ".json";
     }
 
     @Override
@@ -211,7 +214,7 @@ public class WebGalleryScreen extends Screen {
                 button -> shareScreenshot()
         ).dimensions(buttonWidth * 2 + 15, buttonY, buttonWidth, buttonHeight).build();
         likeButton = ButtonWidget.builder(
-                Text.translatable("gui.screenshot_uploader.screenshot_gallery.like_screenshot"),
+                Text.translatable("gui.screenshot_uploader.screenshot_gallery.like_screenshot").withColor(0x2a2a2a),
                 button -> likeScreenshot()
         ).dimensions(buttonWidth * 3 + 20, buttonY, 20, 20).build();
 
@@ -256,41 +259,62 @@ public class WebGalleryScreen extends Screen {
     }
 
 
-    public static void likeScreenshot() {
+    private static void likeScreenshot() {
+        if (imageIds.isEmpty() || clickedImageIndex < 0 || clickedImageIndex >= imageIds.size()) {
+            System.err.println("Invalid image index or list is empty.");
+            return;
+        }
+
         String screenshotId = String.valueOf(imageIds.get(clickedImageIndex));
-        String FILE_PATH = "/config/screenshotUploader/data/local.json";
-        try {
-            File file = new File(FILE_PATH);
-            JsonArray jsonArray;
+        String screenshotUrl = String.valueOf(imagePaths.get(clickedImageIndex));
 
-            if (file.exists() && file.length() > 0) {
-                try (FileReader reader = new FileReader(file)) {
-                    char[] buffer = new char[(int) file.length()];
-                    int numCharsRead = reader.read(buffer);
-                    if (numCharsRead != buffer.length) {
-                        logger.error("Failed to read the like file.");
-                    }
-                    String content = new String(buffer, 0, numCharsRead);
-                    jsonArray = JsonParser.parseString(content).getAsJsonArray();
-                }
-            } else {
-                jsonArray = new JsonArray();
+        File file = new File(FILE_PATH);
+        File parentDir = file.getParentFile();
+        if (parentDir != null && !parentDir.exists()) {
+            boolean dirsCreated = parentDir.mkdirs();
+            if (dirsCreated) {
+                logger.info("Created missing directories: {}", parentDir.getAbsolutePath());
             }
+        }
 
+        JsonArray jsonArray = new JsonArray();
+
+        if (file.exists() && file.length() > 0) {
+            try (FileReader reader = new FileReader(file, StandardCharsets.UTF_8)) {
+                jsonArray = JsonParser.parseReader(reader).getAsJsonArray();
+            } catch (JsonSyntaxException e) {
+                logger.error("Corrupt JSON file detected. Resetting it.", e);
+                jsonArray = new JsonArray();
+            } catch (IOException e) {
+                logger.error("Error reading the like file.", e);
+                return;
+            }
+        }
+
+        boolean screenshotAlreadyLiked = false;
+        for (int i = 0; i < jsonArray.size(); i++) {
+            JsonObject existingLike = jsonArray.get(i).getAsJsonObject();
+            if (existingLike.has("screenshotId") && existingLike.get("screenshotId").getAsString().equals(screenshotId)) {
+                jsonArray.remove(i);
+                screenshotAlreadyLiked = true;
+                break;
+            }
+        }
+
+        if (!screenshotAlreadyLiked) {
             JsonObject newLike = new JsonObject();
             newLike.addProperty("screenshotId", screenshotId);
-
+            newLike.addProperty("screenshotUrl", screenshotUrl);
             jsonArray.add(newLike);
-
-            try (FileWriter writer = new FileWriter(FILE_PATH)) {
-                writer.write(jsonArray.toString());
-            }
-
-            System.out.println("Screenshot like added successfully.");
-
-        } catch (IOException e) {
-            logger.error("Error while saving likes: {}", e.getMessage());
         }
+
+        try (FileWriter writer = new FileWriter(FILE_PATH, StandardCharsets.UTF_8)) {
+            writer.write(new GsonBuilder().setPrettyPrinting().create().toJson(jsonArray));
+        } catch (IOException e) {
+            logger.error("Error while saving likes.", e);
+        }
+        isImageClicked = false;
+        clickedImageIndex = -1;
     }
 
 
@@ -520,6 +544,7 @@ public class WebGalleryScreen extends Screen {
             int y = startY + row * (IMAGE_HEIGHT + GAP) - scrollOffset;
 
             context.fill(x - 2, y - 2, x + IMAGE_WIDTH + 2, y + IMAGE_HEIGHT + 2, 0xFF888888);
+
             Identifier imageId = imageIds.get(i);
             RenderSystem.setShaderTexture(0, imageId);
             context.drawTexture(imageId, x, y, 0, 0, IMAGE_WIDTH, IMAGE_HEIGHT, IMAGE_WIDTH, IMAGE_HEIGHT);
@@ -529,35 +554,36 @@ public class WebGalleryScreen extends Screen {
             }
 
             String username = getString(i);
-
-
-            int textX = 0;
+            int textX = x + 5;
             if (client != null) {
-                textX = x + 5;
-
                 int textY = y + IMAGE_HEIGHT - 10;
                 context.drawText(client.textRenderer, username, textX, textY, 0xFFFFFF, false);
+
+                if (metaDatas.get(i).has("liked") && metaDatas.get(i).get("liked").getAsBoolean()) {
+                    context.drawText(client.textRenderer, "❤", textX + username.length() * 5 + 10, textY, 0xFFFFFF, false);
+                }
             }
+
             if (metaDatas.get(i) != null && metaDatas.get(i).has("uuid")) {
                 String playerHead = getPlayerHeadTexture(UUID.fromString(metaDatas.get(i).get("uuid").getAsString()));
                 Identifier playerHeadId = null;
+
                 if (playerHead != null && !playerHead.isEmpty()) {
                     playerHeadId = loadHeadImage(playerHead);
                 }
 
-                int headSize = 20;
-                int headX = textX - 20;
-                int headY = y + IMAGE_HEIGHT - 10;
-
                 if (playerHeadId != null) {
-
+                    int headSize = 20;
+                    int headX = x + 5;
+                    int headY = y + 5;
 
                     RenderSystem.setShaderTexture(0, playerHeadId);
-                    context.drawTexture(playerHeadId, (int) (headX + ((headSize - headSize * 0.25) / 2)), (int) (headY + ((headSize - headSize * 0.25) / 2)), 0, 0, (int) (headSize - headSize * 0.25), (int) (headSize - headSize * 0.25), (int) (headSize - headSize * 0.25), (int) (headSize - headSize * 0.25));
+                    context.drawTexture(playerHeadId, headX, headY, 0, 0, headSize, headSize, headSize, headSize);
                 }
             }
         }
     }
+
 
     private static String getString(int i) {
         String username = "Unknown";
@@ -623,7 +649,6 @@ public class WebGalleryScreen extends Screen {
         context.fill(sidebarXRight, y, sidebarXRight + sidebarWidth, y + sidebarHeight, 0x80000000);
 
         Map<String, UUID> comments = getComments(metaDatas.get(clickedImageIndex));
-        System.out.println(comments);
         int commentListY = y + 20;
         for (String comment : comments.keySet()) {
             String[] commentParts = comment.split(": ", 2);
@@ -632,7 +657,6 @@ public class WebGalleryScreen extends Screen {
                 String playerComment = commentParts[1];
 
                 String playerHead = getPlayerHeadTexture(comments.get(comment));
-                System.out.println(playerHead);
                 Identifier playerHeadId = null;
                 if (playerHead != null && !playerHead.isEmpty()) {
 
@@ -664,6 +688,8 @@ public class WebGalleryScreen extends Screen {
 
         sendCommentButton.setX(textFieldX + commentWidget.getWidth() + 5);
         sendCommentButton.setY(textFieldY);
+
+        likeButton.setMessage(Text.translatable("gui.screenshot_uploader.screenshot_gallery.like_screenshot").withColor(metaDatas.get(clickedImageIndex).has("liked") && metaDatas.get(clickedImageIndex).get("liked").getAsBoolean() ? 0xFFFFFF : 0x2a2a2a));
 
     }
 
@@ -759,7 +785,7 @@ public class WebGalleryScreen extends Screen {
                             File cacheFolder = new File("screenshots_cache");
                             if (!cacheFolder.exists()) {
                                 if (cacheFolder.mkdirs()) {
-                                    logger.info("Created web screenshots cache folder");
+                                    logger.info("Created web screenshots cache folder for Screenshots");
                                 }
                             }
 
@@ -842,12 +868,12 @@ public class WebGalleryScreen extends Screen {
                             File cacheFolder = new File("screenshots_heads_cache");
                             if (!cacheFolder.exists()) {
                                 if (cacheFolder.mkdirs()) {
-                                    System.out.println("Created web screenshots cache folder");
+                                    logger.info("Created web screenshots cache folder for Heads");
                                 }
                             }
 
                             ImageIO.write(headImage, "PNG", cachedImage);
-                            System.out.println("Head image saved to cache: " + cachedImage.getAbsolutePath());
+                            logger.info("Head image saved to cache: {}", cachedImage.getAbsolutePath());
 
                             try (NativeImage nativeImage = new NativeImage(headImage.getWidth(), headImage.getHeight(), false)) {
                                 for (int y = 0; y < headImage.getHeight(); y++) {
@@ -886,15 +912,22 @@ public class WebGalleryScreen extends Screen {
         return null;
     }
 
-    private static final List<JsonObject> metaDatas = new ArrayList<>();
 
     private static void loadScreenshotsFromServer(String server) {
         metaDatas.clear();
+        imagePaths.clear();
+
+        Set<String> likedScreenshots = loadLikedScreenshots();
+
         List<AbstractMap.SimpleEntry<String, JsonObject>> screenshotData = requestScreenshotListFromServer(server);
+
+        screenshotData.sort(Comparator.comparing(entry -> likedScreenshots.contains(entry.getKey()) ? 0 : 1));
 
         screenshotData.forEach(entry -> {
             String url = entry.getKey();
             JsonObject metaData = entry.getValue();
+
+            metaData.addProperty("liked", likedScreenshots.contains(url));
 
             imagePaths.add(url);
             metaDatas.add(metaData);
@@ -944,6 +977,29 @@ public class WebGalleryScreen extends Screen {
             logger.error("Failed to request screenshot list: {}", e.getMessage());
         }
         return screenshotData;
+    }
+
+
+    private static Set<String> loadLikedScreenshots() {
+        Set<String> likedScreenshots = new HashSet<>();
+        File file = new File(FILE_PATH);
+
+        if (file.exists() && file.length() > 0) {
+            try (FileReader reader = new FileReader(file, StandardCharsets.UTF_8)) {
+                JsonArray jsonArray = JsonParser.parseReader(reader).getAsJsonArray();
+                for (JsonElement element : jsonArray) {
+                    JsonObject obj = element.getAsJsonObject();
+                    if (obj.has("screenshotUrl")) {
+                        likedScreenshots.add(obj.get("screenshotUrl").getAsString());
+                    }
+                }
+            } catch (JsonSyntaxException e) {
+                logger.error("Corrupt JSON file detected. Resetting it.", e);
+            } catch (IOException e) {
+                logger.error("Error reading the like file.", e);
+            }
+        }
+        return likedScreenshots;
     }
 
 

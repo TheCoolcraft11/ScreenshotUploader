@@ -60,22 +60,26 @@ public class SignBlockEntityRendererMixin {
             if (entity.getWorld() != null && !isHangingSign(entity.getWorld(), entity.getPos())) {
 
                 matrices.push();
-                try {
-                    String text = entity.getFrontText().getMessage(0, false).getString() +
-                            entity.getFrontText().getMessage(1, false).getString() +
-                            entity.getFrontText().getMessage(2, false).getString() +
-                            entity.getFrontText().getMessage(3, false).getString() +
-                            entity.getBackText().getMessage(0, false).getString() +
-                            entity.getBackText().getMessage(1, false).getString() +
-                            entity.getBackText().getMessage(2, false).getString() +
-                            entity.getBackText().getMessage(3, false).getString();
 
-                    String urlPattern = "https?://[\\w.-]+(:\\d+)?(/[\\w.-]*)*";
-                    Pattern pattern = Pattern.compile(urlPattern);
-                    Matcher matcher = pattern.matcher(text);
+                String text = entity.getFrontText().getMessage(0, false).getString() +
+                        entity.getFrontText().getMessage(1, false).getString() +
+                        entity.getFrontText().getMessage(2, false).getString() +
+                        entity.getFrontText().getMessage(3, false).getString() +
+                        entity.getBackText().getMessage(0, false).getString() +
+                        entity.getBackText().getMessage(1, false).getString() +
+                        entity.getBackText().getMessage(2, false).getString() +
+                        entity.getBackText().getMessage(3, false).getString();
+
+                String urlPattern = "https?://[\\w.-]+(:\\d+)?(/[\\w.-]*)*";
+                Pattern pattern = Pattern.compile(urlPattern);
+                Matcher matcher = pattern.matcher(text);
+                try {
+
 
                     if (matcher.matches() && entity.isWaxed()) {
                         Identifier signTexture = Identifier.of("minecraft", "textures/entity/signs/" + woodType.name().toLowerCase() + ".png");
+                        if (ConfigManager.getClientConfig().useCustomSign)
+                            signTexture = Identifier.of("screenshot-uploader", "textures/entity/signs/screenshot.png");
                         RenderSystem.setShaderTexture(0, signTexture);
 
                         RenderSystem.enableBlend();
@@ -141,7 +145,7 @@ public class SignBlockEntityRendererMixin {
                     }
                 } finally {
                     matrices.pop();
-                    if (ConfigManager.getClientConfig().hideSign) ci.cancel();
+                    if (ConfigManager.getClientConfig().hideSign && matcher.matches() && entity.isWaxed()) ci.cancel();
                 }
             }
         }

@@ -92,5 +92,6 @@
   "gui.screenshot_uploader.screenshot_sign.close": "Close",
   "gui.screenshot_uploader.screenshot_sign.tooltip": "You need to wax the sign in order to open the screenshot",
   "gui.screenshot_uploader.screenshot_screen.title": "Shared Screenshot",
-  "gui.screenshot_uploader.screenshot_screen.no_image": "Failed to load image. Please check the URL or your internet connection"
+  "gui.screenshot_uploader.screenshot_screen.no_image": "Failed to load image. Please check the URL or your internet connection",
+  "gui.screenshot_uploader.screenshot_gallery.like_screenshot": "❤"
 }
