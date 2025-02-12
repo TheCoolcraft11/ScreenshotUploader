@@ -11,6 +11,7 @@ import net.minecraft.client.gui.tooltip.Tooltip;
 import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.client.gui.widget.TextFieldWidget;
 import net.minecraft.text.Text;
+import net.minecraft.util.Formatting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -54,11 +55,13 @@ public class ConfigScreen extends Screen {
             String key = entry.getKey();
             JsonElement value = entry.getValue();
 
+            if (key.startsWith("_comment")) continue;
+
             if (value.isJsonPrimitive() && value.getAsJsonPrimitive().isString()) {
                 TextFieldWidget textField = new TextFieldWidget(textRenderer, inputXOffset, currentYOffset, 200, 20, Text.literal(key));
                 textField.setMaxLength(1024);
                 textField.setText(value.getAsString());
-                textField.setTooltip(Tooltip.of(Text.of(key)));
+                textField.setTooltip(Tooltip.of(Text.of(key).copy().styled(style -> style.withBold(true)).append(Text.translatableWithFallback((config.has("_comment_" + key) ? ": " + config.get("_comment_" + key).getAsString().replaceAll("^\"|\"$", "'") : ""), (config.has("_comment_" + key) ? ": " + config.get("_comment_" + key).getAsString().replaceAll("^\"|\"$", "'") : "")).styled(style -> style.withColor(Formatting.AQUA)))));
                 textField.setChangedListener(s -> isConfigSaved = false);
                 inputFields.put(key, textField);
                 scrollableButtons.put(key, textField);
@@ -67,7 +70,7 @@ public class ConfigScreen extends Screen {
                 TextFieldWidget textField = new TextFieldWidget(textRenderer, inputXOffset, currentYOffset, 200, 20, Text.literal(key));
                 textField.setMaxLength(1024);
                 textField.setText(value.getAsString());
-                textField.setTooltip(Tooltip.of(Text.of(key)));
+                textField.setTooltip(Tooltip.of(Text.of(key).copy().styled(style -> style.withBold(true)).append(Text.translatableWithFallback((config.has("_comment_" + key) ? ": " + config.get("_comment_" + key).getAsString().replaceAll("^\"|\"$", "'") : ""), (config.has("_comment_" + key) ? ": " + config.get("_comment_" + key).getAsString().replaceAll("^\"|\"$", "'") : "")).styled(style -> style.withColor(Formatting.AQUA)))));
                 textField.setChangedListener(s -> isConfigSaved = false);
                 inputFields.put(key, textField);
                 scrollableButtons.put(key, textField);
@@ -81,11 +84,13 @@ public class ConfigScreen extends Screen {
                     config.addProperty(key, newValue);
                     button.setMessage(Text.translatable(newValue ? "gui.screenshot_uploader.config.true" : "gui.screenshot_uploader.config.false"));
                 }).dimensions(inputXOffset, currentYOffset, 200, 20).tooltip(Tooltip.of(Text.of(key))).build();
+                widget.setTooltip(Tooltip.of(Text.of(key).copy().styled(style -> style.withBold(true)).append(Text.translatableWithFallback((config.has("_comment_" + key) ? ": " + config.get("_comment_" + key).getAsString().replaceAll("^\"|\"$", "'") : ""), (config.has("_comment_" + key) ? ": " + config.get("_comment_" + key).getAsString().replaceAll("^\"|\"$", "'") : "")).styled(style -> style.withColor(Formatting.AQUA)))));
                 addDrawableChild(widget);
                 scrollableButtons.put(key, widget);
             } else if (value.isJsonNull() || value.isJsonArray() || value.isJsonObject()) {
                 ButtonWidget widget = ButtonWidget.builder(Text.translatable("gui.screenshot_uploader.config.not_edit"), button -> {
                 }).dimensions(inputXOffset, currentYOffset, 200, 20).tooltip(Tooltip.of(Text.of(key + "\nHead to /config/screenshotUploader/config.json to edit servers"))).build();
+                widget.setTooltip(Tooltip.of(Text.of(key).copy().styled(style -> style.withBold(true)).append(Text.translatableWithFallback((config.has("_comment_" + key) ? ": " + config.get("_comment_" + key).getAsString().replaceAll("^\"|\"$", "'") : ""), (config.has("_comment_" + key) ? ": " + config.get("_comment_" + key).getAsString().replaceAll("^\"|\"$", "'") : "")).styled(style -> style.withColor(Formatting.AQUA)))));
                 widget.active = false;
                 addDrawableChild(widget);
                 scrollableButtons.put(key, widget);
@@ -127,6 +132,8 @@ public class ConfigScreen extends Screen {
         for (Map.Entry<String, JsonElement> entry : config.entrySet()) {
             String key = entry.getKey();
             int labelY = currentYOffset;
+
+            if (key.startsWith("_comment")) continue;
 
             if (labelY >= 20 && labelY <= this.height - 40) {
                 context.drawTextWithShadow(

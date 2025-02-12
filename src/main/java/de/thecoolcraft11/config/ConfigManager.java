@@ -6,6 +6,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import de.thecoolcraft11.config.data.ClientConfig;
 import de.thecoolcraft11.config.data.ServerConfig;
+import de.thecoolcraft11.config.value.Comment;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -57,6 +58,7 @@ public class ConfigManager {
                 serverConfig = GSON.fromJson(jsonElement, ServerConfig.class);
                 addMissingFields(serverConfig, jsonElement, configFile);
             }
+
         } catch (IOException e) {
             logger.error("Failed to load config: {}", e.getMessage());
             if (isClient) {
@@ -90,15 +92,36 @@ public class ConfigManager {
         saveConfig(configFile, jsonObject);
     }
 
-    private static void saveConfig(File configFile, JsonObject jsonObject) {
+    private static void saveConfig(File configFile, Object config) {
         try (FileWriter writer = new FileWriter(configFile)) {
+            JsonObject jsonObject = new JsonObject();
+
+            for (Field field : config.getClass().getDeclaredFields()) {
+                field.setAccessible(true);
+                try {
+                    if (field.isAnnotationPresent(Comment.class)) {
+                        Comment comment = field.getAnnotation(Comment.class);
+                        jsonObject.addProperty("_comment_" + field.getName(), comment.value());
+                    }
+
+                    jsonObject.add(field.getName(), GSON.toJsonTree(field.get(config)));
+
+                } catch (IllegalAccessException e) {
+                    logger.error("Failed to access field '{}' while saving config: {}", field.getName(), e.getMessage());
+                }
+            }
+            
+            if (jsonObject.has("members")) {
+                jsonObject = jsonObject.getAsJsonObject("members");
+            }
+
             GSON.toJson(jsonObject, writer);
             logger.info("Config saved to {}", configFile.getName());
+
         } catch (IOException e) {
-            logger.error("Failed to save Client config: {}", e.getMessage());
+            logger.error("Failed to save config: {}", e.getMessage());
         }
     }
-
 
     public static ClientConfig getClientConfig() {
         return clientConfig;
@@ -108,24 +131,18 @@ public class ConfigManager {
         return serverConfig;
     }
 
+
     public static void saveClientConfig(File configDir) {
         File clientConfigFile = new File(configDir, "config.json");
-        try (FileWriter writer = new FileWriter(clientConfigFile)) {
-            GSON.toJson(clientConfig, writer);
-        } catch (IOException e) {
-            logger.error("Failed to save Config: {}", e.getMessage());
-        }
+        saveConfig(clientConfigFile, clientConfig);
     }
 
     public static void saveServerConfig(File configDir) {
         File serverConfigFile = new File(configDir, "serverConfig.json");
-        try (FileWriter writer = new FileWriter(serverConfigFile)) {
-            GSON.toJson(serverConfig, writer);
-        } catch (IOException e) {
-            logger.error("Failed to save Server config: {}", e.getMessage());
-        }
+        saveConfig(serverConfigFile, serverConfig);
     }
-    
+
+
     public static void reloadConfig(File configDir, boolean isClient) {
         if (isClient) {
             File clientConfigFile = new File(configDir, "config.json");
