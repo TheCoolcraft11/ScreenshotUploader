@@ -29,7 +29,6 @@ import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.network.ClientPlayNetworkHandler;
 import net.minecraft.command.CommandRegistryAccess;
 import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.Items;
 import net.minecraft.network.message.MessageType;
 import net.minecraft.network.message.SignedMessage;
 import net.minecraft.text.ClickEvent;
@@ -115,6 +114,19 @@ public class ScreenshotUploaderClient implements ClientModInitializer {
                         )
                 )
         );
+        dispatcher.register(ClientCommandManager.literal("open-screenshot")
+                .then(ClientCommandManager.argument("image", StringArgumentType.string())
+                        .executes(context -> {
+                            final String value = StringArgumentType.getString(context, "image");
+
+                            MinecraftClient client = context.getSource().getClient();
+
+                            client.send(() -> client.setScreen(new ScreenshotScreen(value)));
+
+                            return 1;
+                        })
+                )
+        );
     }
 
     private void regsiterChatEvent(Text message, @Nullable SignedMessage signedMessage, @Nullable GameProfile gameProfile, MessageType.Parameters parameters, Instant instant) {
@@ -158,6 +170,10 @@ public class ScreenshotUploaderClient implements ClientModInitializer {
         if (hasServerSaved) {
             String finalServerName = serverName;
             Text newMessage = Text.translatable("message.screenshot_uploader.shared_saved").styled(style -> style.withClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/open-gallery \"" + finalServerName + "\" \"" + extractUrl(message.getString()) + "\"")).withUnderline(true).withColor(Formatting.AQUA));
+
+            client.inGameHud.getChatHud().addMessage(newMessage);
+        } else {
+            Text newMessage = Text.translatable("message.screenshot_uploader.shared").styled(style -> style.withClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/open-screenshot \"" + extractUrl(message.getString()) + "\"")).withUnderline(true).withColor(Formatting.AQUA));
 
             client.inGameHud.getChatHud().addMessage(newMessage);
         }
@@ -243,7 +259,7 @@ public class ScreenshotUploaderClient implements ClientModInitializer {
             if (hit instanceof BlockHitResult) {
 
                 if (client.world != null && client.world.getBlockEntity(pos) instanceof SignBlockEntity sign) {
-                    if (client.player != null && !sign.isWaxed() && client.player.getMainHandStack().getItem().asItem() == Items.PAINTING) {
+                    if (!sign.isWaxed()) {
                         client.send(() -> client.setScreen(new CustomSignEditScreen(sign)));
                         return ActionResult.FAIL;
                     }

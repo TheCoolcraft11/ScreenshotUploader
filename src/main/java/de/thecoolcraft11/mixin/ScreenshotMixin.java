@@ -159,29 +159,47 @@ public class ScreenshotMixin {
                             String baseMessage = "message.screenshot_uploader.upload_success";
                             Text clickableLink = Text.empty();
                             Text clickableLink2 = Text.empty();
+                            Text clickableLink3 = Text.empty();
+                            Text clickableLink4 = Text.empty();
+                            Text clickableLink5 = Text.empty();
 
                             if (responseBody != null) {
                                 String screenshotUrl = responseBody.has("url") && !responseBody.get("url").isJsonNull() ? responseBody.get("url").getAsString() : null;
                                 String galleryUrl = responseBody.has("gallery") && !responseBody.get("gallery").isJsonNull() ? responseBody.get("gallery").getAsString() : null;
 
 
-                                if (screenshotUrl != null) {
-                                    clickableLink = Text.translatable("message.screenshot_uploader.open_link")
-                                            .styled(style -> style.withClickEvent(new ClickEvent(ClickEvent.Action.OPEN_URL, screenshotUrl))
+                                if (screenshotUrl != null && galleryUrl != null) {
+                                    clickableLink = Text.translatable("message.screenshot_uploader.open_screenshot")
+                                            .styled(style -> style.withClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/open-screenshot \"" + screenshotUrl + "\""))
                                                     .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, Text.translatable("message.screenshot_uploader.see_screenshot"))).withColor(Formatting.AQUA));
+                                }
+                                if (screenshotUrl != null) {
+                                    clickableLink2 = Text.translatable("message.screenshot_uploader.open_link")
+                                            .styled(style -> style.withClickEvent(new ClickEvent(ClickEvent.Action.OPEN_URL, screenshotUrl))
+                                                    .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, Text.translatable("message.screenshot_uploader.open_website"))).withColor(Formatting.BLUE));
                                 }
 
                                 if (galleryUrl != null) {
-                                    clickableLink2 = Text.translatable("message.screenshot_uploader.open_all")
+                                    clickableLink3 = Text.translatable("message.screenshot_uploader.open_all")
                                             .styled(style -> style.withClickEvent(new ClickEvent(ClickEvent.Action.OPEN_URL, galleryUrl))
                                                     .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, Text.translatable("message.screenshot_uploader.see_screenshots"))).withColor(Formatting.YELLOW));
+                                }
+                                if (screenshotUrl != null) {
+                                    clickableLink4 = Text.translatable("message.screenshot_uploader.copy")
+                                            .styled(style -> style.withClickEvent(new ClickEvent(ClickEvent.Action.COPY_TO_CLIPBOARD, screenshotUrl))
+                                                    .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, Text.translatable("message.screenshot_uploader.copy_url"))).withColor(Formatting.GRAY));
+                                }
+                                if (screenshotUrl != null) {
+                                    clickableLink5 = Text.translatable("message.screenshot_uploader.share")
+                                            .styled(style -> style.withClickEvent(new ClickEvent(ClickEvent.Action.SUGGEST_COMMAND, screenshotUrl))
+                                                    .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, Text.translatable("message.screenshot_uploader.share_screenshot"))).withColor(Formatting.DARK_GREEN));
                                 }
 
                                 if (screenshotUrl == null && galleryUrl == null) {
                                     baseMessage = "message.screenshot_uploader_no_return_url";
                                 }
 
-                                Text finalMessage = Text.translatable(baseMessage, clickableLink, clickableLink2);
+                                Text finalMessage = Text.translatable(baseMessage, clickableLink, clickableLink2, clickableLink3, clickableLink4, clickableLink5);
 
                                 client.inGameHud.getChatHud().addMessage(finalMessage);
                             }

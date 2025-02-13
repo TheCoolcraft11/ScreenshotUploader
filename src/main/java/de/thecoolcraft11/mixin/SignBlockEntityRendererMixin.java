@@ -29,7 +29,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-@Mixin(SignBlockEntityRenderer.class)
+@Mixin(value = SignBlockEntityRenderer.class, priority = 100000)
 public class SignBlockEntityRendererMixin {
 
     @Unique

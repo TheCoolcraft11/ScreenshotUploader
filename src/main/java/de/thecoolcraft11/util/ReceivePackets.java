@@ -21,8 +21,12 @@ import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.Map;
+import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -58,37 +62,73 @@ public class ReceivePackets {
             String screenshotUrl = responseBody.has("url") && !responseBody.get("url").isJsonNull() ? responseBody.get("url").getAsString() : null;
             String galleryUrl = responseBody.has("gallery") && !responseBody.get("gallery").isJsonNull() ? responseBody.get("gallery").getAsString() : null;
 
+
             String baseMessage = "message.screenshot_uploader.upload_success";
             Text clickableLink = Text.empty();
             Text clickableLink2 = Text.empty();
+            Text clickableLink3 = Text.empty();
+            Text clickableLink4 = Text.empty();
+            Text clickableLink5 = Text.empty();
+            Text clickableLink6 = Text.empty();
 
 
-            if (screenshotUrl != null) {
-                clickableLink = Text.translatable("message.screenshot_uploader.open_link")
-                        .styled(style -> style.withClickEvent(new ClickEvent(ClickEvent.Action.OPEN_URL, screenshotUrl))
+            if (screenshotUrl != null && galleryUrl != null) {
+                clickableLink = Text.translatable("message.screenshot_uploader.open_screenshot")
+                        .styled(style -> style.withClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/open-screenshot \"" + screenshotUrl + "\""))
                                 .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, Text.translatable("message.screenshot_uploader.see_screenshot"))).withColor(Formatting.AQUA));
             }
-
+            if (screenshotUrl != null) {
+                if (getGalleryByHome(homeSiteAddress) != null) {
+                    clickableLink2 = Text.translatable("message.screenshot_uploader.open_gallery")
+                            .styled(style -> style.withClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/open-gallery \"" + getGalleryByHome(homeSiteAddress) + "\" \"" + screenshotUrl + "\""))
+                                    .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, Text.translatable("message.screenshot_uploader.open_game_gallery"))).withColor(Formatting.RED));
+                }
+            }
+            if (screenshotUrl != null) {
+                clickableLink3 = Text.translatable("message.screenshot_uploader.open_link")
+                        .styled(style -> style.withClickEvent(new ClickEvent(ClickEvent.Action.OPEN_URL, screenshotUrl))
+                                .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, Text.translatable("message.screenshot_uploader.open_website"))).withColor(Formatting.BLUE));
+            }
             if (galleryUrl != null) {
-                clickableLink2 = Text.translatable("message.screenshot_uploader.open_all")
+                clickableLink4 = Text.translatable("message.screenshot_uploader.open_all")
                         .styled(style -> style.withClickEvent(new ClickEvent(ClickEvent.Action.OPEN_URL, galleryUrl))
                                 .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, Text.translatable("message.screenshot_uploader.see_screenshots"))).withColor(Formatting.YELLOW));
+            }
+            if (screenshotUrl != null) {
+                clickableLink5 = Text.translatable("message.screenshot_uploader.copy")
+                        .styled(style -> style.withClickEvent(new ClickEvent(ClickEvent.Action.COPY_TO_CLIPBOARD, screenshotUrl))
+                                .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, Text.translatable("message.screenshot_uploader.copy_url"))).withColor(Formatting.GREEN));
+            }
+            if (screenshotUrl != null) {
+                clickableLink6 = Text.translatable("message.screenshot_uploader.share")
+                        .styled(style -> style.withClickEvent(new ClickEvent(ClickEvent.Action.SUGGEST_COMMAND, screenshotUrl))
+                                .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, Text.translatable("message.screenshot_uploader.share_screenshot"))).withColor(Formatting.DARK_GREEN));
             }
 
             if (screenshotUrl == null && galleryUrl == null) {
                 baseMessage = "message.screenshot_uploader_no_return_url";
             }
 
-            Text finalMessage = Text.translatable(baseMessage, clickableLink, clickableLink2);
+            Text finalMessage = Text.translatable(baseMessage, clickableLink, clickableLink2, clickableLink3, clickableLink4, clickableLink5, clickableLink6);
 
             client.inGameHud.getChatHud().addMessage(finalMessage);
-        } else {
-            String errorMessage = responseBody.has("message") ? responseBody.get("message").getAsString() : "Unknown error";
-            Text errorText = Text.translatable("message.screenshot_uploader.upload_failed", errorMessage.split(":")[0]);
-
-            client.inGameHud.getChatHud().addMessage(errorText);
-
         }
+    }
+
+    public static String getGalleryByHome(String homeUrl) {
+        for (Map<String, String> value : ConfigManager.getClientConfig().upload_urls.values()) {
+            if (!value.containsKey("home")) continue;
+            try {
+                URI savedEntry = new URI(value.get("home"));
+                URI messageEntry = new URI(Objects.requireNonNull(homeUrl));
+
+                if (savedEntry.getHost().equals(messageEntry.getHost())) {
+                    return value.get("gallery");
+                }
+            } catch (URISyntaxException ignored) {
+            }
+        }
+        return null;
     }
 
     public static void handleReceivedScreenshot(byte[] screenshotData, String jsonData, ServerPlayerEntity player) {
