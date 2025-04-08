@@ -54,6 +54,8 @@ public class GalleryScreen extends Screen {
     private ButtonWidget openInAppButton;
     private ButtonWidget editButton;
     private static ButtonWidget likeButton;
+    private ButtonWidget sortByButton;
+    private ButtonWidget sortOrderButton;
 
     private ButtonWidget configButton;
 
@@ -63,6 +65,9 @@ public class GalleryScreen extends Screen {
     private final List<ButtonWidget> navigatorButtons = new ArrayList<>();
 
     private final List<ButtonWidget> buttonsToHideOnOverlap = new ArrayList<>();
+
+    private SortBy sortBy = SortBy.DEFAULT;
+    private SortOrder sortOrder = SortOrder.ASCENDING;
 
     public GalleryScreen() {
         super(Text.translatable("gui.screenshot_uploader.screenshot_gallery.title"));
@@ -176,6 +181,24 @@ public class GalleryScreen extends Screen {
                 }
         ).dimensions(5, 5, buttonWidth / 2, buttonHeight).build();
 
+        sortByButton = ButtonWidget.builder(
+                Text.literal(sortBy.toString()),
+                button -> {
+                    sortBy = SortBy.values()[(sortBy.ordinal() + 1) % SortBy.values().length];
+                    sortByButton.setMessage(Text.of(sortBy.toString()));
+                    loadImageSorted(sortOrder, sortBy);
+                }
+        ).dimensions(5, height - buttonHeight - 5, buttonWidth, buttonHeight).build();
+
+        sortOrderButton = ButtonWidget.builder(
+                Text.literal(sortOrder.toString()),
+                button -> {
+                    sortOrder = SortOrder.values()[(sortOrder.ordinal() + 1) % SortOrder.values().length];
+                    sortOrderButton.setMessage(Text.of(sortOrder.toString()));
+                    loadImageSorted(sortOrder, sortBy);
+                }
+        ).dimensions(5 + buttonWidth + 5, height - buttonHeight - 5, buttonWidth, buttonHeight).build();
+
 
         addDrawableChild(saveButton);
         addDrawableChild(deleteButton);
@@ -183,6 +206,8 @@ public class GalleryScreen extends Screen {
         addDrawableChild(configButton);
         addDrawableChild(editButton);
         addDrawableChild(likeButton);
+        addDrawableChild(sortByButton);
+        addDrawableChild(sortOrderButton);
 
         saveButton.visible = false;
         deleteButton.visible = false;
@@ -331,7 +356,11 @@ public class GalleryScreen extends Screen {
         int startX = (width - (IMAGES_PER_ROW * IMAGE_WIDTH + (IMAGES_PER_ROW - 1) * GAP)) / 2;
         int startY = TOP_PADDING + 20;
 
+        if (imageIds.isEmpty()) return;
         for (int i = 0; i < imageIds.size(); i++) {
+            if (imagePaths.size() <= i) {
+                break;
+            }
             int row = i / IMAGES_PER_ROW;
             int col = i % IMAGES_PER_ROW;
             int x = startX + col * (IMAGE_WIDTH + GAP);
@@ -606,6 +635,54 @@ public class GalleryScreen extends Screen {
         clickedImageIndex = -1;
     }
 
+    private CompletableFuture<?> asyncSortFuture;
+
+    private void loadImageSorted(SortOrder sortOrder, SortBy sortBy) {
+        Path screenshotsDir = Paths.get(System.getProperty("user.dir"), "screenshots");
+
+        asyncSortFuture = CompletableFuture.runAsync(() -> {
+            if (asyncSortFuture != null && !asyncSortFuture.isDone()) {
+                asyncSortFuture.cancel(true);
+                imageIds.clear();
+                imagePaths.clear();
+            }
+
+            try (Stream<Path> paths = Files.list(screenshotsDir)) {
+                Set<String> likedScreenshotsSet = loadLikedScreenshots();
+
+                List<Path> sortedPaths = paths
+                        .filter(path -> path.toString().endsWith(".png"))
+                        .sorted((path1, path2) -> {
+                            int result;
+                            if (sortBy == SortBy.DEFAULT) {
+                                boolean liked1 = likedScreenshotsSet.contains(path1.toString());
+                                boolean liked2 = likedScreenshotsSet.contains(path2.toString());
+                                result = Boolean.compare(!liked1, !liked2);
+                            } else {
+                                result = switch (sortBy) {
+                                    case NAME ->
+                                            path1.getFileName().toString().compareTo(path2.getFileName().toString());
+                                    case DATE ->
+                                            Long.compare(path2.toFile().lastModified(), path1.toFile().lastModified());
+                                    case SIZE -> Long.compare(path1.toFile().length(), path2.toFile().length());
+                                    default -> 0;
+                                };
+                            }
+
+                            return sortOrder == SortOrder.ASCENDING ? result : -result;
+                        })
+                        .toList();
+
+                imageIds.clear();
+                imagePaths.clear();
+                imagePaths.addAll(sortedPaths);
+
+                loadImagesAsync();
+            } catch (IOException e) {
+                logger.error("Failed to sort images: {}", e.getMessage());
+            }
+        });
+    }
 
     @Override
     public void resize(MinecraftClient client, int width, int height) {
@@ -626,5 +703,17 @@ public class GalleryScreen extends Screen {
     @Override
     public boolean shouldPause() {
         return false;
+    }
+
+    private enum SortOrder {
+        ASCENDING,
+        DESCENDING
+    }
+
+    private enum SortBy {
+        NAME,
+        DATE,
+        SIZE,
+        DEFAULT
     }
 }

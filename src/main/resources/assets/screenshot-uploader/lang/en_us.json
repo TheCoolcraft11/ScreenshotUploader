@@ -1,6 +1,7 @@
 {
   "key.category.screenshot_uploader.screenshots": "Screenshot Uploader",
   "key.screenshot_uploader.gallery": "Open Gallery",
+  "key.screenshot_uploader.edit_image": "Edit Image",
   "message.screenshot_uploader.uploading_to": "Uploading Screenshots to %s",
   "message.screenshot_uploader.upload_success": "Screenshot uploaded successfully! %s %s %s %s %s %s",
   "message.screenshot_uploader.no_return_url": "Screenshot upload failed: The server did not return valid URLs.",
@@ -22,6 +23,7 @@
   "message.screenshot_uploader.hours_ago": "%s hours and %s minutes ago",
   "message.screenshot_uploader.days_ago": "%s days ago",
   "message.screenshot_uploader.shared_saved": "You have saved this Gallery: Click Here to open the screenshot",
+  "message.screenshot_uploader.shared": "Click Here to open the screenshot",
   "message.screenshot_uploader.next_upload": "Next screenshots will be uploaded to [%s]",
   "message.screenshot_uploader.next_upload_description": "Your screenshots will be uploaded to this server, you can see those screenshots at [ %s ] or in your ingame Gallery(press [%s])",
   "message.screenshot_uploader.next_upload_server_description": "Your screenshots will be uploaded to [%s](%s), you can see those screenshots at [%s] or in your ingame Gallery(press [%s])",

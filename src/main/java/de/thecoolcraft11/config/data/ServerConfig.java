@@ -23,5 +23,9 @@ public class ServerConfig {
     public boolean sendDiscordWebhook = false;
     @Comment("The Url of the Discord webhook")
     public String webhookUrl = "";
+    @Comment("If the server should delete screenshots older than a certain amount of days")
+    public boolean deleteOldScreenshots = false;
+    @Comment("The amount of days after which the screenshots should be deleted")
+    public int deleteAfterDays = 30;
 }
 

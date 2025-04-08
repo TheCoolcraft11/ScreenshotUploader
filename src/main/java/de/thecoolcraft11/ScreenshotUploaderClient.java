@@ -1,7 +1,7 @@
 package de.thecoolcraft11;
 
 
-import com.google.gson.JsonParser;
+import com.google.gson.*;
 import com.mojang.authlib.GameProfile;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.StringArgumentType;
@@ -46,12 +46,16 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
+import java.io.FileReader;
+import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.Instant;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -72,6 +76,8 @@ public class ScreenshotUploaderClient implements ClientModInitializer {
         ClientCommandRegistrationCallback.EVENT.register(this::regsiterCommands);
 
         UseBlockCallback.EVENT.register(ScreenshotUploaderClient::signBlockClick);
+
+        deleteOldScreenshots();
     }
 
 
@@ -267,5 +273,46 @@ public class ScreenshotUploaderClient implements ClientModInitializer {
             }
         }
         return ActionResult.PASS;
+    }
+
+    private void deleteOldScreenshots() {
+        Path screenshotDir = Paths.get("./screenshots/");
+        Path likedFile = Paths.get("./config/screenshotUploader/data/local.json");
+        Set<String> likedScreenshots = loadLikedScreenshots(likedFile.toString());
+        for (File file : Objects.requireNonNull(screenshotDir.toFile().listFiles())) {
+            if (ConfigManager.getClientConfig().deleteOldScreenshots && file.isFile() && file.lastModified() < System.currentTimeMillis() - (ConfigManager.getClientConfig().deleteAfterDays * 24 * 60 * 60 * 1000L)) {
+                try {
+                    System.out.println(likedScreenshots);
+                    System.out.println(file.getAbsoluteFile().toPath().toString().replace(".\\", ""));
+                    if (likedScreenshots.contains(file.getAbsoluteFile().toPath().toString().replace(".\\", "")))
+                        continue;
+                    Files.delete(file.toPath());
+                } catch (IOException e) {
+                    logger.error("Failed to delete old screenshot: {}", e.getMessage());
+                }
+            }
+        }
+    }
+
+    private Set<String> loadLikedScreenshots(String FILE_PATH) {
+        Set<String> likedScreenshots = new HashSet<>();
+        File file = new File(FILE_PATH);
+
+        if (file.exists() && file.length() > 0) {
+            try (FileReader reader = new FileReader(file, StandardCharsets.UTF_8)) {
+                JsonArray jsonArray = JsonParser.parseReader(reader).getAsJsonArray();
+                for (JsonElement element : jsonArray) {
+                    JsonObject obj = element.getAsJsonObject();
+                    if (obj.has("screenshotUrl")) {
+                        likedScreenshots.add(obj.get("screenshotUrl").getAsString());
+                    }
+                }
+            } catch (JsonSyntaxException e) {
+                logger.error("Corrupt JSON file detected. Resetting it.", e);
+            } catch (IOException e) {
+                logger.error("Error reading the like file.", e);
+            }
+        }
+        return likedScreenshots;
     }
 }

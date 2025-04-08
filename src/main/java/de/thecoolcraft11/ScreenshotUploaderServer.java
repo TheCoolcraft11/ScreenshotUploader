@@ -29,6 +29,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.time.Instant;
+import java.util.Objects;
 import java.util.UUID;
 
 import static de.thecoolcraft11.util.ReceivePackets.handleReceivedScreenshot;
@@ -45,6 +46,7 @@ public class ScreenshotUploaderServer implements DedicatedServerModInitializer {
         ServerLifecycleEvents.SERVER_STARTED.register(this::onServerStarting);
         prepareWebServerStart();
         ServerPlayConnectionEvents.JOIN.register(this::registerJoinEvent);
+        deleteOldScreenshots();
     }
 
     private void registerJoinEvent(ServerPlayNetworkHandler serverPlayNetworkHandler, PacketSender player, MinecraftServer minecraftServer) {
@@ -190,6 +192,20 @@ public class ScreenshotUploaderServer implements DedicatedServerModInitializer {
 
     public static String getServerIp() {
         return ConfigManager.getServerConfig().websiteURL;
+    }
+
+    private static void deleteOldScreenshots() {
+        Path screenshotDir = Paths.get("./screenshotUploader/screenshots/");
+        for (File file : Objects.requireNonNull(screenshotDir.toFile().listFiles())) {
+            System.out.println(file.toPath());
+            if (ConfigManager.getServerConfig().deleteOldScreenshots && file.isFile() && file.lastModified() < System.currentTimeMillis() - (ConfigManager.getServerConfig().deleteAfterDays * 24 * 60 * 60 * 1000L)) {
+                try {
+                    Files.delete(file.toPath());
+                } catch (IOException e) {
+                    LOGGER.error("Failed to delete old screenshot: {}", e.getMessage());
+                }
+            }
+        }
     }
 }
 

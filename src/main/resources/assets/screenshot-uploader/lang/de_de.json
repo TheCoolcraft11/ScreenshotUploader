@@ -1,6 +1,7 @@
 {
   "key.category.screenshot_uploader.screenshots": "Screenshot-Uploader",
   "key.screenshot_uploader.gallery": "Galerie öffnen",
+  "key.screenshot_uploader.edit_image": "Bild bearbeiten",
   "message.screenshot_uploader.uploading_to": "Screenshots werden hochgeladen nach %s",
   "message.screenshot_uploader.upload_success": "Screenshot erfolgreich hochgeladen! %s %s %s %s %s %s",
   "message.screenshot_uploader.no_return_url": "Screenshot-Upload fehlgeschlagen: Der Server hat keine gültigen URLs zurückgegeben.",
@@ -123,5 +124,9 @@
   "config.screenshot_uploader.highlight_color_r": "Roter Farbanteil für die Highlight-Farbe, die auf Schilder/Items angewendet wird",
   "config.screenshot_uploader.highlight_color_g": "Grüner Farbanteil für die Highlight-Farbe, die auf Schilder/Items angewendet wird",
   "config.screenshot_uploader.highlight_color_b": "Blauer Farbanteil für die Highlight-Farbe, die auf Schilder/Items angewendet wird",
-  "config.screenshot_uploader.highlight_rotation_speed": "Drehgeschwindigkeit der Highlight-Rotation (für Schild-/Item-Drehung)"
+  "config.screenshot_uploader.highlight_rotation_speed": "Drehgeschwindigkeit der Highlight-Rotation (für Schild-/Item-Drehung)",
+  "message.screenshot_uploader.shared": "Click Here to open the screenshot",
+  "gui.screenshot_uploader.screenshot_screen.title": "Shared Screenshot",
+  "gui.screenshot_uploader.screenshot_screen.no_image": "Laden des Bildes fehlgeschlagen. Bitte überprüfen Sie Ihre Internetverbindung und versuchen Sie es erneut.",
+  "gui.screenshot_uploader.screenshot_gallery.like_screenshot": "❤"
 }

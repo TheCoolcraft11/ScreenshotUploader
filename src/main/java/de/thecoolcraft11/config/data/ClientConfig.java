@@ -84,6 +84,11 @@ public class ClientConfig {
     @Comment("config.screenshot_uploader.highlight_rotation_speed")
     public float highlightRotationSpeed = 0.55f;
 
+    @Comment("config.screenshot_uploader.delete_old_screenshots")
+    public boolean deleteOldScreenshots = false;
+    @Comment("config.screenshot_uploader.delete_after_days")
+    public int deleteAfterDays = 30;
+
     public ClientConfig() {
         Map<String, String> map = new HashMap<>();
         map.put("upload", "https://www.this-should-be-long-enough-so-this-is-a-fake-address.com/upload");
