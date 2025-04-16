@@ -68,6 +68,8 @@ public class ScreenshotUploaderClient implements ClientModInitializer {
     public void onInitializeClient() {
         ClientPlayNetworking.registerGlobalReceiver(AddressPayload.ID, this::registerAddressReceiver);
         ClientPlayNetworking.registerGlobalReceiver(ScreenshotResponsePayload.ID, this::registerScreenshotReceiver);
+
+
         ClientPlayConnectionEvents.DISCONNECT.register((this::registerDisconnectEvent));
         ClientPlayConnectionEvents.JOIN.register(this::registerJoinEvent);
         createConfig();
@@ -279,6 +281,7 @@ public class ScreenshotUploaderClient implements ClientModInitializer {
         Path screenshotDir = Paths.get("./screenshots/");
         Path likedFile = Paths.get("./config/screenshotUploader/data/local.json");
         Set<String> likedScreenshots = loadLikedScreenshots(likedFile.toString());
+        if (screenshotDir.toFile().listFiles() == null) return;
         for (File file : Objects.requireNonNull(screenshotDir.toFile().listFiles())) {
             if (ConfigManager.getClientConfig().deleteOldScreenshots && file.isFile() && file.lastModified() < System.currentTimeMillis() - (ConfigManager.getClientConfig().deleteAfterDays * 24 * 60 * 60 * 1000L)) {
                 try {
@@ -293,6 +296,7 @@ public class ScreenshotUploaderClient implements ClientModInitializer {
             }
         }
     }
+
 
     private Set<String> loadLikedScreenshots(String FILE_PATH) {
         Set<String> likedScreenshots = new HashSet<>();

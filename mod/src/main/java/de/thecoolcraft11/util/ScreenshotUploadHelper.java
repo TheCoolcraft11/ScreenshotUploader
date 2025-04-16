@@ -16,6 +16,7 @@ import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 public class ScreenshotUploadHelper {
 
@@ -42,7 +43,7 @@ public class ScreenshotUploadHelper {
             if (uploadUrl.contains("mcserver://this")) {
                 sendScreenshotPacket(tempFile, jsonData);
             } else {
-                JsonObject result = uploadToUrl(tempFile, jsonData, uploadUrl);
+                JsonObject result = uploadToUrl(tempFile, jsonData, uploadUrl.equals("true") ? "http://localhost:4567/upload" : uploadUrl);
                 resultList.add(result);
             }
 
@@ -125,7 +126,6 @@ public class ScreenshotUploadHelper {
         return result;
     }
 
-
     public static void sendScreenshotPacket(File tempFile, String json) {
         try {
             BufferedImage originalImage = ImageIO.read(tempFile);
@@ -139,8 +139,8 @@ public class ScreenshotUploadHelper {
                 graphics.dispose();
                 originalImage = rgbImage;
             }
-            ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
 
+            ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
             javax.imageio.ImageWriter writer = ImageIO.getImageWritersByFormatName("jpeg").next();
             javax.imageio.ImageWriteParam param = writer.getDefaultWriteParam();
             param.setCompressionMode(javax.imageio.ImageWriteParam.MODE_EXPLICIT);
@@ -152,7 +152,18 @@ public class ScreenshotUploadHelper {
 
             byte[] compressedImageBytes = byteArrayOutputStream.toByteArray();
 
-            ClientPlayNetworking.send(new ScreenshotPayload(compressedImageBytes, json));
+            // Determine if we should use chunking based on packet size
+            boolean useChunking = compressedImageBytes.length > 1;//800000; // 800KB threshold
+
+            if (useChunking) {
+                sendChunkedScreenshotPacket(compressedImageBytes, json);
+            } else {
+                // Legacy mode for Fabric servers
+                ClientPlayNetworking.send(new ScreenshotPayload(compressedImageBytes, json));
+            }
+
+            logger.info("Screenshot sent to server: {} bytes using {} mode",
+                    compressedImageBytes.length, useChunking ? "chunked" : "legacy");
 
             if (!tempFile.delete()) {
                 logger.warn("Failed to delete temporary file while sending packet: {}", tempFile.getAbsolutePath());
@@ -161,6 +172,42 @@ public class ScreenshotUploadHelper {
         } catch (IOException e) {
             throw new RuntimeException("Failed to compress and send screenshot", e);
         }
+    }
+
+    private static void sendChunkedScreenshotPacket(byte[] imageBytes, String json) {
+        // Use a maximum chunk size of 25KB to be safe
+        final int MAX_CHUNK_SIZE = 25000;
+        String transferId = UUID.randomUUID().toString();
+
+        // Calculate how many chunks we need
+        int totalChunks = (int) Math.ceil((double) imageBytes.length / MAX_CHUNK_SIZE);
+
+        // Send initial packet with transfer ID, totalChunks and JSON metadata
+        ClientPlayNetworking.send(new ScreenshotPayload(transferId, totalChunks, json));
+        logger.debug("Sent init packet for transfer {}: {} chunks", transferId, totalChunks);
+
+        // Send each chunk
+        for (int i = 0; i < totalChunks; i++) {
+            int start = i * MAX_CHUNK_SIZE;
+            int length = Math.min(MAX_CHUNK_SIZE, imageBytes.length - start);
+
+            byte[] chunk = new byte[length];
+            System.arraycopy(imageBytes, start, chunk, 0, length);
+
+            ClientPlayNetworking.send(new ScreenshotPayload(transferId, totalChunks, i, chunk));
+            logger.info("Sent chunk {}/{} of transfer {}: {} bytes",
+                    i + 1, totalChunks, transferId, length);
+
+            try {
+                Thread.sleep(50);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        }
+
+        // Send final packet to indicate completion
+        ClientPlayNetworking.send(new ScreenshotPayload(transferId));
+        logger.debug("Sent final packet for transfer {}", transferId);
     }
 
 }

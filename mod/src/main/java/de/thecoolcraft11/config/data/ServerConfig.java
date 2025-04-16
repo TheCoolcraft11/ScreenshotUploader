@@ -11,8 +11,8 @@ public class ServerConfig {
     public boolean allowDelete = false;
     @Comment("The public URL of the webserver !(must be configured for proper functionality)")
     public String websiteURL = "";
-    @Comment("if the a url with a list of all screenshots should be sent to the client(required for ingame server gallery to work)")
-    public boolean senGalleryUrlToClient = true;
+    @Comment("if the url with a list of all screenshots should be sent to the client(required for ingame server gallery to work)")
+    public boolean sendGalleryUrlToClient = true;
     @Comment(" If the server should send an uploadUrl to the clients")
     public boolean sendUrlToClient = true;
     @Comment("Replace the server's upload URL with a custom one sent to the player")

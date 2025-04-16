@@ -1,0 +1,24 @@
+#Determines if an integrated webserver with a screenshot gallery should be started
+screenshotWebserver: true
+#Port of the Webserver
+port: 4567
+#Allow EVERYONE to delete screenshot from the gallery
+allowDelete: false
+#The public URL of the webserver !(must be configured for proper functionality
+websiteURL: ""
+#if the url with a list of all screenshots should be sent to the client(required for ingame server gallery to work)
+sendGalleryUrlToClient: true
+# If the server should send an uploadUrl to the clients
+sendUrlToClient: true
+#Replace the server's upload URL with a custom one sent to the player
+useCustomWebURL: false
+#The custom URL to send to players
+customWebURL: ""
+#If the server should send a Discord Message in a channel (Requires Thread Channel webhookUrl needs to be set in order to work)
+sendDiscordWebhook: false
+#The Url of the Discord webhook
+webhookUrl: ""
+#If the server should delete screenshots older than a certain amount of days
+deleteOldScreenshots: false
+#The amount of days after which the screenshots should be deleted
+deleteAfterDays: 30

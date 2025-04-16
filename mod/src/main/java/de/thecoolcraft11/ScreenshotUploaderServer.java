@@ -43,6 +43,7 @@ public class ScreenshotUploaderServer implements DedicatedServerModInitializer {
     @Override
     public void onInitializeServer() {
         createConfig();
+        createModFolder();
         ServerLifecycleEvents.SERVER_STARTED.register(this::onServerStarting);
         prepareWebServerStart();
         ServerPlayConnectionEvents.JOIN.register(this::registerJoinEvent);
@@ -75,7 +76,7 @@ public class ScreenshotUploaderServer implements DedicatedServerModInitializer {
     private static @NotNull JsonObject getJsonObject() {
         JsonObject jsonObject = new JsonObject();
         jsonObject.addProperty("upload", "mcserver://this");
-        if (ConfigManager.getServerConfig().senGalleryUrlToClient) {
+        if (ConfigManager.getServerConfig().sendGalleryUrlToClient) {
             String urlString = getServerIp();
             if (!urlString.matches("^https?://.*")) {
                 urlString = "http://" + urlString;
@@ -195,15 +196,52 @@ public class ScreenshotUploaderServer implements DedicatedServerModInitializer {
     }
 
     private static void deleteOldScreenshots() {
+        if (!ConfigManager.getServerConfig().deleteOldScreenshots) return;
         Path screenshotDir = Paths.get("./screenshotUploader/screenshots/");
+        if (screenshotDir.toFile().listFiles() == null) return;
         for (File file : Objects.requireNonNull(screenshotDir.toFile().listFiles())) {
-            System.out.println(file.toPath());
-            if (ConfigManager.getServerConfig().deleteOldScreenshots && file.isFile() && file.lastModified() < System.currentTimeMillis() - (ConfigManager.getServerConfig().deleteAfterDays * 24 * 60 * 60 * 1000L)) {
+            if (file.isFile() && file.lastModified() < System.currentTimeMillis() - (ConfigManager.getServerConfig().deleteAfterDays * 24 * 60 * 60 * 1000L)) {
                 try {
                     Files.delete(file.toPath());
                 } catch (IOException e) {
                     LOGGER.error("Failed to delete old screenshot: {}", e.getMessage());
                 }
+            }
+        }
+    }
+
+    private void createModFolder() {
+        Path screenshotDir = Paths.get("./screenshotUploader/screenshots/");
+        Path staticDir = Paths.get("./screenshotUploader/static/");
+        Path staticJsDir = Paths.get("./screenshotUploader/static/js/");
+        Path staticCssDir = Paths.get("./screenshotUploader/static/css/");
+
+        if (!Files.exists(screenshotDir)) {
+            try {
+                Files.createDirectories(screenshotDir);
+            } catch (IOException e) {
+                LOGGER.error("Failed to create screenshot directory: {}", e.getMessage());
+            }
+        }
+        if (!Files.exists(staticDir)) {
+            try {
+                Files.createDirectories(staticDir);
+            } catch (IOException e) {
+                LOGGER.error("Failed to create static directory: {}", e.getMessage());
+            }
+        }
+        if (!Files.exists(staticJsDir)) {
+            try {
+                Files.createDirectories(staticJsDir);
+            } catch (IOException e) {
+                LOGGER.error("Failed to create static js directory: {}", e.getMessage());
+            }
+        }
+        if (!Files.exists(staticCssDir)) {
+            try {
+                Files.createDirectories(staticCssDir);
+            } catch (IOException e) {
+                LOGGER.error("Failed to create static css directory: {}", e.getMessage());
             }
         }
     }
