@@ -1,4 +1,0 @@
-name: Screenshot-uploader
-version: '1.0-SNAPSHOT'
-main: de.thecoolcraft11.screenshotUploader.ScreenshotUploader
-api-version: '1.21'

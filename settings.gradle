@@ -14,4 +14,4 @@ pluginManagement {
 }
 
 rootProject.name = "ScreenshotUploader"
-include 'mod', 'plugin'
+include 'fabric', 'paper'
