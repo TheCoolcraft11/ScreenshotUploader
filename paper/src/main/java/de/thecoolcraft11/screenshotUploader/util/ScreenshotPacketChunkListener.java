@@ -29,10 +29,8 @@ public class ScreenshotPacketChunkListener implements PluginMessageListener {
 
             switch (type) {
                 case "INIT" -> {
-                    byte[] emptyBytes = readByteArray(in);
+                    readByteArray(in);
                     String jsonData = readString(in);
-                    logger.info(jsonData);
-                    logger.info(jsonData);
                     if (jsonData.isEmpty()) {
                         jsonData = "{}";
                         logger.warn("Empty JSON data received in INIT packet, using empty object");

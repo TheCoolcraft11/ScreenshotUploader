@@ -1,6 +1,7 @@
 package de.thecoolcraft11.screenshotUploader;
 
 import de.thecoolcraft11.screenshotUploader.listener.PlayJoinListener;
+import de.thecoolcraft11.screenshotUploader.util.CommentPacketListener;
 import de.thecoolcraft11.screenshotUploader.util.Config;
 import de.thecoolcraft11.screenshotUploader.util.ScreenshotPacketChunkListener;
 import de.thecoolcraft11.screenshotUploader.util.WebServer;
@@ -31,7 +32,7 @@ public final class ScreenshotUploader extends JavaPlugin {
         deleteOldScreenshots();
 
         getServer().getMessenger().registerIncomingPluginChannel(this, "screenshot-uploader:screenshot_chunk_packet", new ScreenshotPacketChunkListener());
-        //getServer().getMessenger().registerIncomingPluginChannel(this, "screenshot-uploader:comment_packet", new CommentPacketListener());
+        getServer().getMessenger().registerIncomingPluginChannel(this, "screenshot-uploader:comment_packet", new CommentPacketListener());
 
         getServer().getMessenger().registerOutgoingPluginChannel(this, "screenshot-uploader:address_packet");
         getServer().getMessenger().registerOutgoingPluginChannel(this, "screenshot-uploader:screenshot_response_packet");
@@ -41,12 +42,15 @@ public final class ScreenshotUploader extends JavaPlugin {
 
 
     public static @NotNull Path getPluginFolder() {
-        return instance.getDataPath();
+        return instance.getDataFolder().toPath();
     }
 
     @Override
     public void onDisable() {
-        // Plugin shutdown logic
+        getServer().getMessenger().unregisterIncomingPluginChannel(this, "screenshot-uploader:screenshot_chunk_packet");
+        getServer().getMessenger().unregisterIncomingPluginChannel(this, "screenshot-uploader:comment_packet");
+        getServer().getMessenger().unregisterOutgoingPluginChannel(this, "screenshot-uploader:address_packet");
+        getServer().getMessenger().unregisterOutgoingPluginChannel(this, "screenshot-uploader:screenshot_response_packet");
     }
 
     private void prepareWebServerStart() {

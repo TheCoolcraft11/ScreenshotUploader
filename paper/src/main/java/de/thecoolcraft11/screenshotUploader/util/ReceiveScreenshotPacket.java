@@ -177,7 +177,7 @@ public class ReceiveScreenshotPacket {
         }
     }
 
-    public static byte[] encodeString(String s) {
+    private static byte[] encodeString(String s) {
         byte[] stringBytes = s.getBytes(StandardCharsets.UTF_8);
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         try {
@@ -189,7 +189,7 @@ public class ReceiveScreenshotPacket {
         return out.toByteArray();
     }
 
-    public static void writeVarInt(OutputStream out, int value) throws IOException {
+    private static void writeVarInt(OutputStream out, int value) throws IOException {
         while ((value & ~0x7F) != 0) {
             out.write((value & 0x7F) | 0x80);
             value >>>= 7;
