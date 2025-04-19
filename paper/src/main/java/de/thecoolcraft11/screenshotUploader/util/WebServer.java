@@ -7,7 +7,6 @@ import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpServer;
 import de.thecoolcraft11.screenshotUploader.ScreenshotUploader;
-import org.bukkit.Bukkit;
 
 import java.io.File;
 import java.io.FileReader;
@@ -105,8 +104,7 @@ public class WebServer {
 
             if (matcher.matches()) {
                 String filename = matcher.group(1);
-                Path gameDir = Bukkit.getServer().getWorlds().getFirst().getWorldFolder().toPath();
-                Path targetFile = gameDir.resolve("./screenshotUploader/screenshots/" + filename);
+                Path targetFile = Paths.get("./screenshotUploader/screenshots/" + filename.replace(".png", ".json"));
 
                 try {
                     if (Files.exists(targetFile)) {
@@ -267,8 +265,7 @@ public class WebServer {
 
             if (matcher.matches()) {
                 String filename = matcher.group(1);
-                Path gameDir = Bukkit.getServer().getWorlds().getFirst().getWorldFolder().toPath();
-                Path commentFile = gameDir.resolve("./screenshotUploader/screenshots/" + filename.replace(".png", ".json"));
+                Path commentFile = Paths.get("./screenshotUploader/screenshots/" + filename.replace(".png", ".json"));
 
                 try {
                     if (Files.exists(commentFile)) {
