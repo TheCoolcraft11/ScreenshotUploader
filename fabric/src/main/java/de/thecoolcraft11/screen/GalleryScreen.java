@@ -13,6 +13,7 @@ import net.minecraft.client.texture.NativeImage;
 import net.minecraft.client.texture.NativeImageBackedTexture;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
+import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -24,6 +25,11 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.Duration;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Stream;
@@ -33,6 +39,7 @@ public class GalleryScreen extends Screen {
 
     private static final List<Identifier> imageIds = new ArrayList<>();
     private static final List<Path> imagePaths = new ArrayList<>();
+    private static final List<JsonObject> metaDatas = new ArrayList<>();
 
     private static final int IMAGES_PER_ROW = ConfigManager.getClientConfig().imagesPerRow;
     private static int IMAGE_WIDTH = 192;
@@ -79,6 +86,7 @@ public class GalleryScreen extends Screen {
         imageIds.clear();
         imagePaths.clear();
         navigatorButtons.clear();
+        metaDatas.clear();
 
         int scaledHeight = height / 6;
         int scaledWidth = (scaledHeight * 16) / 9;
@@ -160,7 +168,7 @@ public class GalleryScreen extends Screen {
                 Text.translatable("gui.screenshot_uploader.screenshot_gallery.edit"),
                 button -> {
                     if (clickedImageIndex >= 0 && clickedImageIndex < imagePaths.size()) {
-                        Path imagePath = imagePaths.get(clickedImageIndex);
+                        Path imagePath = imagePaths.get(clickedImageIndex - 1);
                         if (client != null) client.setScreen(new EditScreen(this, imagePath, null, (image) -> {
                         }));
                     }
@@ -413,6 +421,24 @@ public class GalleryScreen extends Screen {
 
         RenderSystem.disableBlend();
 
+        int sidebarWidth = 300;
+        int sidebarHeight = imageHeight;
+        int sidebarXLeft = x - sidebarWidth;
+
+        context.fill(sidebarXLeft, y, sidebarXLeft + sidebarWidth, y + sidebarHeight, 0xCC000000);
+
+
+        if (clickedImageIndex >= 0 && clickedImageIndex < metaDatas.size()) {
+            Map<Text, Text> drawableInfo = getStringStringMap();
+
+            int textXLeft = sidebarXLeft + 10;
+            int textYLeft = y + 20;
+            for (Text info : drawableInfo.keySet()) {
+                context.drawText(client.textRenderer, info.copy().append(drawableInfo.get(info)), textXLeft, textYLeft, 0xFFFFFF, false);
+                textYLeft += 10;
+            }
+        }
+
         likeButton.setMessage(Text.translatable("gui.screenshot_uploader.screenshot_gallery.like_screenshot").withColor(likedScreenshots.containsKey(imagePaths.get(clickedImageIndex).toString()) && likedScreenshots.get(imagePaths.get(clickedImageIndex).toString()) ? 0xFFFFFF : 0x2a2a2a));
 
     }
@@ -441,6 +467,8 @@ public class GalleryScreen extends Screen {
 
 
     private void loadImagesAsync() {
+        sortByButton.active = false;
+        sortOrderButton.active = false;
         CompletableFuture.runAsync(() -> {
             Set<String> likedScreenshotsSet = loadLikedScreenshots();
 
@@ -455,11 +483,29 @@ public class GalleryScreen extends Screen {
                     if (likedScreenshotsSet.contains(imagePathString)) {
                         likedScreenshots.put(imagePathString, true);
                     }
+                    JsonObject metaData = new JsonObject();
+                    File jsonData = new File(path.getParent().toString(), path.getFileName().toString().replace(".png", ".json"));
+                    if (jsonData.exists()) {
+                        try (FileReader reader = new FileReader(jsonData, StandardCharsets.UTF_8)) {
+                            metaData = JsonParser.parseReader(reader).getAsJsonObject();
+                        } catch (JsonSyntaxException e) {
+                            logger.error("Corrupt JSON file detected. Resetting it.", e);
+                        } catch (IOException e) {
+                            logger.error("Error reading the JSON file.", e);
+                        }
+                    }
+                    metaData.addProperty("screenshotUrl", imagePathString);
+                    metaData.addProperty("liked", likedScreenshotsSet.contains(imagePathString));
+                    metaData.addProperty("screenshotDate", new Date(jsonData.lastModified()).toString());
+
+                    metaDatas.add(metaData);
 
                 } catch (IOException e) {
                     logger.error("Failed to load image '{}': {}", path, e.getMessage());
                 }
             }
+            sortByButton.active = true;
+            sortOrderButton.active = true;
         });
     }
 
@@ -638,6 +684,8 @@ public class GalleryScreen extends Screen {
     private CompletableFuture<?> asyncSortFuture;
 
     private void loadImageSorted(SortOrder sortOrder, SortBy sortBy) {
+        sortByButton.active = false;
+        sortOrderButton.active = false;
         Path screenshotsDir = Paths.get(System.getProperty("user.dir"), "screenshots");
 
         asyncSortFuture = CompletableFuture.runAsync(() -> {
@@ -645,6 +693,7 @@ public class GalleryScreen extends Screen {
                 asyncSortFuture.cancel(true);
                 imageIds.clear();
                 imagePaths.clear();
+                metaDatas.clear();
             }
 
             try (Stream<Path> paths = Files.list(screenshotsDir)) {
@@ -677,12 +726,78 @@ public class GalleryScreen extends Screen {
                 imagePaths.clear();
                 imagePaths.addAll(sortedPaths);
 
+                for (Path path : imagePaths) {
+                    JsonObject metaData = new JsonObject();
+                    File jsonData = new File(path.getParent().toString(), path.getFileName().toString().replace(".png", ".json"));
+                    if (jsonData.exists()) {
+                        try (FileReader reader = new FileReader(jsonData, StandardCharsets.UTF_8)) {
+                            metaData = JsonParser.parseReader(reader).getAsJsonObject();
+                        } catch (JsonSyntaxException e) {
+                            logger.error("Corrupt JSON file detected. Resetting it.", e);
+                        } catch (IOException e) {
+                            logger.error("Error reading the JSON file.", e);
+                        }
+                    }
+                    metaDatas.add(metaData);
+                }
+
                 loadImagesAsync();
             } catch (IOException e) {
                 logger.error("Failed to sort images: {}", e.getMessage());
             }
+            sortByButton.active = true;
+            sortOrderButton.active = true;
         });
     }
+
+
+    private @NotNull LinkedHashMap<Text, Text> getStringStringMap() {
+        JsonObject metaData = metaDatas.get(clickedImageIndex);
+        LinkedHashMap<Text, Text> drawableInfo = new LinkedHashMap<>();
+
+        drawableInfo.put(Text.literal("Username: "), metaData.has("username") && metaData.get("username").isJsonPrimitive() ? Text.literal(metaData.get("username").getAsString()) : metaData.has("fileUsername") && metaData.get("fileUsername").isJsonPrimitive() ? Text.literal(metaData.get("fileUsername").getAsString()) : Text.literal("N/A"));
+        drawableInfo.put(Text.literal("Server: "), metaData.has("server_address") && metaData.get("server_address").isJsonPrimitive() ? Text.literal(metaData.get("server_address").getAsString()) : Text.literal("N/A"));
+        drawableInfo.put(Text.literal("World: "), metaData.has("world_name") && metaData.get("world_name").isJsonPrimitive() ? Text.literal(metaData.get("world_name").getAsString()) : Text.literal("N/A"));
+        drawableInfo.put(Text.literal("Location: "), metaData.has("coordinates") && metaData.get("coordinates").isJsonPrimitive() ? Text.literal(metaData.get("coordinates").getAsString()) : Text.literal("N/A"));
+        drawableInfo.put(Text.literal("Biome: "), metaData.has("biome") && metaData.get("biome").isJsonPrimitive() ? Text.literal(metaData.get("biome").getAsString()) : Text.literal("N/A"));
+        drawableInfo.put(Text.literal(" "), Text.literal(" "));
+        drawableInfo.put(metaData.has("current_time") ? getTimestamp(metaData.get("current_time").getAsLong()) : metaData.has("date") ? getTimestamp(metaData.get("date").getAsLong()) : Text.literal("N/A"), Text.literal(""));
+        drawableInfo.put(metaData.has("current_time") ? getTimeAgo(metaData.get("current_time").getAsLong()) : metaData.has("date") ? getTimeAgo(metaData.get("date").getAsLong()) : Text.literal("N/A"), Text.literal(""));
+        return drawableInfo;
+    }
+
+    public static Text getTimestamp(long millis) {
+
+        Instant timestampInstant = Instant.ofEpochMilli(millis);
+
+        LocalDateTime timestampDateTime = LocalDateTime.ofInstant(timestampInstant, ZoneId.systemDefault());
+
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm:ss");
+
+        return Text.literal(timestampDateTime.format(formatter)).styled(style -> style.withUnderline(true));
+    }
+
+    private static Text getTimeAgo(long millis) {
+        Instant timestampInstant = Instant.ofEpochMilli(millis);
+        Instant nowInstant = Instant.now();
+        Duration duration = Duration.between(timestampInstant, nowInstant);
+        long seconds = duration.getSeconds();
+
+        if (seconds < 60) {
+            return Text.literal("(").append(Text.translatable("message.screenshot_uploader.seconds_ago", seconds).append(")"));
+        } else if (seconds < 3600) {
+            long minutes = seconds / 60;
+            return Text.literal("(").append(Text.translatable("message.screenshot_uploader.minutes_ago", minutes).append(")"));
+        } else if (seconds < 86400) {
+            long hours = seconds / 3600;
+            long minutes = (seconds % 3600) / 60;
+            return Text.literal("(").append(Text.translatable("message.screenshot_uploader.hours_ago", hours, minutes).append(")"));
+        } else {
+            long days = seconds / 86400;
+            return Text.literal("(").append(Text.translatable("message.screenshot_uploader.days_ago", days).append(")"));
+        }
+    }
+
 
     @Override
     public void resize(MinecraftClient client, int width, int height) {

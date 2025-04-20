@@ -61,7 +61,7 @@ public class ConfigScreen extends Screen {
                 TextFieldWidget textField = new TextFieldWidget(textRenderer, inputXOffset, currentYOffset, 200, 20, Text.literal(key));
                 textField.setMaxLength(1024);
                 textField.setText(value.getAsString());
-                textField.setTooltip(Tooltip.of(Text.of(key).copy().styled(style -> style.withBold(true)).append(Text.translatableWithFallback((config.has("_comment_" + key) ? ": " + config.get("_comment_" + key).getAsString().replaceAll("^\"|\"$", "'") : ""), (config.has("_comment_" + key) ? ": " + config.get("_comment_" + key).getAsString().replaceAll("^\"|\"$", "'") : "")).styled(style -> style.withColor(Formatting.AQUA)))));
+                textField.setTooltip(Tooltip.of(Text.of(key + ":\n").copy().styled(style -> style.withBold(true).withUnderline(true)).append(Text.translatable((config.has("_comment_" + key) ? config.get("_comment_" + key).getAsString().replaceAll("^\"|\"$", "'") : "")).styled(style -> style.withUnderline(false).withBold(false).withColor(Formatting.AQUA)))));
                 textField.setChangedListener(s -> isConfigSaved = false);
                 inputFields.put(key, textField);
                 scrollableButtons.put(key, textField);
@@ -70,7 +70,7 @@ public class ConfigScreen extends Screen {
                 TextFieldWidget textField = new TextFieldWidget(textRenderer, inputXOffset, currentYOffset, 200, 20, Text.literal(key));
                 textField.setMaxLength(1024);
                 textField.setText(value.getAsString());
-                textField.setTooltip(Tooltip.of(Text.of(key).copy().styled(style -> style.withBold(true)).append(Text.translatableWithFallback((config.has("_comment_" + key) ? ": " + config.get("_comment_" + key).getAsString().replaceAll("^\"|\"$", "'") : ""), (config.has("_comment_" + key) ? ": " + config.get("_comment_" + key).getAsString().replaceAll("^\"|\"$", "'") : "")).styled(style -> style.withColor(Formatting.AQUA)))));
+                textField.setTooltip(Tooltip.of(Text.of(key + ":\n").copy().styled(style -> style.withBold(true).withUnderline(true)).append(Text.translatable((config.has("_comment_" + key) ? config.get("_comment_" + key).getAsString().replaceAll("^\"|\"$", "'") : "")).styled(style -> style.withUnderline(false).withBold(false).withColor(Formatting.AQUA)))));
                 textField.setChangedListener(s -> isConfigSaved = false);
                 inputFields.put(key, textField);
                 scrollableButtons.put(key, textField);
@@ -84,13 +84,13 @@ public class ConfigScreen extends Screen {
                     config.addProperty(key, newValue);
                     button.setMessage(Text.translatable(newValue ? "gui.screenshot_uploader.config.true" : "gui.screenshot_uploader.config.false"));
                 }).dimensions(inputXOffset, currentYOffset, 200, 20).tooltip(Tooltip.of(Text.of(key))).build();
-                widget.setTooltip(Tooltip.of(Text.of(key).copy().styled(style -> style.withBold(true)).append(Text.translatableWithFallback((config.has("_comment_" + key) ? ": " + config.get("_comment_" + key).getAsString().replaceAll("^\"|\"$", "'") : ""), (config.has("_comment_" + key) ? ": " + config.get("_comment_" + key).getAsString().replaceAll("^\"|\"$", "'") : "")).styled(style -> style.withColor(Formatting.AQUA)))));
+                widget.setTooltip(Tooltip.of(Text.of(key + ":\n").copy().styled(style -> style.withBold(true).withUnderline(true)).append(Text.translatable((config.has("_comment_" + key) ? config.get("_comment_" + key).getAsString().replaceAll("^\"|\"$", "'") : "")).styled(style -> style.withUnderline(false).withBold(false).withColor(Formatting.AQUA)))));
                 addDrawableChild(widget);
                 scrollableButtons.put(key, widget);
             } else if (value.isJsonNull() || value.isJsonArray() || value.isJsonObject()) {
                 ButtonWidget widget = ButtonWidget.builder(Text.translatable("gui.screenshot_uploader.config.not_edit"), button -> {
                 }).dimensions(inputXOffset, currentYOffset, 200, 20).tooltip(Tooltip.of(Text.of(key + "\nHead to /config/screenshotUploader/config.json to edit servers"))).build();
-                widget.setTooltip(Tooltip.of(Text.of(key).copy().styled(style -> style.withBold(true)).append(Text.translatableWithFallback((config.has("_comment_" + key) ? ": " + config.get("_comment_" + key).getAsString().replaceAll("^\"|\"$", "'") : ""), (config.has("_comment_" + key) ? ": " + config.get("_comment_" + key).getAsString().replaceAll("^\"|\"$", "'") : "")).styled(style -> style.withColor(Formatting.AQUA)))));
+                widget.setTooltip(Tooltip.of(Text.of(key + ":\n").copy().styled(style -> style.withBold(true).withUnderline(true)).append(Text.translatable((config.has("_comment_" + key) ? config.get("_comment_" + key).getAsString().replaceAll("^\"|\"$", "'") : "")).styled(style -> style.withUnderline(false).withBold(false).withColor(Formatting.AQUA)))));
                 widget.active = false;
                 addDrawableChild(widget);
                 scrollableButtons.put(key, widget);

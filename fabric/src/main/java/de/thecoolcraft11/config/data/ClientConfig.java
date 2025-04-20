@@ -88,6 +88,8 @@ public class ClientConfig {
     public boolean deleteOldScreenshots = false;
     @Comment("config.screenshot_uploader.delete_after_days")
     public int deleteAfterDays = 30;
+    @Comment("config.screenshot_uploader.save_json_data")
+    public boolean saveJsonData = false;
 
     public ClientConfig() {
         Map<String, String> map = new HashMap<>();

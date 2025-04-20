@@ -4,7 +4,7 @@ screenshotWebserver: true
 port: 4567
 #Allow EVERYONE to delete screenshot from the gallery
 allowDelete: false
-#The public URL of the webserver !(must be configured for proper functionality
+#The public URL of the webserver !(must be configured for proper functionality)
 websiteURL: ""
 #if the url with a list of all screenshots should be sent to the client(required for ingame server gallery to work)
 sendGalleryUrlToClient: true

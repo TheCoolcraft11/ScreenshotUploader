@@ -18,6 +18,7 @@ import net.minecraft.client.texture.NativeImage;
 import net.minecraft.client.texture.NativeImageBackedTexture;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
+import net.minecraft.util.math.BlockPos;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -80,8 +81,14 @@ public class WebGalleryScreen extends Screen {
     private static ButtonWidget likeButton;
 
     private ButtonWidget sendCommentButton;
+    private ButtonWidget sortByButton;
+    private ButtonWidget sortOrderButton;
 
     private TextFieldWidget commentWidget;
+
+    private SortBy sortBy = SortBy.DEFAULT;
+    private SortOrder sortOrder = SortOrder.ASCENDING;
+
 
     private static String FILE_PATH;
 
@@ -225,6 +232,26 @@ public class WebGalleryScreen extends Screen {
         sendCommentButton = ButtonWidget.builder(Text.translatable("gui.screenshot_uploader.screenshot_gallery.send_comment"),
                 button -> sendComment()
         ).dimensions(buttonWidth * 3 + 20, buttonY, buttonWidth, buttonHeight).build();
+        sortByButton = ButtonWidget.builder(
+                Text.literal(sortBy.toString()),
+                button -> {
+                    sortBy = SortBy.values()[(sortBy.ordinal() + 1) % SortBy.values().length];
+                    sortByButton.setMessage(Text.of(sortBy.toString()));
+                    loadScreenshotsSorted(sortOrder, sortBy);
+                }
+        ).dimensions(5, height - buttonHeight - 5, buttonWidth, buttonHeight).build();
+
+        sortOrderButton = ButtonWidget.builder(
+                Text.literal(sortOrder.toString()),
+                button -> {
+                    sortOrder = SortOrder.values()[(sortOrder.ordinal() + 1) % SortOrder.values().length];
+                    sortOrderButton.setMessage(Text.of(sortOrder.toString()));
+                    loadScreenshotsSorted(sortOrder, sortBy);
+                }
+        ).dimensions(5 + buttonWidth + 5, height - buttonHeight - 5, buttonWidth, buttonHeight).build();
+
+        addDrawableChild(sortByButton);
+        addDrawableChild(sortOrderButton);
 
 
         addDrawableChild(saveButton);
@@ -935,6 +962,74 @@ public class WebGalleryScreen extends Screen {
         });
     }
 
+    private void loadScreenshotsSorted(SortOrder sortOrder, SortBy sortBy) {
+        List<AbstractMap.SimpleEntry<String, JsonObject>> entries = requestScreenshotListFromServer(webserverUrl);
+
+        Set<String> likedScreenshotsSet = loadLikedScreenshots();
+
+        entries.sort((entry1, entry2) -> {
+            int result;
+            if (sortBy == SortBy.DEFAULT) {
+                boolean liked1 = likedScreenshotsSet.contains(entry1.getKey());
+                boolean liked2 = likedScreenshotsSet.contains(entry2.getKey());
+                result = Boolean.compare(!liked1, !liked2);
+            } else {
+                result = switch (sortBy) {
+                    case NAME -> entry1.getKey().compareTo(entry2.getKey());
+                    case DATE -> {
+                        long date1 = entry1.getValue().get("date").getAsLong();
+                        long date2 = entry2.getValue().get("date").getAsLong();
+                        yield Long.compare(date2, date1);
+                    }
+                    case PLAYER -> {
+                        String player1 = (entry1.getValue().get("username") != null) ? entry1.getValue().get("username").getAsString() : entry1.getValue().get("fileUsername").getAsString();
+                        String player2 = (entry2.getValue().get("username") != null) ? entry2.getValue().get("username").getAsString() : entry2.getValue().get("fileUsername").getAsString();
+                        yield player1.compareTo(player2);
+                    }
+                    case DIMENSION -> {
+                        String dimension1 = (entry1.getValue().get("world_name") != null) ? entry1.getValue().get("world_name").getAsString() : "N/A";
+                        String dimension2 = (entry2.getValue().get("world_name") != null) ? entry2.getValue().get("world_name").getAsString() : "N/A";
+                        yield dimension1.compareTo(dimension2);
+                    }
+                    case BIOME -> {
+                        String biome1 = (entry1.getValue().get("biome") != null) ? entry1.getValue().get("biome").getAsString() : "N/A";
+                        String biome2 = (entry2.getValue().get("biome") != null) ? entry2.getValue().get("biome").getAsString() : "N/A";
+                        yield biome1.compareTo(biome2);
+                    }
+                    case POSITION -> {
+                        if (entry1.getValue().get("coordinates") == null || entry2.getValue().get("coordinates") == null) {
+                            yield 0;
+                        }
+                        String[] pos1 = entry1.getValue().get("coordinates").getAsString().split(", ");
+                        String[] pos2 = entry2.getValue().get("coordinates").getAsString().split(", ");
+                        int x1 = Integer.parseInt(pos1[0].split(": ")[1]);
+                        int y1 = Integer.parseInt(pos1[1].split(": ")[1]);
+                        int z1 = Integer.parseInt(pos1[2].split(": ")[1]);
+                        int x2 = Integer.parseInt(pos2[0].split(": ")[1]);
+                        int y2 = Integer.parseInt(pos2[1].split(": ")[1]);
+                        int z2 = Integer.parseInt(pos2[2].split(": ")[1]);
+                        BlockPos pos1Block = new BlockPos(x1, y1, z1);
+                        BlockPos pos2Block = new BlockPos(x2, y2, z2);
+                        yield pos1Block.compareTo(pos2Block);
+                    }
+                    default -> 0;
+                };
+            }
+
+            return sortOrder == SortOrder.ASCENDING ? result : -result;
+        });
+
+        imageIds.clear();
+        imagePaths.clear();
+        metaDatas.clear();
+
+        for (AbstractMap.SimpleEntry<String, JsonObject> entry : entries) {
+            imagePaths.add(entry.getKey());
+            metaDatas.add(entry.getValue());
+            loadWebImage(entry.getKey());
+        }
+    }
+
 
     private static List<AbstractMap.SimpleEntry<String, JsonObject>> requestScreenshotListFromServer(String server) {
         List<AbstractMap.SimpleEntry<String, JsonObject>> screenshotData = new ArrayList<>();
@@ -1118,5 +1213,20 @@ public class WebGalleryScreen extends Screen {
     @Override
     public boolean shouldPause() {
         return false;
+    }
+
+    private enum SortOrder {
+        ASCENDING,
+        DESCENDING
+    }
+
+    private enum SortBy {
+        NAME,
+        DATE,
+        PLAYER,
+        DEFAULT,
+        DIMENSION,
+        BIOME,
+        POSITION
     }
 }
