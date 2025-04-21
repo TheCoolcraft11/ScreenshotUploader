@@ -55,6 +55,7 @@ public class GalleryBuilder {
                 .append("<div id='modal-left'>")
                 .append("<img id='modalImage' src='' alt='Full Image'>")
                 .append("<div id='imageCount'></div>")
+                .append("<div id='thumbnails'></div>")
                 .append("<div id='buttonContainer'>")
                 .append("<button id='prevBtn' onclick='previousImage()'>Previous</button>")
                 .append("<button id='nextBtn' onclick='nextImage()'>Next</button>")
@@ -76,7 +77,6 @@ public class GalleryBuilder {
                 .append("</div>")
                 .append("</div>");
         htmlContent.append("</div>")
-                .append("<div id='thumbnails'></div>")
                 .append("</div>");
         htmlContent.append("<script>")
                 .append("let currentSrc = '';")

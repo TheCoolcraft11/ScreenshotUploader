@@ -14,6 +14,8 @@ public class ScreenshotData {
 
     @SerializedName("world_name")
     private final String worldName;
+    @SerializedName("world_seed")
+    private final String worldSeed;
 
     @SerializedName("coordinates")
     private final String coordinates;
@@ -52,11 +54,12 @@ public class ScreenshotData {
     private final String currentTime;
 
     // Constructor
-    public ScreenshotData(String username, String uuid, String accountType, String worldName, String coordinates, String biome, String facingDirection, String dimension, String playerState, String chunkInfo, String entitiesInfo, String worldInfo, String serverAddress, String clientSettings, String systemInfo, String currentTime) {
+    public ScreenshotData(String username, String uuid, String accountType, String worldName, String worldSeed, String coordinates, String biome, String facingDirection, String dimension, String playerState, String chunkInfo, String entitiesInfo, String worldInfo, String serverAddress, String clientSettings, String systemInfo, String currentTime) {
         this.username = username;
         this.uuid = uuid;
         this.accountType = accountType;
         this.worldName = worldName;
+        this.worldSeed = worldSeed;
         this.coordinates = coordinates;
         this.biome = biome;
         this.facingDirection = facingDirection;

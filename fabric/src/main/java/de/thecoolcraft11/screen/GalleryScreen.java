@@ -32,6 +32,7 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 
 public class GalleryScreen extends Screen {
@@ -375,7 +376,14 @@ public class GalleryScreen extends Screen {
             int y = startY + row * (IMAGE_HEIGHT + GAP) - scrollOffset;
 
             context.fill(x - 2, y - 2, x + IMAGE_WIDTH + 2, y + IMAGE_HEIGHT + 2, 0xFF888888);
-            Identifier imageId = imageIds.get(i);
+            Identifier imageId = null;
+            if (imageIds.size() > i) {
+                imageId = imageIds.get(i);
+            }
+            if (imageId == null) {
+                logger.error("Image ID is null for index {}", i);
+                continue;
+            }
             RenderSystem.setShaderTexture(0, imageId);
             context.drawTexture(imageId, x, y, 0, 0, IMAGE_WIDTH, IMAGE_HEIGHT, IMAGE_WIDTH, IMAGE_HEIGHT);
 
@@ -452,8 +460,12 @@ public class GalleryScreen extends Screen {
 
                 List<Path> sortedPaths = paths
                         .filter(path -> path.toString().endsWith(".png"))
-                        .sorted(Comparator.comparing(path -> likedScreenshotsSet.contains(path.toString()) ? 0 : 1))
+                        .sorted(Comparator
+                                .comparing((Path path) -> likedScreenshotsSet.contains(path.toString()) ? 0 : 1)
+                                .thenComparing((Path path) -> path.toFile().lastModified(), Comparator.reverseOrder())
+                        )
                         .toList();
+
 
                 imagePaths.clear();
                 imagePaths.addAll(sortedPaths);
@@ -465,14 +477,17 @@ public class GalleryScreen extends Screen {
         });
     }
 
+    private CompletableFuture<?> asyncSortFuture;
+    private final AtomicInteger sortTaskId = new AtomicInteger();
+
 
     private void loadImagesAsync() {
-        sortByButton.active = false;
-        sortOrderButton.active = false;
-        CompletableFuture.runAsync(() -> {
+        int currentTaskId = sortTaskId.incrementAndGet();
+        asyncSortFuture = CompletableFuture.runAsync(() -> {
             Set<String> likedScreenshotsSet = loadLikedScreenshots();
-
+            if (sortTaskId.get() != currentTaskId) return;
             for (Path path : imagePaths) {
+                if (sortTaskId.get() != currentTaskId) return;
                 try {
                     NativeImage image = NativeImage.read(Files.newInputStream(path));
                     Identifier textureId = Identifier.of("gallery", "textures/" + path.getFileName().toString());
@@ -504,8 +519,6 @@ public class GalleryScreen extends Screen {
                     logger.error("Failed to load image '{}': {}", path, e.getMessage());
                 }
             }
-            sortByButton.active = true;
-            sortOrderButton.active = true;
         });
     }
 
@@ -681,52 +694,66 @@ public class GalleryScreen extends Screen {
         clickedImageIndex = -1;
     }
 
-    private CompletableFuture<?> asyncSortFuture;
 
     private void loadImageSorted(SortOrder sortOrder, SortBy sortBy) {
+        int currentTaskId = sortTaskId.incrementAndGet();
         sortByButton.active = false;
         sortOrderButton.active = false;
+
+        if (asyncSortFuture != null && !asyncSortFuture.isDone()) {
+            asyncSortFuture.cancel(true);
+        }
+
         Path screenshotsDir = Paths.get(System.getProperty("user.dir"), "screenshots");
 
         asyncSortFuture = CompletableFuture.runAsync(() -> {
-            if (asyncSortFuture != null && !asyncSortFuture.isDone()) {
-                asyncSortFuture.cancel(true);
-                imageIds.clear();
-                imagePaths.clear();
-                metaDatas.clear();
-            }
-
-            try (Stream<Path> paths = Files.list(screenshotsDir)) {
+            try {
                 Set<String> likedScreenshotsSet = loadLikedScreenshots();
 
-                List<Path> sortedPaths = paths
-                        .filter(path -> path.toString().endsWith(".png"))
-                        .sorted((path1, path2) -> {
-                            int result;
-                            if (sortBy == SortBy.DEFAULT) {
-                                boolean liked1 = likedScreenshotsSet.contains(path1.toString());
-                                boolean liked2 = likedScreenshotsSet.contains(path2.toString());
-                                result = Boolean.compare(!liked1, !liked2);
-                            } else {
-                                result = switch (sortBy) {
-                                    case NAME ->
-                                            path1.getFileName().toString().compareTo(path2.getFileName().toString());
-                                    case DATE ->
-                                            Long.compare(path2.toFile().lastModified(), path1.toFile().lastModified());
-                                    case SIZE -> Long.compare(path1.toFile().length(), path2.toFile().length());
-                                    default -> 0;
-                                };
-                            }
+                List<Path> sortedPaths;
+                try (Stream<Path> paths = Files.list(screenshotsDir)) {
+                    sortedPaths = paths
+                            .filter(path -> path.toString().endsWith(".png"))
+                            .sorted((path1, path2) -> {
+                                int result;
+                                if (sortBy == SortBy.DEFAULT) {
+                                    if (likedScreenshotsSet.contains(path1.toString()) && !likedScreenshotsSet.contains(path2.toString())) {
+                                        return -1;
+                                    } else if (!likedScreenshotsSet.contains(path1.toString()) && likedScreenshotsSet.contains(path2.toString())) {
+                                        return 1;
+                                    }
 
-                            return sortOrder == SortOrder.ASCENDING ? result : -result;
-                        })
-                        .toList();
+                                    return Long.compare(path2.toFile().lastModified(), path1.toFile().lastModified());
 
-                imageIds.clear();
-                imagePaths.clear();
-                imagePaths.addAll(sortedPaths);
+                                } else {
+                                    result = switch (sortBy) {
+                                        case NAME ->
+                                                path1.getFileName().toString().compareTo(path2.getFileName().toString());
+                                        case DATE ->
+                                                Long.compare(path2.toFile().lastModified(), path1.toFile().lastModified());
+                                        case SIZE -> Long.compare(path1.toFile().length(), path2.toFile().length());
+                                        default -> 0;
+                                    };
+                                }
+                                return sortOrder == SortOrder.ASCENDING ? result : -result;
+                            })
+                            .toList();
+                }
 
-                for (Path path : imagePaths) {
+                if (sortTaskId.get() != currentTaskId) return;
+
+                MinecraftClient.getInstance().execute(() -> {
+                    imageIds.clear();
+                    imagePaths.clear();
+                    metaDatas.clear();
+
+                    imagePaths.addAll(sortedPaths);
+
+                    sortByButton.active = true;
+                    sortOrderButton.active = true;
+                });
+                for (Path path : sortedPaths) {
+                    if (sortTaskId.get() != currentTaskId) return;
                     JsonObject metaData = new JsonObject();
                     File jsonData = new File(path.getParent().toString(), path.getFileName().toString().replace(".png", ".json"));
                     if (jsonData.exists()) {
@@ -738,15 +765,30 @@ public class GalleryScreen extends Screen {
                             logger.error("Error reading the JSON file.", e);
                         }
                     }
-                    metaDatas.add(metaData);
-                }
 
-                loadImagesAsync();
+                    metaData.addProperty("screenshotUrl", path.toString());
+                    metaData.addProperty("liked", likedScreenshotsSet.contains(path.toString()));
+                    metaData.addProperty("screenshotDate", new Date(jsonData.lastModified()).toString());
+
+                    Identifier textureId = null;
+                    try {
+                        NativeImage image = NativeImage.read(Files.newInputStream(path));
+                        textureId = Identifier.of("gallery", "textures/" + path.getFileName().toString());
+                        MinecraftClient.getInstance().getTextureManager().registerTexture(textureId, new NativeImageBackedTexture(image));
+                    } catch (IOException e) {
+                        logger.error("Failed to load image during sort '{}': {}", path, e.getMessage());
+                    }
+
+                    JsonObject finalMetaData = metaData;
+                    Identifier finalTextureId = textureId;
+                    MinecraftClient.getInstance().execute(() -> {
+                        metaDatas.add(finalMetaData);
+                        imageIds.add(finalTextureId);
+                    });
+                }
             } catch (IOException e) {
                 logger.error("Failed to sort images: {}", e.getMessage());
             }
-            sortByButton.active = true;
-            sortOrderButton.active = true;
         });
     }
 
@@ -755,16 +797,33 @@ public class GalleryScreen extends Screen {
         JsonObject metaData = metaDatas.get(clickedImageIndex);
         LinkedHashMap<Text, Text> drawableInfo = new LinkedHashMap<>();
 
-        drawableInfo.put(Text.literal("Username: "), metaData.has("username") && metaData.get("username").isJsonPrimitive() ? Text.literal(metaData.get("username").getAsString()) : metaData.has("fileUsername") && metaData.get("fileUsername").isJsonPrimitive() ? Text.literal(metaData.get("fileUsername").getAsString()) : Text.literal("N/A"));
-        drawableInfo.put(Text.literal("Server: "), metaData.has("server_address") && metaData.get("server_address").isJsonPrimitive() ? Text.literal(metaData.get("server_address").getAsString()) : Text.literal("N/A"));
-        drawableInfo.put(Text.literal("World: "), metaData.has("world_name") && metaData.get("world_name").isJsonPrimitive() ? Text.literal(metaData.get("world_name").getAsString()) : Text.literal("N/A"));
-        drawableInfo.put(Text.literal("Location: "), metaData.has("coordinates") && metaData.get("coordinates").isJsonPrimitive() ? Text.literal(metaData.get("coordinates").getAsString()) : Text.literal("N/A"));
-        drawableInfo.put(Text.literal("Biome: "), metaData.has("biome") && metaData.get("biome").isJsonPrimitive() ? Text.literal(metaData.get("biome").getAsString()) : Text.literal("N/A"));
+        if (metaData.has("username"))
+            drawableInfo.put(Text.literal("Username: "), metaData.has("username") && metaData.get("username").isJsonPrimitive() ? Text.literal(metaData.get("username").getAsString()) : metaData.has("fileUsername") && metaData.get("fileUsername").isJsonPrimitive() ? Text.literal(metaData.get("fileUsername").getAsString()) : Text.literal("N/A"));
+        if (metaData.has("server_address"))
+            drawableInfo.put(Text.literal("Server: "), metaData.has("server_address") && metaData.get("server_address").isJsonPrimitive() ? Text.literal(metaData.get("server_address").getAsString()) : Text.literal("N/A"));
+        if (metaData.has("world_name"))
+            drawableInfo.put(Text.literal("World: "), metaData.has("world_name") && metaData.get("world_name").isJsonPrimitive() ? Text.literal(metaData.get("world_name").getAsString()) : Text.literal("N/A"));
+        if (metaData.has("coordinates"))
+            drawableInfo.put(Text.literal("Location: "), metaData.has("coordinates") && metaData.get("coordinates").isJsonPrimitive() ? Text.literal(metaData.get("coordinates").getAsString()) : Text.literal("N/A"));
+        if (metaData.has("facing_direction"))
+            drawableInfo.put(Text.literal("Facing: "), metaData.has("facing_direction") && metaData.get("facing_direction").isJsonPrimitive() ? Text.literal(metaData.get("facing_direction").getAsString()) : Text.literal("N/A"));
+        if (metaData.has("player_state"))
+            drawableInfo.put(Text.literal("Player: "), metaData.has("player_state") && metaData.get("player_state").isJsonPrimitive() ? Text.literal(metaData.get("player_state").getAsString()) : Text.literal("N/A"));
+        if (metaData.has("biome"))
+            drawableInfo.put(Text.literal("Biome: "), metaData.has("biome") && metaData.get("biome").isJsonPrimitive() ? Text.literal(metaData.get("biome").getAsString()) : Text.literal("N/A"));
+        if (metaData.has("world_info"))
+            drawableInfo.put(Text.literal("World Info: "), metaData.has("world_info") && metaData.get("world_info").isJsonPrimitive() ? Text.literal(metaData.get("world_info").getAsString()) : Text.literal("N/A"));
+        if (metaData.has("world_seed"))
+            drawableInfo.put(Text.literal("Seed: "), metaData.has("world_seed") && metaData.get("world_seed").isJsonPrimitive() ? Text.literal(metaData.get("world_seed").getAsString()) : Text.literal("N/A"));
         drawableInfo.put(Text.literal(" "), Text.literal(" "));
-        drawableInfo.put(metaData.has("current_time") ? getTimestamp(metaData.get("current_time").getAsLong()) : metaData.has("date") ? getTimestamp(metaData.get("date").getAsLong()) : Text.literal("N/A"), Text.literal(""));
-        drawableInfo.put(metaData.has("current_time") ? getTimeAgo(metaData.get("current_time").getAsLong()) : metaData.has("date") ? getTimeAgo(metaData.get("date").getAsLong()) : Text.literal("N/A"), Text.literal(""));
+        if (metaData.has("current_time"))
+            drawableInfo.put(metaData.has("current_time") ? getTimestamp(metaData.get("current_time").getAsLong()) : metaData.has("date") ? getTimestamp(metaData.get("date").getAsLong()) : Text.literal("N/A"), Text.literal(""));
+        if (metaData.has("current_time"))
+            drawableInfo.put(metaData.has("current_time") ? getTimeAgo(metaData.get("current_time").getAsLong()) : metaData.has("date") ? getTimeAgo(metaData.get("date").getAsLong()) : Text.literal("N/A"), Text.literal(""));
+
         return drawableInfo;
     }
+
 
     public static Text getTimestamp(long millis) {
 

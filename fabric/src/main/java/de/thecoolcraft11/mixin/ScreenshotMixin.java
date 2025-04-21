@@ -11,6 +11,7 @@ import de.thecoolcraft11.util.ErrorMessages;
 import de.thecoolcraft11.util.ReceivePackets;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.network.ServerInfo;
 import net.minecraft.client.texture.NativeImage;
@@ -112,6 +113,7 @@ public abstract class ScreenshotMixin {
         String uuid = String.valueOf(client.getSession().getUuidOrNull());
         String accountType = String.valueOf(client.getSession().getAccountType());
         String worldName = sendWorldData ? getWorldName(client) : "N/A";
+        String seed = sendWorldData ? getWorldSeed(client) : "N/A";
         String coordinates = sendWorldData ? getPlayerCoordinates(client) : "N/A";
         String biome = sendWorldData ? getPlayerBiome(client) : "N/A";
         String facingDirection = sendWorldData ? getPlayerFacingDirection(client) : "N/A";
@@ -126,25 +128,29 @@ public abstract class ScreenshotMixin {
         String currentTime = System.currentTimeMillis() + "";
 
 
-        ScreenshotData data = new ScreenshotData(username, uuid, accountType, worldName, coordinates, biome, facingDirection, dimension, playerState, chunkInfo, entitiesInfo, worldInfo, serverAddress, clientSettings, systemInfo, currentTime);
+        ScreenshotData data = new ScreenshotData(username, uuid, accountType, worldName, seed, coordinates, biome, facingDirection, dimension, playerState, chunkInfo, entitiesInfo, worldInfo, serverAddress, clientSettings, systemInfo, currentTime);
         String jsonData = serializeToJson(data);
+
+        logger.error("TST: {}", ConfigManager.getClientConfig().saveJsonData);
+
+        if (ConfigManager.getClientConfig().saveJsonData) {
+            logger.error("A");
+            String filename = Objects.requireNonNull(getScreenshotFilename(Paths.get(client.runDirectory.getName(), "screenshots").toFile())).getName();
+            File jsonFile = new File(client.runDirectory, "screenshots/" + filename.replace(".png", ".json"));
+            try {
+                boolean wasCreated = jsonFile.createNewFile();
+                if (!wasCreated) {
+                    logger.info("JSON file already exists: {}", jsonFile.getAbsolutePath());
+                }
+                Files.writeString(jsonFile.toPath(), jsonData);
+            } catch (Exception e) {
+                logger.error("Failed to save the JSON data to disk", e);
+            }
+        }
 
         if (ConfigManager.getClientConfig().requireNoHud && !client.options.hudHidden ||
                 ConfigManager.getClientConfig().limitToServer &&
                         !Objects.equals(Objects.requireNonNull(client.getCurrentServerEntry()).address, ConfigManager.getClientConfig().limitedServerAddr)) {
-            if (ConfigManager.getClientConfig().saveJsonData) {
-                String filename = Objects.requireNonNull(getScreenshotFilename(Paths.get(client.runDirectory.getName(), "screenshots").toFile())).getName();
-                File jsonFile = new File(client.runDirectory, "screenshots/" + filename.replace(".png", ".json"));
-                try {
-                    boolean wasCreated = jsonFile.createNewFile();
-                    if (!wasCreated) {
-                        logger.info("JSON file already exists: {}", jsonFile.getAbsolutePath());
-                    }
-                    Files.writeString(jsonFile.toPath(), jsonData);
-                } catch (Exception e) {
-                    logger.error("Failed to save the JSON data to disk", e);
-                }
-            }
             return;
         }
 
@@ -260,6 +266,14 @@ public abstract class ScreenshotMixin {
     }
 
     @Unique
+    private static String getWorldSeed(MinecraftClient client) {
+        if (client.getServer() != null) {
+            return String.valueOf(client.getServer().getOverworld().getSeed());
+        }
+        return "Unknown Seed";
+    }
+
+    @Unique
     private static String getPlayerCoordinates(MinecraftClient client) {
         if (client.player != null) {
             BlockPos pos = client.player.getBlockPos();
@@ -300,13 +314,15 @@ public abstract class ScreenshotMixin {
     @Unique
     private static String getPlayerState(MinecraftClient client) {
         if (client.player != null) {
-            return String.format("Flying: %b, Sneaking: %b, Gliding: %b",
-                    client.player.getAbilities().flying,
-                    client.player.isSneaking(),
-                    client.player.isFallFlying());
+            return String.format("Speed: %.2f b/s, Health: %.2f, Food: %d, Air: %d",
+                    client.player.getVelocity().length() * 20,
+                    client.player.getHealth(),
+                    client.player.getHungerManager().getFoodLevel() / 2,
+                    client.player.getAir());
         }
         return "Unknown State";
     }
+
 
     @Unique
     private static String getChunkInfo(MinecraftClient client) {
@@ -338,13 +354,22 @@ public abstract class ScreenshotMixin {
     private static String getWorldInfo(MinecraftClient client) {
         if (client.world != null) {
             WorldProperties properties = client.world.getLevelProperties();
-            return String.format("Time: %d, Weather: %s, Difficulty: %s",
-                    properties.getTime(),
+            return String.format("Time: %s, Weather: %s, Difficulty: %s",
+                    convertMinecraftTimeToHumanReadable(properties.getTimeOfDay()),
                     client.world.isRaining() ? "Raining" : "Clear",
                     client.world.getDifficulty().getName());
         }
         return "No World Info";
     }
+
+    @Unique
+    private static String convertMinecraftTimeToHumanReadable(long ticks) {
+        int hours = (int) ((ticks / 1000 + 6) % 24);
+        int minutes = (int) ((ticks % 1000) * 60 / 1000);
+
+        return String.format("%02d:%02d", hours, minutes);
+    }
+
 
     @Unique
     private static String getServerAddress(MinecraftClient client) {
@@ -355,21 +380,28 @@ public abstract class ScreenshotMixin {
 
     @Unique
     private static String getClientSettings(MinecraftClient client) {
-        return String.format("Graphics: %s, V-Sync: %b, Fullscreen: %b, Language: %s",
+        return String.format("Graphics: %s, V-Sync: %b, Fullscreen: %b, Language: %s, FPS: %d / %d, Render Distance: %d",
                 client.options.getGraphicsMode().getValue(),
                 client.options.getEnableVsync().getValue(),
                 client.options.getFullscreen(),
-                client.getLanguageManager().getLanguage());
+                client.getLanguageManager().getLanguage(),
+                client.getCurrentFps(),
+                client.options.getMaxFps().getValue(),
+                client.options.getViewDistance().getValue()
+        );
     }
 
     @Unique
     private static String getSystemInfo() {
-        return String.format("OS: %s %s (%s), Java: %s",
+        return String.format("OS: %s %s (%s), Java: %s, Version: %s",
                 System.getProperty("os.name"),
                 System.getProperty("os.version"),
                 System.getProperty("os.arch"),
-                System.getProperty("java.version"));
+                System.getProperty("java.version"),
+                FabricLoader.getInstance().getModContainer("minecraft").orElseThrow().getMetadata().getVersion().getFriendlyString()
+        );
     }
+
 
     @Unique
     private static String serializeToJson(ScreenshotData data) {

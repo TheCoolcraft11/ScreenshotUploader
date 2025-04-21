@@ -219,3 +219,22 @@ function showModal(src) {
                 })
                 .catch(error => console.error('Error submitting comment:', error));
         }
+
+document.addEventListener('DOMContentLoaded', function() {
+  const thumbnailsContainer = document.getElementById('thumbnails');
+  const modelContainer = document.getElementById('model-left');
+
+  if (thumbnailsContainer) {
+    thumbnailsContainer.addEventListener('wheel', function(event) {
+      event.preventDefault();
+      thumbnailsContainer.scrollLeft += event.deltaY;
+
+    }, { passive: false });
+  }
+    if (modelContainer) {
+        modelContainer.addEventListener('wheel', function(event) {
+        event.preventDefault();
+
+        }, { passive: false });
+    }
+});

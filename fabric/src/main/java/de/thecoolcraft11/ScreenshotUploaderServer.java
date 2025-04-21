@@ -131,13 +131,19 @@ public class ScreenshotUploaderServer implements DedicatedServerModInitializer {
     }
 
     private void createConfig() {
-        File configDir = new File("config/screenshotUploader");
+        File configDir = new File("config");
+        File screenshotUploaderDir = new File(configDir, "screenshotUploader");
         if (!configDir.exists()) {
             if (configDir.mkdir()) {
                 LOGGER.info("Created Config Folder");
             }
         }
-        ConfigManager.initialize(configDir, false);
+        if (!screenshotUploaderDir.exists()) {
+            if (screenshotUploaderDir.mkdir()) {
+                LOGGER.info("Created ScreenshotUploader Folder");
+            }
+        }
+        ConfigManager.initialize(screenshotUploaderDir, false);
     }
 
     private void prepareWebServerStart() {

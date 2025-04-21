@@ -84,13 +84,19 @@ public class ScreenshotUploaderClient implements ClientModInitializer {
 
 
     private void createConfig() {
-        File configDir = new File("config/screenshotUploader");
+        File configDir = new File("config");
+        File screenshotUploaderDir = new File(configDir, "screenshotUploader");
         if (!configDir.exists()) {
             if (configDir.mkdir()) {
                 logger.info("Created Config Dir");
             }
         }
-        ConfigManager.initialize(configDir, true);
+        if (!screenshotUploaderDir.exists()) {
+            if (screenshotUploaderDir.mkdir()) {
+                logger.info("Created Screenshot Uploader Dir");
+            }
+        }
+        ConfigManager.initialize(screenshotUploaderDir, true);
     }
 
     private void registerScreenshotReceiver(ScreenshotResponsePayload payload, ClientPlayNetworking.Context context) {

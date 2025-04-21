@@ -24,8 +24,14 @@ public final class ScreenshotUploader extends JavaPlugin {
     @Override
     public void onEnable() {
         instance = this;
-        saveResource("static/js/script.js", false);
-        saveResource("static/css/style.css", false);
+        File jsFile = new File(getDataFolder(), "static/js/script.js");
+        File cssFile = new File(getDataFolder(), "static/css/script.js");
+        if (!jsFile.exists()) {
+            saveResource("static/js/script.js", false);
+        }
+        if (!cssFile.exists()) {
+            saveResource("static/css/style.css", false);
+        }
         config = new Config("config.yml", ScreenshotUploader.getProvidingPlugin(ScreenshotUploader.class).getDataFolder());
         createModFolder();
         prepareWebServerStart();
