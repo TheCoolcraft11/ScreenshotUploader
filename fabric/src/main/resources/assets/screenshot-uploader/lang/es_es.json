@@ -128,5 +128,8 @@
   "config.screenshot_uploader.highlight_color_r": "Componente rojo para el color de resaltado aplicado a letreros/objetos",
   "config.screenshot_uploader.highlight_color_g": "Componente verde para el color de resaltado aplicado a letreros/objetos",
   "config.screenshot_uploader.highlight_color_b": "Componente azul para el color de resaltado aplicado a letreros/objetos",
-  "config.screenshot_uploader.highlight_rotation_speed": "Velocidad de rotación del resaltado (aplicada a la rotación del letrero/objeto)"
+  "config.screenshot_uploader.highlight_rotation_speed": "Velocidad de rotación del resaltado (aplicada a la rotación del letrero/objeto)",
+  "config.screenshot_uploader.delete_old_screenshots": "Eliminar capturas de pantalla antiguas después de un cierto período",
+  "config.screenshot_uploader.delete_after_days": "Número de días tras los cuales se eliminarán las capturas antiguas",
+  "config.screenshot_uploader.save_json_data": "Guardar los datos JSON (como el nombre del mundo, ubicación, ...) de la captura en un archivo; puede mostrarse en la galería"
 }

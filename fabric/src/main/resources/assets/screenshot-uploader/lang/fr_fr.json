@@ -128,5 +128,8 @@
   "config.screenshot_uploader.highlight_color_r": "Composant rouge de la couleur de surlignage appliquée aux panneaux/objets",
   "config.screenshot_uploader.highlight_color_g": "Composant vert de la couleur de surlignage appliquée aux panneaux/objets",
   "config.screenshot_uploader.highlight_color_b": "Composant bleu de la couleur de surlignage appliquée aux panneaux/objets",
-  "config.screenshot_uploader.highlight_rotation_speed": "Vitesse de rotation du surlignage (appliquée à la rotation du panneau/objet)"
+  "config.screenshot_uploader.highlight_rotation_speed": "Vitesse de rotation du surlignage (appliquée à la rotation du panneau/objet)",
+  "config.screenshot_uploader.delete_old_screenshots": "Supprimer les anciennes captures d’écran après une certaine période",
+  "config.screenshot_uploader.delete_after_days": "Nombre de jours après lesquels les anciennes captures seront supprimées",
+  "config.screenshot_uploader.save_json_data": "Enregistrer les données JSON (comme le nom du monde, la localisation, ...) de la capture dans un fichier, pouvant être affichées dans la galerie"
 }
