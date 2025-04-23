@@ -9,11 +9,13 @@ import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.Element;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.widget.ButtonWidget;
+import net.minecraft.client.gui.widget.TextFieldWidget;
 import net.minecraft.client.texture.NativeImage;
 import net.minecraft.client.texture.NativeImageBackedTexture;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 import org.jetbrains.annotations.NotNull;
+import org.lwjgl.glfw.GLFW;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -25,10 +27,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.time.Duration;
-import java.time.Instant;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
+import java.time.*;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
@@ -66,6 +65,11 @@ public class GalleryScreen extends Screen {
     private ButtonWidget sortOrderButton;
 
     private ButtonWidget configButton;
+    private TextFieldWidget searchField;
+
+    private final List<Path> originalImagePaths = new ArrayList<>();
+    private String lastSearchQuery = "";
+    private Runnable searchDebounceTask = null;
 
     private static final String FILE_PATH = "./config/screenshotUploader/data/local.json";
     private static final LinkedHashMap<String, Boolean> likedScreenshots = new LinkedHashMap<>();
@@ -208,6 +212,15 @@ public class GalleryScreen extends Screen {
                 }
         ).dimensions(5 + buttonWidth + 5, height - buttonHeight - 5, buttonWidth, buttonHeight).build();
 
+        searchField = new TextFieldWidget(textRenderer, 5 + (2 * buttonWidth) + 10, height - buttonHeight - 5, buttonWidth * 2, buttonHeight, Text.translatable("gui.screenshot_uploader.screenshot_gallery.search"));
+        searchField.setChangedListener(query -> {
+            if (searchDebounceTask != null) {
+                MinecraftClient.getInstance().send(searchDebounceTask);
+            }
+
+            searchDebounceTask = () -> performSearch(query);
+            MinecraftClient.getInstance().send(searchDebounceTask);
+        });
 
         addDrawableChild(saveButton);
         addDrawableChild(deleteButton);
@@ -217,6 +230,7 @@ public class GalleryScreen extends Screen {
         addDrawableChild(likeButton);
         addDrawableChild(sortByButton);
         addDrawableChild(sortOrderButton);
+        addDrawableChild(searchField);
 
         saveButton.visible = false;
         deleteButton.visible = false;
@@ -224,6 +238,11 @@ public class GalleryScreen extends Screen {
         editButton.visible = false;
         configButton.visible = true;
         likeButton.visible = true;
+        sortByButton.visible = true;
+        sortOrderButton.visible = true;
+        searchField.visible = true;
+        searchField.setMaxLength(100);
+
 
         buttonsToHideOnOverlap.add(saveButton);
         buttonsToHideOnOverlap.add(deleteButton);
@@ -333,6 +352,9 @@ public class GalleryScreen extends Screen {
             editButton.visible = true;
             configButton.visible = false;
             likeButton.visible = false;
+            sortByButton.visible = false;
+            sortOrderButton.visible = false;
+            searchField.visible = false;
             navigatorButtons.forEach(buttonWidget -> buttonWidget.visible = false);
         } else {
             renderGallery(context, mouseX, mouseY);
@@ -343,6 +365,9 @@ public class GalleryScreen extends Screen {
             editButton.visible = false;
             configButton.visible = true;
             likeButton.visible = true;
+            sortByButton.visible = true;
+            sortOrderButton.visible = true;
+            searchField.visible = true;
 
             navigatorButtons.forEach(buttonWidget -> buttonWidget.visible = true);
         }
@@ -466,6 +491,8 @@ public class GalleryScreen extends Screen {
                         )
                         .toList();
 
+                originalImagePaths.clear();
+                originalImagePaths.addAll(sortedPaths);
 
                 imagePaths.clear();
                 imagePaths.addAll(sortedPaths);
@@ -475,6 +502,317 @@ public class GalleryScreen extends Screen {
                 logger.error("Failed to load images: {}", e.getMessage());
             }
         });
+    }
+
+    private void performSearch(String query) {
+        if (query.equals(lastSearchQuery)) {
+            return;
+        }
+
+        lastSearchQuery = query;
+
+        if (query.isEmpty()) {
+            imagePaths.clear();
+            imagePaths.addAll(originalImagePaths);
+            imageIds.clear();
+            metaDatas.clear();
+            loadImagesAsync();
+            return;
+        }
+
+        List<SearchTerm> searchTerms = parseSearchTerms(query);
+
+        CompletableFuture.runAsync(() -> {
+            List<Path> matchingPaths = new ArrayList<>();
+            Map<Path, JsonObject> pathToMetadata = new HashMap<>();
+
+            for (Path path : originalImagePaths) {
+                try {
+                    JsonObject metaData = new JsonObject();
+                    File jsonData = new File(path.getParent().toString(), path.getFileName().toString().replace(".png", ".json"));
+
+                    if (jsonData.exists()) {
+                        try (FileReader reader = new FileReader(jsonData, StandardCharsets.UTF_8)) {
+                            metaData = JsonParser.parseReader(reader).getAsJsonObject();
+                        } catch (JsonSyntaxException e) {
+                            logger.error("Corrupt JSON file detected while searching.", e);
+                        }
+                    }
+
+                    metaData.addProperty("filename", path.getFileName().toString().toLowerCase());
+                    pathToMetadata.put(path, metaData);
+
+                } catch (IOException e) {
+                    logger.error("Failed to load metadata for search: {}", e.getMessage());
+                }
+            }
+
+            for (Map.Entry<Path, JsonObject> entry : pathToMetadata.entrySet()) {
+                Path path = entry.getKey();
+                JsonObject metaData = entry.getValue();
+
+                boolean matchesAllTerms = true;
+
+                for (SearchTerm term : searchTerms) {
+                    if (!matchesTerm(metaData, term)) {
+                        matchesAllTerms = false;
+                        break;
+                    }
+                }
+
+                if (matchesAllTerms) {
+                    matchingPaths.add(path);
+                }
+            }
+
+            MinecraftClient.getInstance().execute(() -> {
+                imagePaths.clear();
+                imagePaths.addAll(matchingPaths);
+                imageIds.clear();
+                metaDatas.clear();
+                loadImagesAsync();
+            });
+        });
+    }
+
+    private List<SearchTerm> parseSearchTerms(String query) {
+        List<SearchTerm> searchTerms = new ArrayList<>();
+        Map<String, String> fieldMappings = getSearchFieldTerms();
+
+        String[] terms = query.split(",(?=([^\"]*\"[^\"]*\")*[^\"]*$)");
+
+        for (String term : terms) {
+            term = term.trim();
+            if (term.isEmpty()) continue;
+
+            String fieldName = null;
+            String fieldValue = term.toLowerCase();
+
+            for (Map.Entry<String, String> entry : fieldMappings.entrySet()) {
+                if (term.toLowerCase().startsWith(entry.getKey())) {
+                    fieldName = entry.getValue();
+                    fieldValue = term.substring(entry.getKey().length()).trim().toLowerCase();
+                    break;
+                }
+            }
+
+            searchTerms.add(new SearchTerm(fieldName, fieldValue));
+        }
+
+        return searchTerms;
+    }
+
+    private boolean matchesTerm(JsonObject metaData, SearchTerm term) {
+        String searchFieldName = term.fieldName;
+        String searchFieldValue = term.fieldValue;
+
+        String operator = extractComparisonOperator(searchFieldValue);
+        String actualValue = searchFieldValue;
+        if (!operator.isEmpty()) {
+            actualValue = searchFieldValue.substring(operator.length()).trim();
+        }
+
+        if (searchFieldName == null) {
+            for (Map.Entry<String, JsonElement> field : metaData.entrySet()) {
+                if (field.getValue().isJsonPrimitive() &&
+                        field.getValue().getAsString().toLowerCase().contains(actualValue)) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        if (searchFieldName.equals("date")) {
+            if (metaData.has("current_time") && metaData.get("current_time").isJsonPrimitive()) {
+                return compareDate(metaData.get("current_time").getAsLong(), operator, actualValue);
+            } else if (metaData.has("date") && metaData.get("date").isJsonPrimitive()) {
+                return compareDate(metaData.get("date").getAsLong(), operator, actualValue);
+            }
+            return false;
+        }
+
+        if (metaData.has(searchFieldName) && metaData.get(searchFieldName).isJsonPrimitive()) {
+            String fieldValue = metaData.get(searchFieldName).getAsString().toLowerCase();
+            if (operator.isEmpty()) {
+                return fieldValue.contains(actualValue);
+            } else {
+                return compareValues(fieldValue, operator, actualValue);
+            }
+        }
+
+        switch (searchFieldName) {
+            case "health", "food", "air", "speed" -> {
+                if (metaData.has("player_state") && metaData.get("player_state").isJsonPrimitive()) {
+                    String playerState = metaData.get("player_state").getAsString().toLowerCase();
+                    return matchesNestedField(playerState, searchFieldName, operator, actualValue);
+                }
+            }
+            case "time", "weather", "difficulty" -> {
+                if (metaData.has("world_info") && metaData.get("world_info").isJsonPrimitive()) {
+                    String worldInfo = metaData.get("world_info").getAsString().toLowerCase();
+                    return matchesNestedField(worldInfo, searchFieldName, operator, actualValue);
+                }
+            }
+            case "x", "y", "z" -> {
+                if (metaData.has("coordinates") && metaData.get("coordinates").isJsonPrimitive()) {
+                    String coordinates = metaData.get("coordinates").getAsString().toLowerCase();
+                    return matchesNestedField(coordinates, searchFieldName, operator, actualValue);
+                }
+            }
+        }
+
+        return false;
+    }
+
+    private record SearchTerm(String fieldName, String fieldValue) {
+    }
+
+    private String extractComparisonOperator(String searchValue) {
+        searchValue = searchValue.trim();
+        if (searchValue.startsWith(">=") || searchValue.startsWith("<=")) {
+            return searchValue.substring(0, 2);
+        } else if (searchValue.startsWith(">") || searchValue.startsWith("<") || searchValue.startsWith("=")) {
+            return searchValue.substring(0, 1);
+        }
+        return "";
+    }
+
+    private boolean matchesNestedField(String fieldString, String subFieldName, String operator, String searchValue) {
+        String pattern = subFieldName + ": ";
+        int pos = fieldString.indexOf(pattern);
+        if (pos == -1) {
+            pattern = subFieldName + ":";
+            pos = fieldString.indexOf(pattern);
+        }
+
+        if (pos != -1) {
+            int valueStart = pos + pattern.length();
+            int valueEnd = fieldString.indexOf(',', valueStart);
+            if (valueEnd == -1) {
+                valueEnd = fieldString.length();
+            }
+
+            String extractedValue = fieldString.substring(valueStart, valueEnd).trim();
+
+            if (operator.isEmpty()) {
+                return extractedValue.contains(searchValue);
+            } else {
+                return compareValues(extractedValue, operator, searchValue);
+            }
+        }
+
+        return false;
+    }
+
+    private boolean compareDate(long timestamp, String operator, String searchValue) {
+        LocalDate screenshotDate = Instant.ofEpochMilli(timestamp)
+                .atZone(ZoneId.systemDefault())
+                .toLocalDate();
+
+        try {
+            if (searchValue.equals("today")) {
+                LocalDate today = LocalDate.now();
+                return compareDateWithOperator(screenshotDate, operator, today);
+            } else if (searchValue.equals("yesterday")) {
+                LocalDate yesterday = LocalDate.now().minusDays(1);
+                return compareDateWithOperator(screenshotDate, operator, yesterday);
+            } else if (searchValue.contains("week")) {
+                LocalDate aWeekAgo = LocalDate.now().minusWeeks(1);
+                if (operator.isEmpty()) {
+                    return !screenshotDate.isBefore(aWeekAgo);
+                }
+                return compareDateWithOperator(screenshotDate, operator, aWeekAgo);
+            } else if (searchValue.contains("month")) {
+                LocalDate aMonthAgo = LocalDate.now().minusMonths(1);
+                if (operator.isEmpty()) {
+                    return !screenshotDate.isBefore(aMonthAgo);
+                }
+                return compareDateWithOperator(screenshotDate, operator, aMonthAgo);
+            }
+
+            LocalDate searchDate = null;
+
+            if (searchValue.matches("\\d{1,2}\\.\\d{1,2}\\.\\d{4}")) {
+                DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd.MM.yyyy");
+                searchDate = LocalDate.parse(searchValue, formatter);
+            } else if (searchValue.matches("\\d{1,2}\\.\\d{4}")) {
+                DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MM.yyyy");
+                YearMonth queryYearMonth = YearMonth.parse(searchValue, formatter);
+                searchDate = queryYearMonth.atDay(1);
+            } else if (searchValue.matches("\\d{4}")) {
+                int year = Integer.parseInt(searchValue);
+                searchDate = LocalDate.of(year, 1, 1);
+            }
+
+            if (searchDate != null) {
+                return compareDateWithOperator(screenshotDate, operator, searchDate);
+            }
+        } catch (Exception ignored) {
+        }
+        String formattedDate = screenshotDate.format(DateTimeFormatter.ofPattern("dd.MM.yyyy"));
+        return formattedDate.contains(searchValue);
+    }
+
+    private boolean compareDateWithOperator(LocalDate screenshotDate, String operator, LocalDate referenceDate) {
+        return switch (operator) {
+            case ">" -> screenshotDate.isAfter(referenceDate);
+            case "<" -> screenshotDate.isBefore(referenceDate);
+            case ">=" -> screenshotDate.isAfter(referenceDate) || screenshotDate.isEqual(referenceDate);
+            case "<=" -> screenshotDate.isBefore(referenceDate) || screenshotDate.isEqual(referenceDate);
+            default -> screenshotDate.isEqual(referenceDate);
+        };
+    }
+
+    private boolean compareValues(String fieldValue, String operator, String searchValue) {
+        try {
+            double fieldNumeric = Double.parseDouble(fieldValue.replaceAll("[^0-9.-]", ""));
+            double searchNumeric = Double.parseDouble(searchValue.replaceAll("[^0-9.-]", ""));
+
+            return switch (operator) {
+                case ">" -> fieldNumeric > searchNumeric;
+                case "<" -> fieldNumeric < searchNumeric;
+                case ">=" -> fieldNumeric >= searchNumeric;
+                case "<=" -> fieldNumeric <= searchNumeric;
+                case "=" -> fieldNumeric == searchNumeric;
+                default -> fieldValue.contains(searchValue);
+            };
+        } catch (NumberFormatException e) {
+            return fieldValue.contains(searchValue);
+        }
+    }
+
+
+    private static @NotNull Map<String, String> getSearchFieldTerms() {
+        Map<String, String> fieldMappings = new HashMap<>();
+
+        fieldMappings.put("seed:", "world_seed");
+        fieldMappings.put("biome:", "biome");
+        fieldMappings.put("world:", "world_name");
+        fieldMappings.put("server:", "server_address");
+        fieldMappings.put("username:", "username");
+        fieldMappings.put("coordinates:", "coordinates");
+        fieldMappings.put("location:", "coordinates");
+        fieldMappings.put("facing:", "facing_direction");
+        fieldMappings.put("player:", "player_state");
+
+        fieldMappings.put("date:", "date");
+        fieldMappings.put("day:", "date");
+        fieldMappings.put("time:", "date");
+
+        fieldMappings.put("health:", "health");
+        fieldMappings.put("food:", "food");
+        fieldMappings.put("air:", "air");
+        fieldMappings.put("speed:", "speed");
+
+        fieldMappings.put("worldtime:", "time");
+        fieldMappings.put("weather:", "weather");
+        fieldMappings.put("difficulty:", "difficulty");
+
+        fieldMappings.put("x:", "x");
+        fieldMappings.put("y:", "y");
+        fieldMappings.put("z:", "z");
+
+        return fieldMappings;
     }
 
     private CompletableFuture<?> asyncSortFuture;
@@ -617,9 +955,20 @@ public class GalleryScreen extends Screen {
         int x = (width - imageWidth) / 2 + (int) imageOffsetX;
         int y = (height - imageHeight) / 2 + (int) imageOffsetY;
 
-        for (Element button : this.children()) {
-            if (isButtonCoveredByImage((ButtonWidget) button, x, y, imageWidth, imageHeight)) {
-                return true;
+
+        for (var var : this.children()) {
+            if ((var instanceof ButtonWidget button)) {
+                if (isButtonCoveredByImage(button, x, y, imageWidth, imageHeight)) {
+                    return true;
+                }
+            } else if (var instanceof TextFieldWidget textFieldWidget) {
+                if (isTextFieldCoveredByImage(textFieldWidget, x, y, imageWidth, imageHeight)) {
+                    return true;
+                }
+            } else if (var instanceof Element element) {
+                if (element.isMouseOver(x, y)) {
+                    return true;
+                }
             }
         }
         return false;
@@ -630,6 +979,16 @@ public class GalleryScreen extends Screen {
         int buttonY = button.getY();
         int buttonWidth = button.getWidth();
         int buttonHeight = button.getHeight();
+
+        return !(buttonX + buttonWidth < imageX || buttonX > imageX + imageWidth ||
+                buttonY + buttonHeight < imageY || buttonY > imageY + imageHeight);
+    }
+
+    private boolean isTextFieldCoveredByImage(TextFieldWidget textFieldWidget, int imageX, int imageY, int imageWidth, int imageHeight) {
+        int buttonX = textFieldWidget.getX();
+        int buttonY = textFieldWidget.getY();
+        int buttonWidth = textFieldWidget.getWidth();
+        int buttonHeight = textFieldWidget.getHeight();
 
         return !(buttonX + buttonWidth < imageX || buttonX > imageX + imageWidth ||
                 buttonY + buttonHeight < imageY || buttonY > imageY + imageHeight);
@@ -877,6 +1236,26 @@ public class GalleryScreen extends Screen {
     @Override
     public boolean shouldPause() {
         return false;
+    }
+
+    @Override
+    public boolean charTyped(char chr, int modifiers) {
+        if (searchField.isFocused() && searchField.charTyped(chr, modifiers)) {
+            return true;
+        }
+        return super.charTyped(chr, modifiers);
+    }
+
+    @Override
+    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        if (searchField.isFocused() && searchField.keyPressed(keyCode, scanCode, modifiers)) {
+            return true;
+        }
+        if (keyCode == GLFW.GLFW_KEY_F && (modifiers & GLFW.GLFW_MOD_CONTROL) != 0) {
+            searchField.setFocused(true);
+            return true;
+        }
+        return super.keyPressed(keyCode, scanCode, modifiers);
     }
 
     private enum SortOrder {

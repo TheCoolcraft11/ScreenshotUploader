@@ -100,6 +100,7 @@
   "gui.screenshot_uploader.screenshot_sign.set_text": "Link einfügen",
   "gui.screenshot_uploader.screenshot_sign.close": "Schließen",
   "gui.screenshot_uploader.screenshot_sign.tooltip": "Du musst das Schild wachsen bevor du den Screenshot öffnen kannst",
+  "gui.screenshot_uploader.screenshot_gallery.search": "Suche",
   "config.screenshot_uploader.enable_mod": "Bestimmt, ob das Mod aktiviert werden soll",
   "config.screenshot_uploader.upload_screenshots_to_url": "Schaltet die Screenshot-Uploads zu den angegebenen upload_urls ein",
   "config.screenshot_uploader.upload_urls": "Liste mit Servernamen und den Serverdaten (Upload, Galerie, Home)",

@@ -104,6 +104,7 @@
   "gui.screenshot_uploader.screenshot_screen.title": "Shared Screenshot",
   "gui.screenshot_uploader.screenshot_screen.no_image": "Failed to load image. Please check the URL or your internet connection",
   "gui.screenshot_uploader.screenshot_gallery.like_screenshot": "❤",
+  "gui.screenshot_uploader.screenshot_gallery.search": "Search",
   "config.screenshot_uploader.enable_mod": "Determines if the mod should be enabled",
   "config.screenshot_uploader.upload_screenshots_to_url": "Toggle screenshot uploads to the specified upload_urls",
   "config.screenshot_uploader.upload_urls": "List with server name and the server data (upload, gallery, home)",

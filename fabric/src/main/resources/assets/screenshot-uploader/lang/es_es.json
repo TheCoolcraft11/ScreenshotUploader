@@ -104,6 +104,7 @@
   "gui.screenshot_uploader.screenshot_screen.title": "Captura de pantalla compartida",
   "gui.screenshot_uploader.screenshot_screen.no_image": "No se pudo cargar la imagen. Por favor, revise la URL o su conexión a internet.",
   "gui.screenshot_uploader.screenshot_gallery.like_screenshot": "❤",
+  "gui.screenshot_uploader.screenshot_gallery.search": "Buscar",
   "config.screenshot_uploader.enable_mod": "Determina si el mod debe estar habilitado",
   "config.screenshot_uploader.upload_screenshots_to_url": "Activa las cargas de capturas de pantalla a las upload_urls especificadas",
   "config.screenshot_uploader.upload_urls": "Lista con el nombre del servidor y los datos del servidor (subida, galería, inicio)",
