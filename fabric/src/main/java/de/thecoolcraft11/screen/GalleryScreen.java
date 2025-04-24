@@ -664,9 +664,6 @@ public class GalleryScreen extends Screen {
         return false;
     }
 
-    private record SearchTerm(String fieldName, String fieldValue) {
-    }
-
     private String extractComparisonOperator(String searchValue) {
         searchValue = searchValue.trim();
         if (searchValue.startsWith(">=") || searchValue.startsWith("<=")) {
@@ -1268,5 +1265,8 @@ public class GalleryScreen extends Screen {
         DATE,
         SIZE,
         DEFAULT
+    }
+
+    private record SearchTerm(String fieldName, String fieldValue) {
     }
 }
