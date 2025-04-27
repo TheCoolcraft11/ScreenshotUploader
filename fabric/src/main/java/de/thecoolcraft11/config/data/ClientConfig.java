@@ -90,6 +90,8 @@ public class ClientConfig {
     public int deleteAfterDays = 30;
     @Comment("config.screenshot_uploader.save_json_data")
     public boolean saveJsonData = false;
+    @Comment("config.screenshot_uploader.ask_before_upload")
+    public boolean askBeforeUpload = false;
 
     public ClientConfig() {
         Map<String, String> map = new HashMap<>();
