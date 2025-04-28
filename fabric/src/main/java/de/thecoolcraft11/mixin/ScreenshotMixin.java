@@ -100,8 +100,7 @@ public abstract class ScreenshotMixin {
         String jsonData = ScreenshotDataHelper.getJSONData(client);
 
 
-        String
-                filename = Objects.requireNonNull(getScreenshotFilename(Paths.get(client.runDirectory.getName(), "screenshots").toFile())).getName();
+        String filename = Objects.requireNonNull(getScreenshotFilename(Paths.get(client.runDirectory.getName(), "screenshots").toFile())).getName();
 
         if (ConfigManager.getClientConfig().saveJsonData) {
             File jsonFile = new File(client.runDirectory, "screenshots/" + filename.replace(".png", ".json"));
@@ -123,7 +122,23 @@ public abstract class ScreenshotMixin {
         }
 
         if (ConfigManager.getClientConfig().askBeforeUpload) {
-            client.send(() -> client.setScreen(new ConfirmScreenshotsScreen(client.currentScreen, image, jsonData, (doSave, doUpload, image1, jsonData1) -> {
+            client.send(() -> client.setScreen(new ConfirmScreenshotsScreen(client.currentScreen, image, jsonData, filename, (doSave, doUpload, image1, jsonData1) -> {
+                if (!doSave) {
+                    client.setScreen(client.currentScreen);
+                    try {
+                        File screenshotFile = new File(client.runDirectory, "screenshots/" + filename);
+                        boolean wasDeleted = screenshotFile.delete();
+                        if (wasDeleted) {
+                            client.inGameHud.getChatHud().addMessage(Text.translatable("message.screenshot_uploader.screenshot_deleted", filename).styled(style -> style.withColor(Formatting.RED)));
+                        } else {
+                            logger.error("Failed to delete the screenshot file: {}", screenshotFile.getAbsolutePath());
+                        }
+
+                    } catch (Exception e) {
+                        logger.error("Failed to delete the image file", e);
+                    }
+                    return;
+                }
                 if (image1 != null) {
                     if (doUpload) {
                         NativeImage imageCopy = new NativeImage(image1.getWidth(), image1.getHeight(), false);
