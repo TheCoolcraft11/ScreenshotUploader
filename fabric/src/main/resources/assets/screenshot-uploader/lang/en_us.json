@@ -108,7 +108,7 @@
   "gui.screenshot_uploader.screenshot_gallery.search": "Search",
   "gui.screenshot_uploader.confirm_screenshot.save": "Save Screenshot",
   "gui.screenshot_uploader.confirm_screenshot.upload": "Upload Screenshot",
-  "gui.screenshot_uploader.confirm_screenshot.cancel": "Delete",
+  "gui.screenshot_uploader.confirm_screenshot.cancel": "Delete Screenshot",
   "gui.screenshot_uploader.confirm_screenshot.title": "Screenshot Confirmation",
   "gui.screenshot_uploader.confirm_screenshot.header": "What do you want to do with this screenshot?",
   "config.screenshot_uploader.enable_mod": "Determines if the mod should be enabled",
