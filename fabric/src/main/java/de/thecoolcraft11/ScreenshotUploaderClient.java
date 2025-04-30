@@ -178,18 +178,18 @@ public class ScreenshotUploaderClient implements ClientModInitializer {
                     }
                 }
             }
-        }
 
 
-        if (hasServerSaved) {
-            String finalServerName = serverName;
-            Text newMessage = Text.translatable("message.screenshot_uploader.shared_saved").styled(style -> style.withClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/open-gallery \"" + finalServerName + "\" \"" + extractUrl(message.getString()) + "\"")).withUnderline(true).withColor(Formatting.AQUA));
+            if (hasServerSaved) {
+                String finalServerName = serverName;
+                Text newMessage = Text.translatable("message.screenshot_uploader.shared_saved").styled(style -> style.withClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/open-gallery \"" + finalServerName + "\" \"" + extractUrl(message.getString()) + "\"")).withUnderline(true).withColor(Formatting.AQUA));
 
-            client.inGameHud.getChatHud().addMessage(newMessage);
-        } else {
-            Text newMessage = Text.translatable("message.screenshot_uploader.shared").styled(style -> style.withClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/open-screenshot \"" + extractUrl(message.getString()) + "\"")).withUnderline(true).withColor(Formatting.AQUA));
+                client.inGameHud.getChatHud().addMessage(newMessage);
+            } else {
+                Text newMessage = Text.translatable("message.screenshot_uploader.shared").styled(style -> style.withClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/open-screenshot \"" + extractUrl(message.getString()) + "\"")).withUnderline(true).withColor(Formatting.AQUA));
 
-            client.inGameHud.getChatHud().addMessage(newMessage);
+                client.inGameHud.getChatHud().addMessage(newMessage);
+            }
         }
     }
 
@@ -232,15 +232,20 @@ public class ScreenshotUploaderClient implements ClientModInitializer {
     }
 
     private static String extractUrl(String message) {
-        String urlPattern = "https?://[\\w.-]+(:\\d+)?(/[\\w.-]*)*";
+        String urlPattern = "https?://[\\w\\-._~:/?#\\[\\]@!$&'()*+,;=%]+";
         Pattern pattern = Pattern.compile(urlPattern);
         Matcher matcher = pattern.matcher(message);
 
-        if (matcher.find()) {
-            return matcher.group();
+        while (matcher.find()) {
+            String url = matcher.group();
+            if (url.matches("(?i).+\\.(png|jpe?g|gif|webp)(\\?.*)?$")) {
+                return url;
+            }
         }
+
         return null;
     }
+
 
     private static ActionResult signBlockClick(PlayerEntity player, World world, Hand hand, BlockHitResult hitResult) {
         BlockPos pos = hitResult.getBlockPos();
