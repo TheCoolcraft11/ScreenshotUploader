@@ -24,6 +24,7 @@ public final class ScreenshotUploader extends JavaPlugin {
     @Override
     public void onEnable() {
         instance = this;
+        config = new Config("config.yml", ScreenshotUploader.getProvidingPlugin(ScreenshotUploader.class).getDataFolder());
         File jsFile = new File(getDataFolder(), "static/js/script.js");
         File cssFile = new File(getDataFolder(), "static/css/script.js");
         if (!jsFile.exists()) {
@@ -32,7 +33,6 @@ public final class ScreenshotUploader extends JavaPlugin {
         if (!cssFile.exists()) {
             saveResource("static/css/style.css", config.getFileConfiguration().getBoolean("replaceStaticFilesOnStart"));
         }
-        config = new Config("config.yml", ScreenshotUploader.getProvidingPlugin(ScreenshotUploader.class).getDataFolder());
         createModFolder();
         prepareWebServerStart();
         deleteOldScreenshots();

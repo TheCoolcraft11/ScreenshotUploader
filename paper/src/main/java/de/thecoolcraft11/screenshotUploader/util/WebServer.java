@@ -117,7 +117,7 @@ public class WebServer {
 
             if (matcher.matches()) {
                 String filename = matcher.group(1);
-                Path targetFile = Paths.get("./screenshotUploader/screenshots/" + filename.replace(".png", ".json"));
+                Path targetFile = Paths.get("./screenshotUploader/screenshots/" + filename);
 
                 try {
                     if (Files.exists(targetFile)) {
