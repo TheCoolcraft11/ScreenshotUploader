@@ -121,31 +121,44 @@ function showModal(src) {
             });
         }
 
-        function deleteImage() {
-            const imageName = currentSrc.split('/').pop();
+function deleteImage() {
+    const imageName = currentSrc.split('/').pop();
+    let passphrase = "";
 
-            if (confirm(`Are you sure you want to delete the image "${imageName}"?`)) {
-                fetch(`delete/${imageName}`, {
-                    method: 'DELETE',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${sessionStorage.getItem('authToken')}`
-                    },
-                })
-                    .then((response) => {
-                     if(response.ok) {
-                     alert("Image deleted successfully!");
-                     }else {
-                     alert("Failed to delete Image!");
-                     }
-                    })
-                    .catch(error => {
-                        console.error('Error:', error);
-                        alert('An error occurred while deleting the image.');
-                    });
-            }
+    const passphraseElement = document.getElementById('deletePassphrase');
+    if (passphraseElement) {
+        passphrase = passphraseElement.value;
+        if (!passphrase && !allowEmptyPassphrase) {
+            alert("Please enter the deletion passphrase");
+            return;
         }
+    }
 
+    if (confirm(`Are you sure you want to delete the image "${imageName}"?`)) {
+        fetch(`delete/${imageName}`, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Delete-Passphrase': passphrase
+            },
+        })
+        .then((response) => {
+            if (response.status === 401) {
+                alert("Incorrect passphrase!");
+            } else if (response.ok) {
+                alert("Image deleted successfully!");
+                document.getElementById('modal').style.display = 'none';
+                location.reload();
+            } else {
+                alert("Failed to delete image!");
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('An error occurred while deleting the image.');
+        });
+    }
+}
        function toggleDarkMode() {
          const body = document.body;
             const header = document.querySelector('h1');

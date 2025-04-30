@@ -16,6 +16,7 @@ import java.net.InetSocketAddress;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Objects;
 import java.util.Random;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -48,7 +49,7 @@ public class WebServer {
             }
             File dir = new File("./screenshotUploader/screenshots/");
             File[] files = dir.listFiles((dir1, name) -> name.endsWith(".jpg") || name.endsWith(".png"));
-            String response = GalleryBuilder.buildGallery(files, config.getFileConfiguration().getBoolean("allowDelete"));
+            String response = GalleryBuilder.buildGallery(files, config.getFileConfiguration().getBoolean("allowDelete"), Objects.requireNonNull(config.getFileConfiguration().getString("deletionPassphrase")).isEmpty());
             exchange.getResponseHeaders().add("Content-Type", "text/html; charset=UTF-8");
             exchange.sendResponseHeaders(200, response.getBytes().length);
             try (OutputStream os = exchange.getResponseBody()) {
@@ -98,7 +99,19 @@ public class WebServer {
                 exchange.sendResponseHeaders(405, -1);
                 return;
             }
+            if (!config.getFileConfiguration().getBoolean("allowDelete")) {
+                exchange.sendResponseHeaders(403, -1);
+                return;
+            }
 
+            String providedPassphrase = exchange.getRequestHeaders().getFirst("X-Delete-Passphrase");
+            String configuredPassphrase = config.getFileConfiguration().getString("deletionPassphrase");
+
+            if (configuredPassphrase != null && !configuredPassphrase.isEmpty() &&
+                    (providedPassphrase == null || !providedPassphrase.equals(configuredPassphrase))) {
+                exchange.sendResponseHeaders(401, -1);
+                return;
+            }
             String requestURI = exchange.getRequestURI().toString();
             Matcher matcher = DELETE_PATTERN.matcher(requestURI);
 

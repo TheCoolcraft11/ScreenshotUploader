@@ -5,7 +5,7 @@ import java.util.*;
 
 public class GalleryBuilder {
 
-    public static String buildGallery(File[] files, boolean allowDelete) {
+    public static String buildGallery(File[] files, boolean allowDelete, boolean allowEmptyPassphrase) {
         List<Map<String, String>> imagesWithUsernames = files != null
                 ? Arrays.stream(files).map(file -> {
             String filename = file.getName();
@@ -65,10 +65,15 @@ public class GalleryBuilder {
                 .append("<button id='slideshowToggle' onclick='toggleSlideshow()'>Start Slideshow</button>")
                 .append("<input type='number' id='intervalInput' placeholder='Interval (s)' min='1' value='5'>");
 
-        if (allowDelete) {
-            htmlContent.append("<button id='deleteImage' onclick='deleteImage()'>Delete Image</button>");
-        }
 
+        if (allowDelete) {
+            htmlContent.append("<div id='deleteControls' style='display:flex;align-items:center;margin-top:10px;'>");
+            if (!allowEmptyPassphrase) {
+                htmlContent.append("<input type='password' id='deletePassphrase' placeholder='Deletion Passphrase' style='margin-right:10px;'>");
+            }
+            htmlContent.append("<button id='deleteImage' onclick='deleteImage()'>Delete Image</button>");
+            htmlContent.append("</div>");
+        }
         htmlContent.append("</div>")
                 .append("</div>")
                 .append("<div id='modal-right'>")

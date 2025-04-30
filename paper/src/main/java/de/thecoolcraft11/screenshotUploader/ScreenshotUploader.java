@@ -27,10 +27,10 @@ public final class ScreenshotUploader extends JavaPlugin {
         File jsFile = new File(getDataFolder(), "static/js/script.js");
         File cssFile = new File(getDataFolder(), "static/css/script.js");
         if (!jsFile.exists()) {
-            saveResource("static/js/script.js", false);
+            saveResource("static/js/script.js", config.getFileConfiguration().getBoolean("replaceStaticFilesOnStart"));
         }
         if (!cssFile.exists()) {
-            saveResource("static/css/style.css", false);
+            saveResource("static/css/style.css", config.getFileConfiguration().getBoolean("replaceStaticFilesOnStart"));
         }
         config = new Config("config.yml", ScreenshotUploader.getProvidingPlugin(ScreenshotUploader.class).getDataFolder());
         createModFolder();

@@ -340,6 +340,42 @@ input[type="text"] {
   border: none;
 }
 
+#deletePassphrase,
+#intervalInput {
+  padding: 10px;
+  border-radius: 5px;
+  border: 1px solid #333;
+  background-color: #444;
+  color: white;
+  margin-right: 10px;
+  transition: border-color 0.3s ease;
+}
+
+#deletePassphrase:focus,
+ #intervalInput:focus {
+  border-color: #f39c12;
+  outline: none;
+}
+
+#deleteControls {
+  display: flex;
+  align-items: center;
+  margin-top: 10px;
+}
+
+
+#deleteImage:hover {
+  background-color: #7e2222;
+  color: #fff;
+}
+
+#intervalInput {
+  width: 60px;
+  margin: 10px;
+  padding: 5px;
+}
+
+
 #fullscreenBtn:hover,
 #downloadBtn:hover,
 #slideshowToggle:hover,
@@ -356,15 +392,6 @@ input[type="text"] {
   margin-top: 20px;
 }
 
-#intervalInput {
-  width: 60px;
-  margin: 10px;
-  padding: 5px;
-  border-radius: 5px;
-  border: 1px solid #ddd;
-  background-color: #333;
-  color: white;
-}
 
 #imageCount {
   color: white;

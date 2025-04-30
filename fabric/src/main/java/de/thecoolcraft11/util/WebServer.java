@@ -48,7 +48,7 @@ public class WebServer {
             }
             File dir = new File("./screenshotUploader/screenshots/");
             File[] files = dir.listFiles((dir1, name) -> name.endsWith(".jpg") || name.endsWith(".png"));
-            String response = GalleryBuilder.buildGallery(files, ConfigManager.getServerConfig().allowDelete);
+            String response = GalleryBuilder.buildGallery(files, ConfigManager.getServerConfig().allowDelete, ConfigManager.getServerConfig().deletionPassphrase.isEmpty());
             exchange.getResponseHeaders().add("Content-Type", "text/html; charset=UTF-8");
             exchange.sendResponseHeaders(200, response.getBytes().length);
             try (OutputStream os = exchange.getResponseBody()) {
@@ -96,6 +96,19 @@ public class WebServer {
         public void handle(HttpExchange exchange) throws IOException {
             if (!"DELETE".equals(exchange.getRequestMethod())) {
                 exchange.sendResponseHeaders(405, -1);
+                return;
+            }
+            if (!ConfigManager.getServerConfig().allowDelete) {
+                exchange.sendResponseHeaders(403, -1);
+                return;
+            }
+
+            String providedPassphrase = exchange.getRequestHeaders().getFirst("X-Delete-Passphrase");
+            String configuredPassphrase = ConfigManager.getServerConfig().deletionPassphrase;
+
+            if (configuredPassphrase != null && !configuredPassphrase.isEmpty() &&
+                    (providedPassphrase == null || !providedPassphrase.equals(configuredPassphrase))) {
+                exchange.sendResponseHeaders(401, -1);
                 return;
             }
 

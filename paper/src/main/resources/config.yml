@@ -2,8 +2,10 @@
 screenshotWebserver: true
 #Port of the Webserver
 port: 4567
-#Allow EVERYONE to delete screenshot from the gallery
+#Allow EVERYONE with the passphrase to delete screenshots
 allowDelete: false
+#Passphrase for deleting screenshots from, ONLY SHARE WITH TRUSTED PEOPLE, Leave empty to allow everyone to delete screenshots
+deletionPassphrase: "",
 #The public URL of the webserver !(must be configured for proper functionality)
 websiteURL: ""
 #if the url with a list of all screenshots should be sent to the client(required for ingame server gallery to work)
@@ -22,3 +24,5 @@ webhookUrl: ""
 deleteOldScreenshots: false
 #The amount of days after which the screenshots should be deleted
 deleteAfterDays: 30
+#If static files should be replaced on server start, Turn off if you want to use custom js / css, Note: You wont be able to use new features if you turn this off
+replaceStaticFilesOnStart: true

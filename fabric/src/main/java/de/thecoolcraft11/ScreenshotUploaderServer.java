@@ -183,6 +183,13 @@ public class ScreenshotUploaderServer implements DedicatedServerModInitializer {
         Path gameDir = FabricLoader.getInstance().getGameDir();
         Path targetFile = gameDir.resolve(targetPath);
 
+        boolean fileExists = Files.exists(targetFile);
+        boolean shouldReplace = ConfigManager.getServerConfig().replaceStaticFilesOnStart;
+
+        if (fileExists && !shouldReplace) {
+            return;
+        }
+
         try (InputStream resourceStream = getClass().getResourceAsStream(resourcePath)) {
             if (resourceStream == null) {
                 LOGGER.error("Resource not found: {}", resourcePath);
