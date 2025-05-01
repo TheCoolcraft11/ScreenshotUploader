@@ -7,6 +7,7 @@ import com.google.gson.JsonPrimitive;
 import de.thecoolcraft11.config.ConfigManager;
 import de.thecoolcraft11.packet.AddressPayload;
 import de.thecoolcraft11.packet.CommentPayload;
+import de.thecoolcraft11.packet.DeletionPacket;
 import de.thecoolcraft11.packet.ScreenshotPayload;
 import de.thecoolcraft11.util.WebServer;
 import net.fabricmc.api.DedicatedServerModInitializer;
@@ -48,29 +49,53 @@ public class ScreenshotUploaderServer implements DedicatedServerModInitializer {
         prepareWebServerStart();
         ServerPlayConnectionEvents.JOIN.register(this::registerJoinEvent);
         deleteOldScreenshots();
+        registerPacketReceivers();
     }
 
     private void registerJoinEvent(ServerPlayNetworkHandler serverPlayNetworkHandler, PacketSender player, MinecraftServer minecraftServer) {
-        {
-            if (ConfigManager.getServerConfig().sendUrlToClient) {
-                JsonObject jsonObject = getJsonObject();
-                ServerPlayNetworking.send(serverPlayNetworkHandler.getPlayer(), new AddressPayload(jsonObject.toString()));
-            }
-            ServerPlayNetworking.registerGlobalReceiver(ScreenshotPayload.ID, (payload, context) -> {
-                byte[] bytes = payload.bytes();
-                String json = payload.json();
-                context.server().execute(() ->
-                        handleReceivedScreenshot(bytes, json, context.player())
-                );
-            });
-            ServerPlayNetworking.registerGlobalReceiver(CommentPayload.ID, (payload, context) -> {
-
-                String comment = payload.comment();
-                String screenshot = payload.screenshot();
-                context.server().execute(() -> applyCommentToScreenshot(comment, screenshot, String.valueOf(context.player().getName().getString()), context.player().getUuid())
-                );
-            });
+        if (ConfigManager.getServerConfig().sendUrlToClient) {
+            JsonObject jsonObject = getJsonObject();
+            ServerPlayNetworking.send(serverPlayNetworkHandler.getPlayer(), new AddressPayload(jsonObject.toString()));
         }
+    }
+
+    private void registerPacketReceivers() {
+        ServerPlayNetworking.registerGlobalReceiver(ScreenshotPayload.ID, (payload, context) -> {
+            byte[] bytes = payload.bytes();
+            String json = payload.json();
+            context.server().execute(() ->
+                    handleReceivedScreenshot(bytes, json, context.player())
+            );
+        });
+        ServerPlayNetworking.registerGlobalReceiver(CommentPayload.ID, (payload, context) -> {
+
+            String comment = payload.comment();
+            String screenshot = payload.screenshot();
+            context.server().execute(() -> applyCommentToScreenshot(comment, screenshot, String.valueOf(context.player().getName().getString()), context.player().getUuid())
+            );
+        });
+        ServerPlayNetworking.registerGlobalReceiver(DeletionPacket.ID, (payload, context) -> {
+            String screenshot = payload.screenshot();
+            String url = getServerIp();
+            String filename = screenshot.replace(url + "/screenshots/", "");
+            LOGGER.error("Deleting screenshot: {}", screenshot);
+            context.server().execute(() -> {
+                if (!context.player().hasPermissionLevel(3)) {
+                    LOGGER.error("Player {} does not have permission to delete screenshots.", context.player().getName().getString());
+                    return;
+                }
+                Path gameDir = FabricLoader.getInstance().getGameDir();
+                Path targetFile = gameDir.resolve("./screenshotUploader/screenshots/" + filename);
+
+                try {
+                    if (Files.exists(targetFile)) {
+                        Files.delete(targetFile);
+                    }
+                } catch (IOException e) {
+                    LOGGER.error("Error deleting file: {}", e.getMessage());
+                }
+            });
+        });
     }
 
     private static @NotNull JsonObject getJsonObject() {

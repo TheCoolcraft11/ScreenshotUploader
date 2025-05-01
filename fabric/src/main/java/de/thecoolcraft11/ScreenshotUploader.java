@@ -20,6 +20,7 @@ public class ScreenshotUploader implements ModInitializer {
         PayloadTypeRegistry.playC2S().register(ScreenshotChunkPayload.ID, ScreenshotChunkPayload.CODEC);
         PayloadTypeRegistry.playS2C().register(ScreenshotResponsePayload.ID, ScreenshotResponsePayload.CODEC);
         PayloadTypeRegistry.playC2S().register(CommentPayload.ID, CommentPayload.CODEC);
+        PayloadTypeRegistry.playC2S().register(DeletionPacket.ID, DeletionPacket.CODEC);
 
 
         logger.info("Screenshot Uploader initialized.");

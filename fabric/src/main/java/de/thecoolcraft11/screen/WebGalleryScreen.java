@@ -6,6 +6,7 @@ import com.mojang.authlib.yggdrasil.ProfileResult;
 import com.mojang.blaze3d.systems.RenderSystem;
 import de.thecoolcraft11.config.ConfigManager;
 import de.thecoolcraft11.packet.CommentPayload;
+import de.thecoolcraft11.packet.DeletionPacket;
 import de.thecoolcraft11.util.ReceivePackets;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.client.MinecraftClient;
@@ -81,11 +82,12 @@ public class WebGalleryScreen extends Screen {
     private ButtonWidget sendCommentButton;
     private ButtonWidget sortByButton;
     private ButtonWidget sortOrderButton;
+    private ButtonWidget deleteButton;
 
     private TextFieldWidget commentWidget;
 
     private TextFieldWidget searchField;
-    
+
     private String lastSearchQuery = "";
     private Runnable searchDebounceTask = null;
 
@@ -228,6 +230,15 @@ public class WebGalleryScreen extends Screen {
                 Text.translatable("gui.screenshot_uploader.screenshot_gallery.like_screenshot").withColor(0x2a2a2a),
                 button -> likeScreenshot()
         ).dimensions(buttonWidth * 3 + 20, buttonY, 20, 20).build();
+        deleteButton = ButtonWidget.builder(
+                Text.translatable("gui.screenshot_uploader.screenshot_gallery.delete_screenshot"),
+                button -> {
+                    if (clickedImageIndex >= 0 && clickedImageIndex < imageIds.size()) {
+                        String screenshotId = String.valueOf(imagePaths.get(clickedImageIndex));
+                        ClientPlayNetworking.send(new DeletionPacket(screenshotId));
+                    }
+                }
+        ).dimensions(buttonWidth * 4 - (buttonWidth - 20) + 25, buttonY, buttonWidth, buttonHeight).build();
 
 
         commentWidget = new TextFieldWidget(textRenderer, 0, 0, 100, 20, Text.of(""));
@@ -272,6 +283,7 @@ public class WebGalleryScreen extends Screen {
         addDrawableChild(sendCommentButton);
         addDrawableChild(likeButton);
         addDrawableChild(searchField);
+        addDrawableChild(deleteButton);
 
         saveButton.visible = false;
         openInAppButton.visible = false;
@@ -282,11 +294,13 @@ public class WebGalleryScreen extends Screen {
         likeButton.visible = false;
         searchField.visible = true;
         searchField.setMaxLength(100);
+        deleteButton.visible = false;
 
         buttonsToHideOnOverlap.add(saveButton);
         buttonsToHideOnOverlap.add(openInAppButton);
         buttonsToHideOnOverlap.add(shareButton);
         buttonsToHideOnOverlap.add(likeButton);
+        buttonsToHideOnOverlap.add(deleteButton);
 
         int initialImageIndex = imagePaths.indexOf(initialImageName);
         if (initialImageIndex >= 0) {
@@ -499,6 +513,7 @@ public class WebGalleryScreen extends Screen {
             commentWidget.visible = true;
             sendCommentButton.visible = true;
             searchField.visible = false;
+            deleteButton.visible = true;
             navigatorButtons.forEach(buttonWidget -> buttonWidget.visible = false);
         } else {
             saveButton.visible = false;
@@ -510,6 +525,7 @@ public class WebGalleryScreen extends Screen {
             sendCommentButton.visible = false;
             likeButton.visible = false;
             searchField.visible = true;
+            deleteButton.visible = false;
             navigatorButtons.forEach(buttonWidget -> buttonWidget.visible = true);
         }
         boolean isImageOverlappingButtons = clickedImageIndex >= 0 && isImageOverlappingButtons();
