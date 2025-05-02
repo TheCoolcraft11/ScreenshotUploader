@@ -283,7 +283,7 @@ public class WebGalleryScreen extends Screen {
         addDrawableChild(sendCommentButton);
         addDrawableChild(likeButton);
         addDrawableChild(searchField);
-        addDrawableChild(deleteButton);
+        if (ReceivePackets.allowDelete) addDrawableChild(deleteButton);
 
         saveButton.visible = false;
         openInAppButton.visible = false;

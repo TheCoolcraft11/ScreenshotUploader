@@ -38,6 +38,7 @@ public class ReceivePackets {
     public static String serverSiteAddress = null;
     public static String gallerySiteAddress = null;
     public static String homeSiteAddress = null;
+    public static boolean allowDelete = false;
 
     public static void receiveAddress(MinecraftClient client, String message) {
         JsonObject jsonObject = JsonParser.parseString(message).getAsJsonObject();
@@ -53,6 +54,9 @@ public class ReceivePackets {
         gallerySiteAddress = jsonObject.get("gallery").getAsString();
 
         homeSiteAddress = homeAddr;
+
+        if (jsonObject.has("allowDelete")) allowDelete = jsonObject.get("allowDelete").getAsBoolean();
+
     }
 
     public static void receiveScreenshotRes(JsonObject responseBody, MinecraftClient client) {

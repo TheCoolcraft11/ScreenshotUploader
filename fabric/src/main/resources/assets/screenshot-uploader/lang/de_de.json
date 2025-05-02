@@ -64,6 +64,7 @@
   "gui.screenshot_uploader.screenshot_gallery.send_comment": "Kommentar senden",
   "gui.screenshot_uploader.screenshot_gallery.config": "Konfiguration",
   "gui.screenshot_uploader.screenshot_gallery.edit": "Bearbeiten",
+  "gui.screenshot_uploader.screenshot_gallery.delete_screenshot": "Screenshot löschen",
   "gui.screenshot_uploader.config.title": "Konfiguration",
   "gui.screenshot_uploader.config.not_edit": "Gehe zu /config/screenshotUploader/config.json, um Server zu bearbeiten",
   "gui.screenshot_uploader.config.save": "Speichern",

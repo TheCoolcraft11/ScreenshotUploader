@@ -41,14 +41,14 @@ public class PlayJoinListener implements Listener {
                     return;
                 }
 
-                JsonObject jsonObject = getJsonObject();
+                JsonObject jsonObject = getJsonObject(player);
                 byte[] data = encodeString(jsonObject.toString());
                 player.sendPluginMessage(ScreenshotUploader.instance, "screenshot-uploader:address_packet", data);
             }
         }).start();
     }
 
-    private static @NotNull JsonObject getJsonObject() {
+    private static @NotNull JsonObject getJsonObject(Player player) {
         JsonObject jsonObject = new JsonObject();
         jsonObject.addProperty("upload", "mcserver://chunked");
         if (ScreenshotUploader.config.getFileConfiguration().getBoolean("sendGalleryUrlToClient")) {
@@ -68,6 +68,9 @@ public class PlayJoinListener implements Listener {
         if (ScreenshotUploader.config.getFileConfiguration().getBoolean("useCustomWebURL")) {
             jsonObject.remove("upload");
             jsonObject.addProperty("upload", config.getFileConfiguration().getString("useCustomWebURL"));
+        }
+        if (ScreenshotUploader.config.getFileConfiguration().getBoolean("allowOpsToDelete") && player.isOp()) {
+            jsonObject.addProperty("allowDelete", true);
         }
         return jsonObject;
     }

@@ -1,5 +1,6 @@
-package de.thecoolcraft11.screenshotUploader.util;
+package de.thecoolcraft11.screenshotUploader.packet;
 
+import de.thecoolcraft11.screenshotUploader.util.ReceiveScreenshotPacket;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.messaging.PluginMessageListener;
 import org.jetbrains.annotations.NotNull;

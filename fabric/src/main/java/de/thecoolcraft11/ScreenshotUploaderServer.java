@@ -16,6 +16,7 @@ import net.fabricmc.fabric.api.networking.v1.PacketSender;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.fabricmc.loader.api.FabricLoader;
+import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerPlayNetworkHandler;
 import org.jetbrains.annotations.NotNull;
@@ -54,7 +55,7 @@ public class ScreenshotUploaderServer implements DedicatedServerModInitializer {
 
     private void registerJoinEvent(ServerPlayNetworkHandler serverPlayNetworkHandler, PacketSender player, MinecraftServer minecraftServer) {
         if (ConfigManager.getServerConfig().sendUrlToClient) {
-            JsonObject jsonObject = getJsonObject();
+            JsonObject jsonObject = getJsonObject(serverPlayNetworkHandler.getPlayer());
             ServerPlayNetworking.send(serverPlayNetworkHandler.getPlayer(), new AddressPayload(jsonObject.toString()));
         }
     }
@@ -78,9 +79,8 @@ public class ScreenshotUploaderServer implements DedicatedServerModInitializer {
             String screenshot = payload.screenshot();
             String url = getServerIp();
             String filename = screenshot.replace(url + "/screenshots/", "");
-            LOGGER.error("Deleting screenshot: {}", screenshot);
             context.server().execute(() -> {
-                if (!context.player().hasPermissionLevel(3)) {
+                if (!context.player().hasPermissionLevel(3) && !ConfigManager.getServerConfig().allowPlayersToDelete) {
                     LOGGER.error("Player {} does not have permission to delete screenshots.", context.player().getName().getString());
                     return;
                 }
@@ -98,7 +98,7 @@ public class ScreenshotUploaderServer implements DedicatedServerModInitializer {
         });
     }
 
-    private static @NotNull JsonObject getJsonObject() {
+    private static @NotNull JsonObject getJsonObject(PlayerEntity playerEntity) {
         JsonObject jsonObject = new JsonObject();
         jsonObject.addProperty("upload", "mcserver://this");
         if (ConfigManager.getServerConfig().sendGalleryUrlToClient) {
@@ -118,6 +118,9 @@ public class ScreenshotUploaderServer implements DedicatedServerModInitializer {
         if (ConfigManager.getServerConfig().useCustomWebURL) {
             jsonObject.remove("upload");
             jsonObject.addProperty("upload", ConfigManager.getServerConfig().customWebURL);
+        }
+        if ((ConfigManager.getServerConfig().allowOpsToDelete && playerEntity.hasPermissionLevel(3)) || ConfigManager.getServerConfig().allowPlayersToDelete) {
+            jsonObject.addProperty("allowDelete", true);
         }
         return jsonObject;
     }
