@@ -119,10 +119,14 @@ public class WebServer {
                 String filename = matcher.group(1);
                 Path gameDir = FabricLoader.getInstance().getGameDir();
                 Path targetFile = gameDir.resolve("./screenshotUploader/screenshots/" + filename);
+                Path jsonFile = gameDir.resolve("./screenshotUploader/screenshots/" + filename.replace(".png", ".json"));
 
                 try {
                     if (Files.exists(targetFile)) {
                         Files.delete(targetFile);
+                    }
+                    if (Files.exists(jsonFile)) {
+                        Files.delete(jsonFile);
                         exchange.sendResponseHeaders(200, -1);
                     } else {
                         exchange.sendResponseHeaders(404, -1);

@@ -11,10 +11,12 @@ public class ServerConfig {
     public boolean allowDelete = false;
     @Comment("Passphrase for deleting screenshots from, ONLY SHARE WITH TRUSTED PEOPLE, Leave empty to allow everyone to delete screenshots")
     public String deletionPassphrase = "";
-    @Comment("Allow OPs to delete screenshots ingame")
+    @Comment("Allow OPs to delete ALL screenshots ingame")
     public boolean allowOpsToDelete = true;
-    @Comment("Allow OPs to delete screenshots ingame")
+    @Comment("Allow Players to delete ALL screenshots ingame")
     public boolean allowPlayersToDelete = false;
+    @Comment("Allow Players to delete own screenshots ingame")
+    public boolean allowPlayersToDeleteOwn = true;
     @Comment("The public URL of the webserver !(must be configured for proper functionality)")
     public String websiteURL = "";
     @Comment("if the url with a list of all screenshots should be sent to the client(required for ingame server gallery to work)")

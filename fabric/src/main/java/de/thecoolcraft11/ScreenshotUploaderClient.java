@@ -198,6 +198,7 @@ public class ScreenshotUploaderClient implements ClientModInitializer {
         ReceivePackets.serverSiteAddress = null;
         ReceivePackets.homeSiteAddress = null;
         ReceivePackets.allowDelete = false;
+        ReceivePackets.allowDeleteOwn = false;
     }
 
     private void registerJoinEvent(ClientPlayNetworkHandler playNetworkHandler, PacketSender packetSender, MinecraftClient minecraftClient) {

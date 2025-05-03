@@ -236,6 +236,9 @@ public class WebGalleryScreen extends Screen {
                     if (clickedImageIndex >= 0 && clickedImageIndex < imageIds.size()) {
                         String screenshotId = String.valueOf(imagePaths.get(clickedImageIndex));
                         ClientPlayNetworking.send(new DeletionPacket(screenshotId));
+                        if (client != null) {
+                            client.setScreen(null);
+                        }
                     }
                 }
         ).dimensions(buttonWidth * 4 - (buttonWidth - 20) + 25, buttonY, buttonWidth, buttonHeight).build();
@@ -283,7 +286,7 @@ public class WebGalleryScreen extends Screen {
         addDrawableChild(sendCommentButton);
         addDrawableChild(likeButton);
         addDrawableChild(searchField);
-        if (ReceivePackets.allowDelete) addDrawableChild(deleteButton);
+        if (ReceivePackets.allowDelete || ReceivePackets.allowDeleteOwn) addDrawableChild(deleteButton);
 
         saveButton.visible = false;
         openInAppButton.visible = false;
@@ -513,7 +516,7 @@ public class WebGalleryScreen extends Screen {
             commentWidget.visible = true;
             sendCommentButton.visible = true;
             searchField.visible = false;
-            deleteButton.visible = true;
+            if (ReceivePackets.allowDelete || ReceivePackets.allowDeleteOwn) deleteButton.visible = true;
             navigatorButtons.forEach(buttonWidget -> buttonWidget.visible = false);
         } else {
             saveButton.visible = false;

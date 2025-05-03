@@ -39,6 +39,7 @@ public class ReceivePackets {
     public static String gallerySiteAddress = null;
     public static String homeSiteAddress = null;
     public static boolean allowDelete = false;
+    public static boolean allowDeleteOwn = false;
 
     public static void receiveAddress(MinecraftClient client, String message) {
         JsonObject jsonObject = JsonParser.parseString(message).getAsJsonObject();
@@ -56,6 +57,7 @@ public class ReceivePackets {
         homeSiteAddress = homeAddr;
 
         if (jsonObject.has("allowDelete")) allowDelete = jsonObject.get("allowDelete").getAsBoolean();
+        if (jsonObject.has("allowDeleteOwn")) allowDeleteOwn = jsonObject.get("allowDeleteOwn").getAsBoolean();
 
     }
 

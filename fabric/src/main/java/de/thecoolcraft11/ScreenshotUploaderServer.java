@@ -80,22 +80,90 @@ public class ScreenshotUploaderServer implements DedicatedServerModInitializer {
             String url = getServerIp();
             String filename = screenshot.replace(url + "/screenshots/", "");
             context.server().execute(() -> {
-                if (!context.player().hasPermissionLevel(3) && !ConfigManager.getServerConfig().allowPlayersToDelete) {
-                    LOGGER.error("Player {} does not have permission to delete screenshots.", context.player().getName().getString());
-                    return;
-                }
-                Path gameDir = FabricLoader.getInstance().getGameDir();
-                Path targetFile = gameDir.resolve("./screenshotUploader/screenshots/" + filename);
+                String deletionType = getDeletionType(context.player());
 
-                try {
-                    if (Files.exists(targetFile)) {
-                        Files.delete(targetFile);
+
+                final Path BASE_DIR = Paths.get("./screenshotUploader/screenshots/");
+                switch (deletionType) {
+                    case "deleteOP" -> {
+                        if (!context.player().hasPermissionLevel(3)) {
+                            LOGGER.error("Player {} tried to delete screenshot {}, but is not an OP", context.player().getName().getString(), filename);
+                            return;
+                        }
+                        Path targetFile = BASE_DIR.resolve(filename);
+                        Path jsonFile = BASE_DIR.resolve(filename.replace(".png", ".json"));
+                        try {
+                            if (Files.exists(targetFile)) {
+                                Files.delete(targetFile);
+                            }
+                            if (Files.exists(jsonFile)) {
+                                Files.delete(jsonFile);
+                            }
+                        } catch (IOException e) {
+                            LOGGER.error("Failed to delete screenshot by OP: {}", e.getMessage());
+                        }
                     }
-                } catch (IOException e) {
-                    LOGGER.error("Error deleting file: {}", e.getMessage());
+                    case "deleteAll" -> {
+                        Path targetFile = BASE_DIR.resolve(filename);
+                        Path jsonFile = BASE_DIR.resolve(filename.replace(".png", ".json"));
+                        try {
+                            if (Files.exists(targetFile)) {
+                                Files.delete(targetFile);
+                            }
+                            if (Files.exists(jsonFile)) {
+                                Files.delete(jsonFile);
+                            }
+                        } catch (IOException e) {
+                            LOGGER.error("Failed to delete screenshot by Player: {}", e.getMessage());
+                        }
+                    }
+                    case "deleteOwn" -> {
+                        Path targetFile = BASE_DIR.resolve(filename);
+                        Path jsonFile = BASE_DIR.resolve(filename.replace(".png", ".json"));
+                        try {
+                            if (Files.exists(targetFile)) {
+                                String jsonContent = new String(Files.readAllBytes(jsonFile));
+                                JsonObject jsonObject = JsonParser.parseString(jsonContent).getAsJsonObject();
+                                if (jsonObject.has("uuid") && jsonObject.get("uuid").getAsString().equals(context.player().getUuid().toString())) {
+                                    if (Files.exists(targetFile)) {
+                                        Files.delete(targetFile);
+                                    }
+                                    if (Files.exists(jsonFile)) {
+                                        Files.delete(jsonFile);
+                                    }
+                                } else {
+                                    LOGGER.error("Player {} tried to delete screenshot {}, but is not the author or an OP", context.player().getName().getString(), filename);
+                                }
+                            }
+                        } catch (IOException e) {
+                            LOGGER.error("Failed to delete own screenshot: {}", e.getMessage());
+                        }
+                    }
+                    default ->
+                            LOGGER.error("Player {} tried to delete screenshot {}, but is not allowed to do so", context.player().getName().getString(), filename);
                 }
             });
         });
+    }
+
+    private static @NotNull String getDeletionType(PlayerEntity player) {
+        boolean allowOps = ConfigManager.getServerConfig().allowOpsToDelete;
+        boolean allowPlayers = ConfigManager.getServerConfig().allowPlayersToDelete;
+        boolean allowPlayersOwn = ConfigManager.getServerConfig().allowPlayersToDeleteOwn;
+        boolean isOP = player.hasPermissionLevel(3);
+
+        String deletionType;
+
+        if (allowOps && isOP) {
+            deletionType = "deleteOP";
+        } else if (allowPlayers) {
+            deletionType = "deleteAll";
+        } else if (allowPlayersOwn) {
+            deletionType = "deleteOwn";
+        } else {
+            deletionType = "none";
+        }
+        return deletionType;
     }
 
     private static @NotNull JsonObject getJsonObject(PlayerEntity playerEntity) {
@@ -121,6 +189,9 @@ public class ScreenshotUploaderServer implements DedicatedServerModInitializer {
         }
         if ((ConfigManager.getServerConfig().allowOpsToDelete && playerEntity.hasPermissionLevel(3)) || ConfigManager.getServerConfig().allowPlayersToDelete) {
             jsonObject.addProperty("allowDelete", true);
+        }
+        if (ConfigManager.getServerConfig().allowPlayersToDeleteOwn) {
+            jsonObject.addProperty("allowDeleteOwn", true);
         }
         return jsonObject;
     }
