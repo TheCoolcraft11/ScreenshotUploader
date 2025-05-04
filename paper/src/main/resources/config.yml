@@ -8,6 +8,10 @@ allowDelete: false
 deletionPassphrase: ""
 #Allow OPs to delete screenshots ingame
 allowOpsToDelete: true
+#Allow Players to delete ALL screenshots ingame
+allowPlayersToDelete: false
+#Allow Players to delete own screenshots ingame
+allowPlayersToDeleteOwn: true
 #The public URL of the webserver !(must be configured for proper functionality)
 websiteURL: ""
 #if the url with a list of all screenshots should be sent to the client(required for ingame server gallery to work)

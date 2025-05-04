@@ -35,11 +35,9 @@ public class ReceiveScreenshotPacket {
             String screenshotFileName = baseFileName + ".png";
             File screenshotFile = new File("screenshotUploader/" + screenshotFileName);
             Files.write(screenshotFile.toPath(), screenshotData);
-            logger.info("Screenshot received from {} and saved as {}", player.getName(), screenshotFileName);
             String jsonFileName = "screenshotUploader/screenshots/" + baseFileName + ".json";
             try (FileWriter fileWriter = new FileWriter(jsonFileName)) {
                 fileWriter.write(jsonData);
-                logger.info("JSON data saved as {}", jsonFileName);
             } catch (IOException e) {
                 logger.error("Error saving JSON data: {}", e.getMessage());
             }

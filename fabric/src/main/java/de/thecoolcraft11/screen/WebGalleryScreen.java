@@ -95,7 +95,6 @@ public class WebGalleryScreen extends Screen {
     private SortBy sortBy = SortBy.DEFAULT;
     private SortOrder sortOrder = SortOrder.ASCENDING;
 
-
     private static String FILE_PATH;
 
     public WebGalleryScreen(Screen parent, String webserverUrl, String initialImageName) {
@@ -516,7 +515,13 @@ public class WebGalleryScreen extends Screen {
             commentWidget.visible = true;
             sendCommentButton.visible = true;
             searchField.visible = false;
-            if (ReceivePackets.allowDelete || ReceivePackets.allowDeleteOwn) deleteButton.visible = true;
+            boolean isAllowDelete = false;
+            if (client != null) {
+                if (client.player != null) {
+                    isAllowDelete = metaDatas.get(clickedImageIndex).has("uuid") && metaDatas.get(clickedImageIndex).get("uuid").getAsString().equals(client.player.getUuid().toString());
+                }
+            }
+            deleteButton.visible = ReceivePackets.allowDelete || (ReceivePackets.allowDeleteOwn && isAllowDelete);
             navigatorButtons.forEach(buttonWidget -> buttonWidget.visible = false);
         } else {
             saveButton.visible = false;
@@ -536,6 +541,18 @@ public class WebGalleryScreen extends Screen {
         for (Element button : this.children()) {
             if (button instanceof ButtonWidget) {
                 if (buttonsToHideOnOverlap.contains(button)) {
+                    if (button == deleteButton) {
+                        boolean isAllowDelete = false;
+                        if (metaDatas.size() > clickedImageIndex && clickedImageIndex >= 0) {
+                            if (client != null) {
+                                if (client.player != null) {
+                                    isAllowDelete = metaDatas.get(clickedImageIndex).has("uuid") && metaDatas.get(clickedImageIndex).get("uuid").getAsString().equals(client.player.getUuid().toString());
+                                }
+                            }
+                        }
+                        deleteButton.visible = ReceivePackets.allowDelete || (ReceivePackets.allowDeleteOwn && isAllowDelete);
+                        return;
+                    }
                     if (isImageClicked) {
                         ((ButtonWidget) button).visible = !isImageOverlappingButtons;
                     } else {
