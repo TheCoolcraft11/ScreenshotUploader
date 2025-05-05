@@ -139,5 +139,6 @@
   "gui.screenshot_uploader.screenshot_gallery.like_screenshot": "❤",
   "config.screenshot_uploader.delete_old_screenshots": "Lösche alte Screenshots, die älter als die angegebene Anzahl von Tagen sind",
   "config.screenshot_uploader.delete_after_days": "Anzahl der Tage, nach denen alte Screenshots gelöscht werden sollen",
-  "config.screenshot_uploader.save_json_data": "Speichert JSON Daten (wie z.B. Weltname, Postion) des Screenshots in einer Datei, kann in der Galerie angezeigt werden"
+  "config.screenshot_uploader.save_json_data": "Speichert JSON Daten (wie z.B. Weltname, Postion) des Screenshots in einer Datei, kann in der Galerie angezeigt werden",
+  "config.screenshot_uploader.ask_before_upload": "Frage vor dem Hochladen eines Screenshots"
 }

@@ -86,10 +86,13 @@ public class ClientConfig {
 
     @Comment("config.screenshot_uploader.delete_old_screenshots")
     public boolean deleteOldScreenshots = false;
+
     @Comment("config.screenshot_uploader.delete_after_days")
     public int deleteAfterDays = 30;
+
     @Comment("config.screenshot_uploader.save_json_data")
     public boolean saveJsonData = false;
+
     @Comment("config.screenshot_uploader.ask_before_upload")
     public boolean askBeforeUpload = false;
 

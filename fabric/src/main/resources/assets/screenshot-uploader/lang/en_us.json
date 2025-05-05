@@ -139,5 +139,6 @@
   "config.screenshot_uploader.highlight_rotation_speed": "Speed of the highlight rotation (applies to sign/item rotation)",
   "config.screenshot_uploader.delete_old_screenshots": "Delete old screenshots after a certain period",
   "config.screenshot_uploader.delete_after_days": "Number of days after which old screenshots will be deleted",
-  "config.screenshot_uploader.save_json_data": "Save the JSON data (like World name, Location, ...) of the screenshot to a file, can be displayed in the gallery"
+  "config.screenshot_uploader.save_json_data": "Save the JSON data (like World name, Location, ...) of the screenshot to a file, can be displayed in the gallery",
+  "config.screenshot_uploader.ask_before_upload": "If you want to be asked before uploading a screenshot"
 }

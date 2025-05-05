@@ -4,13 +4,13 @@ screenshotWebserver: true
 port: 4567
 #Allow EVERYONE with the passphrase to delete screenshots
 allowDelete: false
-#Passphrase for deleting screenshots from, ONLY SHARE WITH TRUSTED PEOPLE, Leave empty to allow everyone to delete screenshots
+#Passphrase for deleting screenshots from the web gallery, ONLY SHARE WITH TRUSTED PEOPLE, Leave empty to allow everyone to delete screenshots
 deletionPassphrase: ""
 #Allow OPs to delete screenshots ingame
 allowOpsToDelete: true
 #Allow Players to delete ALL screenshots ingame
 allowPlayersToDelete: false
-#Allow Players to delete own screenshots ingame
+#Allow Players to delete their own screenshots ingame
 allowPlayersToDeleteOwn: true
 #The public URL of the webserver !(must be configured for proper functionality)
 websiteURL: ""
