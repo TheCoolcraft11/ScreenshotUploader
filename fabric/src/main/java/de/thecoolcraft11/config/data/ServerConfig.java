@@ -7,6 +7,8 @@ public class ServerConfig {
     public boolean screenshotWebserver = true;
     @Comment("Port of the Webserver")
     public int port = 4567;
+    @Comment("IP address the webserver should bind to. Use 0.0.0.0 for all network interfaces, or 127.0.0.1 to restrict to localhost")
+    public String host = "0.0.0.0";
     @Comment("Allow EVERYONE with the passphrase to delete screenshots")
     public boolean allowDelete = false;
     @Comment("Passphrase for deleting screenshots from, ONLY SHARE WITH TRUSTED PEOPLE, Leave empty to allow everyone to delete screenshots")

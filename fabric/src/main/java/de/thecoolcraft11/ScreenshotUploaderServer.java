@@ -247,7 +247,7 @@ public class ScreenshotUploaderServer implements DedicatedServerModInitializer {
 
     private void prepareWebServerStart() {
         if (ConfigManager.getServerConfig().screenshotWebserver) {
-            String ipAddress = "127.0.0.1";
+            String ipAddress = ConfigManager.getServerConfig().host == null || Objects.requireNonNull(ConfigManager.getServerConfig().host).isEmpty() ? "0.0.0.0" : ConfigManager.getServerConfig().host;
             int port = ConfigManager.getServerConfig().port;
             LOGGER.info("Starting web server on {}:{} ...", ipAddress, port);
             startWebServer();

@@ -72,7 +72,7 @@ public final class ScreenshotUploader extends JavaPlugin {
     }
 
     private void startWebServer() {
-        String ipAddress = "127.0.0.1";
+        String ipAddress = config.getFileConfiguration().getString("ipAddress") == null || Objects.requireNonNull(config.getFileConfiguration().getString("ipAddress")).isEmpty() ? "0.0.0.0" : config.getFileConfiguration().getString("ipAddress");
         int port = config.getFileConfiguration().getInt("port");
         String urlString = getServerIp();
         if (!urlString.matches("^https?://.*")) {

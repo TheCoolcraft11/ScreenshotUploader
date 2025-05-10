@@ -2,6 +2,8 @@
 screenshotWebserver: true
 #Port of the Webserver
 port: 4567
+#IP address the webserver should bind to. Use 0.0.0.0 for all network interfaces, or 127.0.0.1 to restrict to localhost
+host: "0.0.0.0"
 #Allow EVERYONE with the passphrase to delete screenshots
 allowDelete: false
 #Passphrase for deleting screenshots from the web gallery, ONLY SHARE WITH TRUSTED PEOPLE, Leave empty to allow everyone to delete screenshots
@@ -22,7 +24,7 @@ sendUrlToClient: true
 useCustomWebURL: false
 #The custom URL to send to players
 customWebURL: ""
-#If the server should send a Discord Message in a channel (Requires Thread Channel webhookUrl needs to be set in order to work)
+#If the server should send a Discord Message in a channel (Requires Thread Channel webhookUrl needs to be set to work)
 sendDiscordWebhook: false
 #The Url of the Discord webhook
 webhookUrl: ""
