@@ -1,4 +1,4 @@
 name: ScreenshotUploader
-version: '1.3'
+version: '1.3.1'
 main: de.thecoolcraft11.screenshotUploader.ScreenshotUploader
 api-version: '1.21'

@@ -222,14 +222,41 @@ public class GalleryScreen extends Screen {
             MinecraftClient.getInstance().send(searchDebounceTask);
         });
 
+        this.addDrawableChild(ButtonWidget.builder(
+                        Text.translatable("gui.screenshot_uploader.screenshot_gallery.view_tags"),
+                        button -> {
+                            String screenshotName = null;
+                            if (imagePaths.get(clickedImageIndex) != null) {
+                                screenshotName = imagePaths.get(clickedImageIndex).toString();
+
+                            }
+
+                            if (screenshotName != null) {
+                                if (client != null) {
+                                    client.setScreen(new ScreenshotTaggingScreen(this, screenshotName));
+                                }
+                                logger.error(screenshotName);
+                            }
+                        })
+                .dimensions(this.width - 150, this.height - 40, 100, 20)
+                .build());
+
         addDrawableChild(saveButton);
+
         addDrawableChild(deleteButton);
+
         addDrawableChild(openInAppButton);
+
         addDrawableChild(configButton);
+
         addDrawableChild(editButton);
+
         addDrawableChild(likeButton);
+
         addDrawableChild(sortByButton);
+
         addDrawableChild(sortOrderButton);
+
         addDrawableChild(searchField);
 
         saveButton.visible = false;
