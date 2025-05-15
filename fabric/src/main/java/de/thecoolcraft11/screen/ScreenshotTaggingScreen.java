@@ -166,6 +166,16 @@ public class ScreenshotTaggingScreen extends Screen {
     private void loadExistingTags() {
         try {
             File jsonFile = new File(screenshotPath.replace(".png", ".json"));
+            if (!jsonFile.exists()) {
+                boolean wasCreated = jsonFile.createNewFile();
+                if (wasCreated) {
+                    try (FileWriter writer = new FileWriter(jsonFile)) {
+                        writer.write("{}");
+                    }
+                } else {
+                    logger.error("File already exists.");
+                }
+            }
             if (jsonFile.exists()) {
                 try (JsonReader reader = new JsonReader(new FileReader(jsonFile))) {
                     JsonObject json = gson.fromJson(reader, JsonObject.class);

@@ -92,6 +92,9 @@ public class GalleryScreen extends Screen {
         imagePaths.clear();
         navigatorButtons.clear();
         metaDatas.clear();
+        clickedImageIndex = -1;
+        isImageClicked = false;
+        scrollOffset = 0;
 
         int scaledHeight = height / 6;
         int scaledWidth = (scaledHeight * 16) / 9;
@@ -499,7 +502,11 @@ public class GalleryScreen extends Screen {
             }
         }
 
-        likeButton.setMessage(Text.translatable("gui.screenshot_uploader.screenshot_gallery.like_screenshot").withColor(likedScreenshots.containsKey(imagePaths.get(clickedImageIndex).toString()) && likedScreenshots.get(imagePaths.get(clickedImageIndex).toString()) ? 0xFFFFFF : 0x2a2a2a));
+        if (imagePaths.size() > clickedImageIndex && imagePaths.get(clickedImageIndex) != null) {
+            likeButton.setMessage(Text.translatable("gui.screenshot_uploader.screenshot_gallery.like_screenshot").withColor(likedScreenshots.containsKey(imagePaths.get(clickedImageIndex).toString()) && likedScreenshots.get(imagePaths.get(clickedImageIndex).toString()) ? 0xFFFFFF : 0x2a2a2a));
+        } else {
+            likeButton.setMessage(Text.translatable("gui.screenshot_uploader.screenshot_gallery.like_screenshot").withColor(0x2a2a2a));
+        }
 
     }
 
@@ -648,6 +655,26 @@ public class GalleryScreen extends Screen {
             }
             return false;
         }
+
+        if (searchFieldName.equals("tags")) {
+            if (metaData.has("tags") && metaData.get("tags").isJsonArray()) {
+                JsonArray tags = metaData.getAsJsonArray("tags");
+                for (JsonElement tag : tags) {
+                    if (tag.isJsonPrimitive()) {
+                        String tagValue = tag.getAsString().toLowerCase();
+                        if (operator.isEmpty()) {
+                            if (tagValue.equals(actualValue) || tagValue.contains(actualValue)) {
+                                return true;
+                            }
+                        } else {
+                            return compareValues(tagValue, operator, actualValue);
+                        }
+                    }
+                }
+            }
+            return false;
+        }
+
 
         if (searchFieldName.equals("date")) {
             if (metaData.has("current_time") && metaData.get("current_time").isJsonPrimitive()) {
@@ -835,6 +862,8 @@ public class GalleryScreen extends Screen {
         fieldMappings.put("x:", "x");
         fieldMappings.put("y:", "y");
         fieldMappings.put("z:", "z");
+
+        fieldMappings.put("tag:", "tags");
 
         return fieldMappings;
     }
