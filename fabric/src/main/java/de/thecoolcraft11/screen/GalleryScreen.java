@@ -238,7 +238,6 @@ public class GalleryScreen extends Screen {
                                 if (client != null) {
                                     client.setScreen(new ScreenshotTaggingScreen(this, screenshotName));
                                 }
-                                logger.error(screenshotName);
                             }
                         })
                 .dimensions(this.width - 150, this.height - 40, 100, 20)
@@ -445,9 +444,46 @@ public class GalleryScreen extends Screen {
             if (mouseX > x && mouseX < x + IMAGE_WIDTH && mouseY > y && mouseY < y + IMAGE_HEIGHT) {
                 context.fill(x, y, x + IMAGE_WIDTH, y + IMAGE_HEIGHT, 0x80FFFFFF);
             }
+
             if (client != null) {
                 if (likedScreenshots.containsKey(imagePaths.get(i).toString()) && likedScreenshots.get(imagePaths.get(i).toString())) {
                     context.drawText(client.textRenderer, "❤", x + 5, y + IMAGE_HEIGHT - 10, 0xFFFFFF, false);
+                }
+            }
+
+            if (i < metaDatas.size() && metaDatas.get(i) != null) {
+                JsonObject metadata = metaDatas.get(i);
+                if (metadata.has("tags") && metadata.get("tags").isJsonArray()) {
+                    JsonArray tags = metadata.getAsJsonArray("tags");
+                    if (client != null) {
+                        if (!tags.isEmpty()) {
+                            String firstTag = tags.get(0).getAsString();
+                            int tagWidth = client.textRenderer.getWidth(firstTag);
+                            int tagX = x + IMAGE_WIDTH - tagWidth - 5;
+                            int tagY = y + IMAGE_HEIGHT - 12;
+
+                            int padding = 2;
+                            context.fill(tagX - padding, tagY - padding,
+                                    tagX + tagWidth + padding, tagY + client.textRenderer.fontHeight + padding,
+                                    0xA0502000);
+
+                            context.fill(tagX - padding - 1, tagY - padding - 1,
+                                    tagX + tagWidth + padding + 1, tagY - padding,
+                                    0xFFDDDDDD);
+                            context.fill(tagX - padding - 1, tagY + client.textRenderer.fontHeight + padding,
+                                    tagX + tagWidth + padding + 1, tagY + client.textRenderer.fontHeight + padding + 1,
+                                    0xFFDDDDDD);
+                            context.fill(tagX - padding - 1, tagY - padding,
+                                    tagX - padding, tagY + client.textRenderer.fontHeight + padding,
+                                    0xFFDDDDDD);
+                            context.fill(tagX + tagWidth + padding, tagY - padding,
+                                    tagX + tagWidth + padding + 1, tagY + client.textRenderer.fontHeight + padding,
+                                    0xFFDDDDDD);
+
+                            context.drawText(client.textRenderer, firstTag, tagX + 1, tagY + 1, 0x000000, false);
+                            context.drawText(client.textRenderer, firstTag, tagX, tagY, 0xFFFFFF, false);
+                        }
+                    }
                 }
             }
         }
@@ -1124,9 +1160,26 @@ public class GalleryScreen extends Screen {
 
                 List<Path> sortedPaths;
                 try (Stream<Path> paths = Files.list(screenshotsDir)) {
-                    sortedPaths = paths
+                    List<PathWithMetadata> pathsWithMetadata = paths
                             .filter(path -> path.toString().endsWith(".png"))
-                            .sorted((path1, path2) -> {
+                            .map(path -> {
+                                JsonObject metadata = new JsonObject();
+                                File jsonData = new File(path.getParent().toString(),
+                                        path.getFileName().toString().replace(".png", ".json"));
+                                if (jsonData.exists()) {
+                                    try (FileReader reader = new FileReader(jsonData, StandardCharsets.UTF_8)) {
+                                        metadata = JsonParser.parseReader(reader).getAsJsonObject();
+                                    } catch (Exception e) {
+                                        logger.error("Error reading metadata for sorting: {}", e.getMessage());
+                                    }
+                                }
+                                return new PathWithMetadata(path, metadata);
+                            }).sorted((pm1, pm2) -> {
+                                Path path1 = pm1.path();
+                                Path path2 = pm2.path();
+                                JsonObject metadata1 = pm1.metadata();
+                                JsonObject metadata2 = pm2.metadata();
+
                                 int result;
                                 if (sortBy == SortBy.DEFAULT) {
                                     if (likedScreenshotsSet.contains(path1.toString()) && !likedScreenshotsSet.contains(path2.toString())) {
@@ -1136,7 +1189,19 @@ public class GalleryScreen extends Screen {
                                     }
 
                                     return Long.compare(path2.toFile().lastModified(), path1.toFile().lastModified());
+                                } else if (sortBy == SortBy.TAG) {
+                                    String tag1 = getFirstTag(metadata1);
+                                    String tag2 = getFirstTag(metadata2);
 
+                                    if (tag1 == null && tag2 == null) {
+                                        return path1.getFileName().toString().compareTo(path2.getFileName().toString());
+                                    } else if (tag1 == null) {
+                                        return 1;
+                                    } else if (tag2 == null) {
+                                        return -1;
+                                    } else {
+                                        return tag1.compareToIgnoreCase(tag2);
+                                    }
                                 } else {
                                     result = switch (sortBy) {
                                         case NAME ->
@@ -1148,7 +1213,10 @@ public class GalleryScreen extends Screen {
                                     };
                                 }
                                 return sortOrder == SortOrder.ASCENDING ? result : -result;
-                            })
+                            }).toList();
+
+                    sortedPaths = pathsWithMetadata.stream()
+                            .map(PathWithMetadata::path)
                             .toList();
                 }
 
@@ -1204,6 +1272,18 @@ public class GalleryScreen extends Screen {
         });
     }
 
+    private String getFirstTag(JsonObject metadata) {
+        if (metadata != null && metadata.has("tags") && metadata.get("tags").isJsonArray()) {
+            JsonArray tagsArray = metadata.getAsJsonArray("tags");
+            if (!tagsArray.isEmpty() && tagsArray.get(0).isJsonPrimitive()) {
+                return tagsArray.get(0).getAsString();
+            }
+        }
+        return null;
+    }
+
+    private record PathWithMetadata(Path path, JsonObject metadata) {
+    }
 
     private @NotNull LinkedHashMap<Text, Text> getStringStringMap() {
         JsonObject metaData = metaDatas.get(clickedImageIndex);
@@ -1320,6 +1400,7 @@ public class GalleryScreen extends Screen {
         NAME,
         DATE,
         SIZE,
+        TAG,
         DEFAULT
     }
 

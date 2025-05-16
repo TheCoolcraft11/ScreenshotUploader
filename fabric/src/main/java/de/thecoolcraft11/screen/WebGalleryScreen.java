@@ -277,6 +277,34 @@ public class WebGalleryScreen extends Screen {
             MinecraftClient.getInstance().send(searchDebounceTask);
         });
 
+        this.addDrawableChild(ButtonWidget.builder(
+                        Text.translatable("gui.screenshot_uploader.screenshot_gallery.view_tags"),
+                        button -> {
+                            String screenshotName = null;
+                            if (imagePaths.get(clickedImageIndex) != null) {
+                                screenshotName = imagePaths.get(clickedImageIndex);
+
+                            }
+
+                            JsonArray tags = new JsonArray();
+                            if (metaDatas.size() > clickedImageIndex) {
+                                JsonObject metaData = metaDatas.get(clickedImageIndex);
+                                if (metaData.has("tags")) {
+                                    tags = metaData.getAsJsonArray("tags");
+                                }
+                            }
+
+
+                            if (screenshotName != null) {
+                                if (client != null) {
+                                    client.setScreen(new ScreenshotWebTaggingScreen(this, screenshotName, tags));
+                                }
+                            }
+                        })
+                .dimensions(this.width - 150, this.height - 40, 100, 20)
+                .build());
+
+
         addDrawableChild(sortByButton);
         addDrawableChild(sortOrderButton);
         addDrawableChild(saveButton);
@@ -634,13 +662,70 @@ public class WebGalleryScreen extends Screen {
             }
 
             String username = getString(i);
-            int textX = x + 5;
             if (client != null) {
+                int textX = x + 5;
                 int textY = y + IMAGE_HEIGHT - 10;
+
+                int usernameWidth = client.textRenderer.getWidth(username);
+                int padding = 2;
+
+                context.fill(textX - padding, textY - padding,
+                        textX + usernameWidth + padding, textY + client.textRenderer.fontHeight + padding,
+                        0xA0000050);
+
+                context.fill(textX - padding - 1, textY - padding - 1,
+                        textX + usernameWidth + padding + 1, textY - padding,
+                        0xFFAAAAAA);
+                context.fill(textX - padding - 1, textY + client.textRenderer.fontHeight + padding,
+                        textX + usernameWidth + padding + 1, textY + client.textRenderer.fontHeight + padding + 1,
+                        0xFFAAAAAA);
+                context.fill(textX - padding - 1, textY - padding,
+                        textX - padding, textY + client.textRenderer.fontHeight + padding,
+                        0xFFAAAAAA);
+                context.fill(textX + usernameWidth + padding, textY - padding,
+                        textX + usernameWidth + padding + 1, textY + client.textRenderer.fontHeight + padding,
+                        0xFFAAAAAA);
+
                 context.drawText(client.textRenderer, username, textX, textY, 0xFFFFFF, false);
 
                 if (metaDatas.get(i).has("liked") && metaDatas.get(i).get("liked").getAsBoolean()) {
-                    context.drawText(client.textRenderer, "❤", textX + username.length() * 5 + 10, textY, 0xFFFFFF, false);
+                    context.drawText(client.textRenderer, "❤", textX + usernameWidth + 10, textY, 0xFFFFFF, false);
+                }
+            }
+
+            if (i < metaDatas.size() && metaDatas.get(i) != null) {
+                JsonObject metadata = metaDatas.get(i);
+                if (metadata.has("tags") && metadata.get("tags").isJsonArray()) {
+                    JsonArray tags = metadata.getAsJsonArray("tags");
+                    if (client != null) {
+                        if (!tags.isEmpty()) {
+                            String firstTag = tags.get(0).getAsString();
+                            int tagWidth = client.textRenderer.getWidth(firstTag);
+                            int tagX = x + IMAGE_WIDTH - tagWidth - 5;
+                            int tagY = y + IMAGE_HEIGHT - 12;
+
+                            int padding = 2;
+                            context.fill(tagX - padding, tagY - padding,
+                                    tagX + tagWidth + padding, tagY + client.textRenderer.fontHeight + padding,
+                                    0xA0502000);
+
+                            context.fill(tagX - padding - 1, tagY - padding - 1,
+                                    tagX + tagWidth + padding + 1, tagY - padding,
+                                    0xFFDDDDDD);
+                            context.fill(tagX - padding - 1, tagY + client.textRenderer.fontHeight + padding,
+                                    tagX + tagWidth + padding + 1, tagY + client.textRenderer.fontHeight + padding + 1,
+                                    0xFFDDDDDD);
+                            context.fill(tagX - padding - 1, tagY - padding,
+                                    tagX - padding, tagY + client.textRenderer.fontHeight + padding,
+                                    0xFFDDDDDD);
+                            context.fill(tagX + tagWidth + padding, tagY - padding,
+                                    tagX + tagWidth + padding + 1, tagY + client.textRenderer.fontHeight + padding,
+                                    0xFFDDDDDD);
+
+                            context.drawText(client.textRenderer, firstTag, tagX + 1, tagY + 1, 0x000000, false);
+                            context.drawText(client.textRenderer, firstTag, tagX, tagY, 0xFFFFFF, false);
+                        }
+                    }
                 }
             }
 

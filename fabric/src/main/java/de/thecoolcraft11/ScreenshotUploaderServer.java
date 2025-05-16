@@ -1,14 +1,8 @@
 package de.thecoolcraft11;
 
-import com.google.gson.JsonArray;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
-import com.google.gson.JsonPrimitive;
+import com.google.gson.*;
 import de.thecoolcraft11.config.ConfigManager;
-import de.thecoolcraft11.packet.AddressPayload;
-import de.thecoolcraft11.packet.CommentPayload;
-import de.thecoolcraft11.packet.DeletionPacket;
-import de.thecoolcraft11.packet.ScreenshotPayload;
+import de.thecoolcraft11.packet.*;
 import de.thecoolcraft11.util.WebServer;
 import net.fabricmc.api.DedicatedServerModInitializer;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
@@ -144,6 +138,63 @@ public class ScreenshotUploaderServer implements DedicatedServerModInitializer {
                 }
             });
         });
+        ServerPlayNetworking.registerGlobalReceiver(TagPayload.ID, (payload, context) -> {
+            String tagsJson = payload.tagsJson();
+            String screenshot = payload.screenshot();
+            context.server().execute(() -> applyTagToScreenshot(tagsJson, screenshot, context.player().getUuid())
+            );
+        });
+    }
+
+    private void applyTagToScreenshot(String tagsJson, String screenshot, UUID uuid) {
+        Path BASE_DIR = Paths.get("./screenshotUploader/screenshots/");
+        String url = getServerIp();
+        String filename = screenshot.replace(url + "/screenshots/", "");
+        Path targetFile = BASE_DIR.resolve(filename);
+        Path tagFile = BASE_DIR.resolve(filename.replace(".png", ".json"));
+
+        try {
+            if (!Files.exists(targetFile)) {
+                return;
+            }
+
+            JsonElement incomingJsonElement = JsonParser.parseString(tagsJson);
+            JsonArray incomingTags;
+
+            if (incomingJsonElement.isJsonObject() && incomingJsonElement.getAsJsonObject().has("tags")) {
+                incomingTags = incomingJsonElement.getAsJsonObject().getAsJsonArray("tags");
+            } else if (incomingJsonElement.isJsonArray()) {
+                incomingTags = incomingJsonElement.getAsJsonArray();
+            } else {
+                LOGGER.error("Invalid tags format: {}", tagsJson);
+                return;
+            }
+
+            JsonObject existingJson = new JsonObject();
+            if (Files.exists(tagFile)) {
+                String existingContent = new String(Files.readAllBytes(tagFile));
+                existingJson = JsonParser.parseString(existingContent).getAsJsonObject();
+            }
+
+            if (!existingJson.has("uuid") || !existingJson.get("uuid").getAsString().equals(uuid.toString())) {
+                return;
+            }
+
+            JsonArray tagsArray = existingJson.has("tags") ? existingJson.getAsJsonArray("tags") : new JsonArray();
+
+            for (int i = 0; i < incomingTags.size(); i++) {
+                JsonElement tagElement = incomingTags.get(i);
+                tagsArray.add(tagElement);
+            }
+
+            existingJson.add("tags", tagsArray);
+
+            Files.createDirectories(tagFile.getParent());
+            Files.write(tagFile, existingJson.toString().getBytes());
+
+        } catch (Exception e) {
+            LOGGER.error("Error applying tags: ", e);
+        }
     }
 
     private static @NotNull String getDeletionType(PlayerEntity player) {

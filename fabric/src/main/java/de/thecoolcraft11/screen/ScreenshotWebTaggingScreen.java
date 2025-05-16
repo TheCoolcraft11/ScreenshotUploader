@@ -1,10 +1,9 @@
 package de.thecoolcraft11.screen;
 
-import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-import com.google.gson.stream.JsonReader;
+import de.thecoolcraft11.packet.TagPayload;
+import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
@@ -14,26 +13,25 @@ import net.minecraft.text.Text;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.File;
-import java.io.FileReader;
-import java.io.FileWriter;
 import java.util.ArrayList;
 import java.util.List;
 
-public class ScreenshotTaggingScreen extends Screen {
+public class ScreenshotWebTaggingScreen extends Screen {
     private final Screen parent;
-    private final String screenshotPath;
+    private final String screenshotId;
+    private final JsonArray existingJson;
     private TextFieldWidget tagInputField;
     private final List<String> currentTags = new ArrayList<>();
     private int scrollOffset = 0;
     private final int maxVisible = 10;
-    Logger logger = LoggerFactory.getLogger(ScreenshotTaggingScreen.class);
-    private final Gson gson = new Gson();
+    Logger logger = LoggerFactory.getLogger(ScreenshotWebTaggingScreen.class);
 
-    public ScreenshotTaggingScreen(Screen parent, String screenshotPath) {
+    public ScreenshotWebTaggingScreen(Screen parent, String screenshotId, JsonArray existingJson) {
         super(Text.translatable("gui.screenshot_uploader.tagging_screen.title"));
         this.parent = parent;
-        this.screenshotPath = screenshotPath;
+        this.screenshotId = screenshotId;
+        this.existingJson = existingJson;
+
         loadExistingTags();
     }
 
@@ -164,60 +162,29 @@ public class ScreenshotTaggingScreen extends Screen {
     }
 
     private void loadExistingTags() {
-        try {
-            File jsonFile = new File(screenshotPath.replace(".png", ".json"));
-            if (!jsonFile.exists()) {
-                boolean wasCreated = jsonFile.createNewFile();
-                if (wasCreated) {
-                    try (FileWriter writer = new FileWriter(jsonFile)) {
-                        writer.write("{}");
-                    }
-                } else {
-                    logger.error("File already exists.");
+        if (existingJson != null) {
+            for (JsonElement element : existingJson) {
+                String tag = element.getAsString();
+                if (!currentTags.contains(tag)) {
+                    currentTags.add(tag);
                 }
             }
-            if (jsonFile.exists()) {
-                try (JsonReader reader = new JsonReader(new FileReader(jsonFile))) {
-                    JsonObject json = gson.fromJson(reader, JsonObject.class);
-
-                    if (json.has("tags")) {
-                        JsonArray tagsArray = json.getAsJsonArray("tags");
-                        for (JsonElement tag : tagsArray) {
-                            currentTags.add(tag.getAsString());
-                        }
-                    }
-                }
-            }
-        } catch (Exception e) {
-            logger.error("Error loading tags: {}", e.getMessage());
+        } else {
+            logger.error("No tags found in existing JSON.");
         }
     }
 
     private void saveTags() {
-        try {
-            File jsonFile = new File(screenshotPath.replace(".png", ".json"));
-            JsonObject json;
-
-            if (jsonFile.exists()) {
-                try (JsonReader reader = new JsonReader(new FileReader(jsonFile))) {
-                    json = gson.fromJson(reader, JsonObject.class);
-                    if (json == null) {
-                        json = new JsonObject();
-                    }
-                }
-            } else {
-                json = new JsonObject();
+        StringBuilder tagsJson = new StringBuilder("{\"tags\":[");
+        for (int i = 0; i < currentTags.size(); i++) {
+            tagsJson.append("\"").append(currentTags.get(i)).append("\"");
+            if (i < currentTags.size() - 1) {
+                tagsJson.append(",");
             }
-
-            JsonArray tagsArray = new JsonArray();
-            currentTags.forEach(tagsArray::add);
-            json.add("tags", tagsArray);
-
-            try (FileWriter writer = new FileWriter(jsonFile)) {
-                gson.toJson(json, writer);
-            }
-        } catch (Exception e) {
-            logger.error("Error saving tags: {}", e.getMessage());
         }
+        tagsJson.append("]}");
+        String jsonString = tagsJson.toString();
+        logger.info("Saving tags: {}", jsonString);
+        ClientPlayNetworking.send(new TagPayload(jsonString, screenshotId));
     }
 }
