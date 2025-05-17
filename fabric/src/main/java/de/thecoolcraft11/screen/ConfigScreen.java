@@ -76,7 +76,6 @@ public class ConfigScreen extends Screen {
                 scrollableButtons.put(key, textField);
                 addSelectableChild(textField);
             } else if (value.isJsonPrimitive() && value.getAsJsonPrimitive().isBoolean()) {
-
                 boolean currentValue = value.getAsBoolean();
                 ButtonWidget widget = ButtonWidget.builder(Text.translatable(currentValue ? "gui.screenshot_uploader.config.true" : "gui.screenshot_uploader.config.false"), button -> {
                     isConfigSaved = false;
@@ -87,9 +86,18 @@ public class ConfigScreen extends Screen {
                 widget.setTooltip(Tooltip.of(Text.of(key + ":\n").copy().styled(style -> style.withBold(true).withUnderline(true)).append(Text.translatable((config.has("_comment_" + key) ? config.get("_comment_" + key).getAsString().replaceAll("^\"|\"$", "'") : "")).styled(style -> style.withUnderline(false).withBold(false).withColor(Formatting.AQUA)))));
                 addDrawableChild(widget);
                 scrollableButtons.put(key, widget);
+            } else if (key.equals("upload_urls") && value.isJsonObject()) {
+                ButtonWidget widget = ButtonWidget.builder(Text.translatable("gui.screenshot_uploader.config.manage_servers"), button -> {
+                    if (client != null) {
+                        client.setScreen(new ServerManagerScreen(this, config.getAsJsonObject("upload_urls")));
+                    }
+                }).dimensions(inputXOffset, currentYOffset, 200, 20).build();
+                widget.setTooltip(Tooltip.of(Text.of(key + ":\n").copy().styled(style -> style.withBold(true).withUnderline(true)).append(Text.translatable((config.has("_comment_" + key) ? config.get("_comment_" + key).getAsString().replaceAll("^\"|\"$", "'") : "")).styled(style -> style.withUnderline(false).withBold(false).withColor(Formatting.AQUA)))));
+                addDrawableChild(widget);
+                scrollableButtons.put(key, widget);
             } else if (value.isJsonNull() || value.isJsonArray() || value.isJsonObject()) {
                 ButtonWidget widget = ButtonWidget.builder(Text.translatable("gui.screenshot_uploader.config.not_edit"), button -> {
-                }).dimensions(inputXOffset, currentYOffset, 200, 20).tooltip(Tooltip.of(Text.of(key + "\nHead to /config/screenshotUploader/config.json to edit servers"))).build();
+                }).dimensions(inputXOffset, currentYOffset, 200, 20).tooltip(Tooltip.of(Text.of(key + "\nHead to /config/screenshotUploader/config.json to edit this value"))).build();
                 widget.setTooltip(Tooltip.of(Text.of(key + ":\n").copy().styled(style -> style.withBold(true).withUnderline(true)).append(Text.translatable((config.has("_comment_" + key) ? config.get("_comment_" + key).getAsString().replaceAll("^\"|\"$", "'") : "")).styled(style -> style.withUnderline(false).withBold(false).withColor(Formatting.AQUA)))));
                 widget.active = false;
                 addDrawableChild(widget);
@@ -248,5 +256,10 @@ public class ConfigScreen extends Screen {
                     Text.translatable("gui.screenshot_uploader.config.unsaved_detail")
             ));
         }
+    }
+
+    public void changeConfig(JsonObject jsonObject) {
+        this.config.add("upload_urls", jsonObject);
+        this.isConfigSaved = false;
     }
 }

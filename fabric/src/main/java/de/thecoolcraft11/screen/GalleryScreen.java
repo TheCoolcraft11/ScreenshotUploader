@@ -2,7 +2,9 @@ package de.thecoolcraft11.screen;
 
 import com.google.gson.*;
 import com.mojang.blaze3d.systems.RenderSystem;
+import de.thecoolcraft11.config.AlbumManager;
 import de.thecoolcraft11.config.ConfigManager;
+import de.thecoolcraft11.config.data.Album;
 import de.thecoolcraft11.util.ReceivePackets;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
@@ -63,6 +65,9 @@ public class GalleryScreen extends Screen {
     private static ButtonWidget likeButton;
     private ButtonWidget sortByButton;
     private ButtonWidget sortOrderButton;
+
+    private ButtonWidget addToAlbumButton;
+    private ButtonWidget viewTagsButton;
 
     private ButtonWidget configButton;
     private TextFieldWidget searchField;
@@ -225,7 +230,7 @@ public class GalleryScreen extends Screen {
             MinecraftClient.getInstance().send(searchDebounceTask);
         });
 
-        this.addDrawableChild(ButtonWidget.builder(
+        viewTagsButton = ButtonWidget.builder(
                         Text.translatable("gui.screenshot_uploader.screenshot_gallery.view_tags"),
                         button -> {
                             String screenshotName = null;
@@ -240,8 +245,31 @@ public class GalleryScreen extends Screen {
                                 }
                             }
                         })
-                .dimensions(this.width - 150, this.height - 40, 100, 20)
-                .build());
+                .dimensions(this.width - 150, buttonY, 100, 20)
+                .build();
+
+        this.addDrawableChild(ButtonWidget.builder(
+                Text.translatable("gui.screenshot_uploader.screenshot_gallery.config"),
+                button -> {
+                    if (client != null) {
+                        client.setScreen(new AlbumConfigScreen(this));
+                    }
+                }
+        ).dimensions(buttonWidth, 5, buttonWidth / 2, buttonHeight).build());
+
+        addToAlbumButton = ButtonWidget.builder(
+                Text.translatable("gui.screenshot_uploader.screenshot_gallery.add_to_album"),
+                button -> {
+                    if (clickedImageIndex >= 0 && clickedImageIndex < imagePaths.size()) {
+                        Path imagePath = imagePaths.get(clickedImageIndex);
+                        if (client != null) {
+                            client.setScreen(new SelectAlbumScreen(this, imagePath.toString()));
+                        }
+                    }
+                }
+        ).dimensions((5 * buttonWidth) + 30, buttonY, buttonWidth, buttonHeight).build();
+
+        addDrawableChild(addToAlbumButton);
 
         addDrawableChild(saveButton);
 
@@ -261,6 +289,8 @@ public class GalleryScreen extends Screen {
 
         addDrawableChild(searchField);
 
+        addDrawableChild(viewTagsButton);
+
         saveButton.visible = false;
         deleteButton.visible = false;
         openInAppButton.visible = false;
@@ -271,13 +301,15 @@ public class GalleryScreen extends Screen {
         sortOrderButton.visible = true;
         searchField.visible = true;
         searchField.setMaxLength(100);
-
+        addToAlbumButton.visible = false;
 
         buttonsToHideOnOverlap.add(saveButton);
         buttonsToHideOnOverlap.add(deleteButton);
         buttonsToHideOnOverlap.add(openInAppButton);
         buttonsToHideOnOverlap.add(editButton);
         buttonsToHideOnOverlap.add(likeButton);
+        buttonsToHideOnOverlap.add(addToAlbumButton);
+        buttonsToHideOnOverlap.add(viewTagsButton);
     }
 
 
@@ -384,6 +416,8 @@ public class GalleryScreen extends Screen {
             sortByButton.visible = false;
             sortOrderButton.visible = false;
             searchField.visible = false;
+            viewTagsButton.visible = true;
+            addToAlbumButton.visible = true;
             navigatorButtons.forEach(buttonWidget -> buttonWidget.visible = false);
         } else {
             renderGallery(context, mouseX, mouseY);
@@ -397,6 +431,8 @@ public class GalleryScreen extends Screen {
             sortByButton.visible = true;
             sortOrderButton.visible = true;
             searchField.visible = true;
+            viewTagsButton.visible = false;
+            addToAlbumButton.visible = false;
 
             navigatorButtons.forEach(buttonWidget -> buttonWidget.visible = true);
         }
@@ -429,7 +465,27 @@ public class GalleryScreen extends Screen {
             int x = startX + col * (IMAGE_WIDTH + GAP);
             int y = startY + row * (IMAGE_HEIGHT + GAP) - scrollOffset;
 
-            context.fill(x - 2, y - 2, x + IMAGE_WIDTH + 2, y + IMAGE_HEIGHT + 2, 0xFF888888);
+            int fillColor = 0xFF888888;
+
+            if (i < metaDatas.size()) {
+                JsonObject metadata = metaDatas.get(i);
+                if (metadata != null && metadata.has("album") && client != null) {
+                    String albumUUID = metadata.get("album").getAsString();
+                    Album album = AlbumManager.getAlbum(UUID.fromString(albumUUID));
+                    if (album != null) {
+                        String colorHex = album.getColor();
+                        try {
+                            fillColor = Integer.parseInt(colorHex.replace("#", ""), 16) | 0xFF000000;
+                        } catch (NumberFormatException e) {
+                            logger.error("Failed to parse color for album {}: {}; {}", album.getTitle(), colorHex, e);
+                        }
+                    }
+                }
+            }
+
+            context.fill(x - 2, y - 2, x + IMAGE_WIDTH + 2, y + IMAGE_HEIGHT + 2, fillColor);
+
+
             Identifier imageId = null;
             if (imageIds.size() > i) {
                 imageId = imageIds.get(i);

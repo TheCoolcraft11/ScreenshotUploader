@@ -5,6 +5,7 @@ import com.google.gson.*;
 import com.mojang.authlib.GameProfile;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.StringArgumentType;
+import de.thecoolcraft11.config.AlbumManager;
 import de.thecoolcraft11.config.ConfigManager;
 import de.thecoolcraft11.event.KeyInputHandler;
 import de.thecoolcraft11.packet.AddressPayload;
@@ -80,6 +81,8 @@ public class ScreenshotUploaderClient implements ClientModInitializer {
         UseBlockCallback.EVENT.register(ScreenshotUploaderClient::signBlockClick);
 
         deleteOldScreenshots();
+
+        AlbumManager.loadAlbums();
     }
 
 
