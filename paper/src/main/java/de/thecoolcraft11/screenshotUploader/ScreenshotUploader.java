@@ -4,6 +4,7 @@ import de.thecoolcraft11.screenshotUploader.listener.PlayJoinListener;
 import de.thecoolcraft11.screenshotUploader.packet.CommentPacketListener;
 import de.thecoolcraft11.screenshotUploader.packet.DeletionPacketListener;
 import de.thecoolcraft11.screenshotUploader.packet.ScreenshotPacketChunkListener;
+import de.thecoolcraft11.screenshotUploader.packet.TagPacketListener;
 import de.thecoolcraft11.screenshotUploader.util.Config;
 import de.thecoolcraft11.screenshotUploader.util.WebServer;
 import org.bukkit.Bukkit;
@@ -41,6 +42,7 @@ public final class ScreenshotUploader extends JavaPlugin {
         getServer().getMessenger().registerIncomingPluginChannel(this, "screenshot-uploader:screenshot_chunk_packet", new ScreenshotPacketChunkListener());
         getServer().getMessenger().registerIncomingPluginChannel(this, "screenshot-uploader:comment_packet", new CommentPacketListener());
         getServer().getMessenger().registerIncomingPluginChannel(this, "screenshot-uploader:deletion_packet", new DeletionPacketListener());
+        getServer().getMessenger().registerIncomingPluginChannel(this, "screenshot-uploader:tag_packet", new TagPacketListener());
 
         getServer().getMessenger().registerOutgoingPluginChannel(this, "screenshot-uploader:address_packet");
         getServer().getMessenger().registerOutgoingPluginChannel(this, "screenshot-uploader:screenshot_response_packet");
@@ -58,6 +60,7 @@ public final class ScreenshotUploader extends JavaPlugin {
         getServer().getMessenger().unregisterIncomingPluginChannel(this, "screenshot-uploader:screenshot_chunk_packet");
         getServer().getMessenger().unregisterIncomingPluginChannel(this, "screenshot-uploader:comment_packet");
         getServer().getMessenger().unregisterIncomingPluginChannel(this, "screenshot-uploader:deletion_packet");
+        getServer().getMessenger().unregisterIncomingPluginChannel(this, "screenshot-uploader:tag_packet");
         getServer().getMessenger().unregisterOutgoingPluginChannel(this, "screenshot-uploader:address_packet");
         getServer().getMessenger().unregisterOutgoingPluginChannel(this, "screenshot-uploader:screenshot_response_packet");
     }

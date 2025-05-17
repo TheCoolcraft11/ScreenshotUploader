@@ -180,14 +180,7 @@ public class ScreenshotUploaderServer implements DedicatedServerModInitializer {
                 return;
             }
 
-            JsonArray tagsArray = existingJson.has("tags") ? existingJson.getAsJsonArray("tags") : new JsonArray();
-
-            for (int i = 0; i < incomingTags.size(); i++) {
-                JsonElement tagElement = incomingTags.get(i);
-                tagsArray.add(tagElement);
-            }
-
-            existingJson.add("tags", tagsArray);
+            existingJson.add("tags", incomingTags);
 
             Files.createDirectories(tagFile.getParent());
             Files.write(tagFile, existingJson.toString().getBytes());
