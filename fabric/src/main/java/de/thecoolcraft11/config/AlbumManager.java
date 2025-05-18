@@ -5,6 +5,7 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import de.thecoolcraft11.config.data.Album;
+import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -22,7 +23,7 @@ public class AlbumManager {
     public static void loadAlbums() {
         File configDir = new File(CONFIG_DIR);
         if (!configDir.exists() && !configDir.mkdirs()) {
-            LOGGER.error("Failed to create config directory");
+            LOGGER.error("Failed to create config directory during load");
             return;
         }
 
@@ -50,7 +51,7 @@ public class AlbumManager {
                     Album album = new Album(uuid, title, color, description, coverScreenshotName);
                     albums.put(uuid, album);
                 } catch (Exception e) {
-                    LOGGER.error("Error parsing album with ID: " + entry.getKey(), e);
+                    LOGGER.error("Error parsing album with ID: {}", entry.getKey(), e);
                 }
             }
 
@@ -65,23 +66,11 @@ public class AlbumManager {
         try {
             File configDir = new File(CONFIG_DIR);
             if (!configDir.exists() && !configDir.mkdirs()) {
-                LOGGER.error("Failed to create config directory");
+                LOGGER.error("Failed to create config directory during save");
                 return;
             }
 
-            JsonObject root = new JsonObject();
-
-            for (Map.Entry<UUID, Album> entry : albums.entrySet()) {
-                Album album = entry.getValue();
-                JsonObject albumObj = new JsonObject();
-
-                albumObj.addProperty("title", album.getTitle());
-                albumObj.addProperty("color", album.getColor());
-                albumObj.addProperty("description", album.getDescription());
-                albumObj.addProperty("coverScreenshotName", album.getCoverScreenshotName());
-
-                root.add(entry.getKey().toString(), albumObj);
-            }
+            JsonObject root = getJsonObject();
 
             try (Writer writer = new FileWriter(new File(configDir, ALBUMS_FILE))) {
                 GSON.toJson(root, writer);
@@ -91,6 +80,23 @@ public class AlbumManager {
         } catch (IOException e) {
             LOGGER.error("Error saving albums", e);
         }
+    }
+
+    private static @NotNull JsonObject getJsonObject() {
+        JsonObject root = new JsonObject();
+
+        for (Map.Entry<UUID, Album> entry : albums.entrySet()) {
+            Album album = entry.getValue();
+            JsonObject albumObj = new JsonObject();
+
+            albumObj.addProperty("title", album.getTitle());
+            albumObj.addProperty("color", album.getColor());
+            albumObj.addProperty("description", album.getDescription());
+            albumObj.addProperty("coverScreenshotName", album.getCoverScreenshotName());
+
+            root.add(entry.getKey().toString(), albumObj);
+        }
+        return root;
     }
 
     public static void addAlbum(Album album) {

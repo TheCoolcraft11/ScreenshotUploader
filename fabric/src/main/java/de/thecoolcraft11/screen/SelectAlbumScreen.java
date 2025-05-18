@@ -31,6 +31,9 @@ public class SelectAlbumScreen extends Screen {
         super(Text.translatable("gui.screenshot_uploader.select_album.title"));
         this.parent = parent;
         this.screenshotPath = screenshotPath;
+        if (parent instanceof GalleryScreen galleryScreen) {
+            galleryScreen.cancelAllAsyncTasks();
+        }
     }
 
     @Override
@@ -39,6 +42,10 @@ public class SelectAlbumScreen extends Screen {
 
         albums.clear();
         albums.addAll(AlbumManager.getAllAlbums());
+
+        if (parent instanceof GalleryScreen galleryScreen) {
+            galleryScreen.cancelAllAsyncTasks();
+        }
 
         int centerX = this.width / 2;
         int centerY = this.height / 2;
@@ -67,8 +74,13 @@ public class SelectAlbumScreen extends Screen {
                 button -> {
                     if (selectedAlbumIndex >= 0 && selectedAlbumIndex < albums.size()) {
                         assignScreenshotToAlbum(albums.get(selectedAlbumIndex).getUuid());
-                        if (client != null) {
-                            client.setScreen(parent);
+                        if (this.client != null) {
+                            if (parent instanceof GalleryScreen galleryScreen) {
+                                galleryScreen.cancelAllAsyncTasks();
+                                client.setScreen(new GalleryScreen());
+                            } else {
+                                client.setScreen(parent);
+                            }
                         }
                     }
                 }
@@ -204,7 +216,12 @@ public class SelectAlbumScreen extends Screen {
     @Override
     public void close() {
         if (this.client != null) {
-            this.client.setScreen(parent);
+            if (parent instanceof GalleryScreen galleryScreen) {
+                galleryScreen.cancelAllAsyncTasks();
+                client.setScreen(new GalleryScreen());
+            } else {
+                client.setScreen(parent);
+            }
         }
     }
 }

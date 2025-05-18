@@ -51,7 +51,7 @@ public class GalleryScreen extends Screen {
 
     private static boolean isImageClicked = false;
     private static int clickedImageIndex = -1;
-    private int scrollOffset = 0;
+    private int scrollOffset;
 
     private double zoomLevel = 2.0;
     private double imageOffsetX = 0.0;
@@ -71,6 +71,7 @@ public class GalleryScreen extends Screen {
 
     private ButtonWidget configButton;
     private TextFieldWidget searchField;
+    private ButtonWidget albumConfigButton;
 
     private final List<Path> originalImagePaths = new ArrayList<>();
     private String lastSearchQuery = "";
@@ -88,6 +89,23 @@ public class GalleryScreen extends Screen {
 
     public GalleryScreen() {
         super(Text.translatable("gui.screenshot_uploader.screenshot_gallery.title"));
+        imageIds.clear();
+        imagePaths.clear();
+        navigatorButtons.clear();
+        metaDatas.clear();
+        clickedImageIndex = -1;
+        isImageClicked = false;
+        scrollOffset = 0;
+        likedScreenshots.clear();
+        if (asyncSortFuture != null && !asyncSortFuture.isDone()) {
+            asyncSortFuture.cancel(true);
+        }
+
+        if (searchDebounceTask != null) {
+            MinecraftClient.getInstance().send(() -> searchDebounceTask = null);
+        }
+
+        sortTaskId.incrementAndGet();
     }
 
     @Override
@@ -100,6 +118,16 @@ public class GalleryScreen extends Screen {
         clickedImageIndex = -1;
         isImageClicked = false;
         scrollOffset = 0;
+        likedScreenshots.clear();
+        if (asyncSortFuture != null && !asyncSortFuture.isDone()) {
+            asyncSortFuture.cancel(true);
+        }
+
+        if (searchDebounceTask != null) {
+            MinecraftClient.getInstance().send(() -> searchDebounceTask = null);
+        }
+
+        sortTaskId.incrementAndGet();
 
         int scaledHeight = height / 6;
         int scaledWidth = (scaledHeight * 16) / 9;
@@ -202,6 +230,16 @@ public class GalleryScreen extends Screen {
                 }
         ).dimensions(5, 5, buttonWidth / 2, buttonHeight).build();
 
+
+        albumConfigButton = ButtonWidget.builder(
+                Text.translatable("gui.screenshot_uploader.screenshot_gallery.album_config"),
+                button -> {
+                    if (client != null) {
+                        client.setScreen(new AlbumConfigScreen(this));
+                    }
+                }
+        ).dimensions(5 + 5 + buttonWidth / 2, 5, buttonWidth / 2, buttonHeight).build();
+
         sortByButton = ButtonWidget.builder(
                 Text.literal(sortBy.toString()),
                 button -> {
@@ -248,14 +286,6 @@ public class GalleryScreen extends Screen {
                 .dimensions(this.width - 150, buttonY, 100, 20)
                 .build();
 
-        this.addDrawableChild(ButtonWidget.builder(
-                Text.translatable("gui.screenshot_uploader.screenshot_gallery.config"),
-                button -> {
-                    if (client != null) {
-                        client.setScreen(new AlbumConfigScreen(this));
-                    }
-                }
-        ).dimensions(buttonWidth, 5, buttonWidth / 2, buttonHeight).build());
 
         addToAlbumButton = ButtonWidget.builder(
                 Text.translatable("gui.screenshot_uploader.screenshot_gallery.add_to_album"),
@@ -291,6 +321,8 @@ public class GalleryScreen extends Screen {
 
         addDrawableChild(viewTagsButton);
 
+        addDrawableChild(albumConfigButton);
+
         saveButton.visible = false;
         deleteButton.visible = false;
         openInAppButton.visible = false;
@@ -300,8 +332,10 @@ public class GalleryScreen extends Screen {
         sortByButton.visible = true;
         sortOrderButton.visible = true;
         searchField.visible = true;
-        searchField.setMaxLength(100);
+        searchField.setMaxLength(128);
+        searchField.setPlaceholder(Text.translatable("gui.screenshot_uploader.screenshot_gallery.search_placeholder"));
         addToAlbumButton.visible = false;
+        albumConfigButton.visible = true;
 
         buttonsToHideOnOverlap.add(saveButton);
         buttonsToHideOnOverlap.add(deleteButton);
@@ -418,6 +452,7 @@ public class GalleryScreen extends Screen {
             searchField.visible = false;
             viewTagsButton.visible = true;
             addToAlbumButton.visible = true;
+            albumConfigButton.visible = false;
             navigatorButtons.forEach(buttonWidget -> buttonWidget.visible = false);
         } else {
             renderGallery(context, mouseX, mouseY);
@@ -433,6 +468,7 @@ public class GalleryScreen extends Screen {
             searchField.visible = true;
             viewTagsButton.visible = false;
             addToAlbumButton.visible = false;
+            albumConfigButton.visible = true;
 
             navigatorButtons.forEach(buttonWidget -> buttonWidget.visible = true);
         }
@@ -748,34 +784,54 @@ public class GalleryScreen extends Screen {
             return false;
         }
 
-        if (searchFieldName.equals("tags")) {
-            if (metaData.has("tags") && metaData.get("tags").isJsonArray()) {
-                JsonArray tags = metaData.getAsJsonArray("tags");
-                for (JsonElement tag : tags) {
-                    if (tag.isJsonPrimitive()) {
-                        String tagValue = tag.getAsString().toLowerCase();
-                        if (operator.isEmpty()) {
-                            if (tagValue.equals(actualValue) || tagValue.contains(actualValue)) {
-                                return true;
+        switch (searchFieldName) {
+            case "tags" -> {
+                if (metaData.has("tags") && metaData.get("tags").isJsonArray()) {
+                    JsonArray tags = metaData.getAsJsonArray("tags");
+                    for (JsonElement tag : tags) {
+                        if (tag.isJsonPrimitive()) {
+                            String tagValue = tag.getAsString().toLowerCase();
+                            if (operator.isEmpty()) {
+                                if (tagValue.equals(actualValue) || tagValue.contains(actualValue)) {
+                                    return true;
+                                }
+                            } else {
+                                return compareValues(tagValue, operator, actualValue);
                             }
-                        } else {
-                            return compareValues(tagValue, operator, actualValue);
                         }
                     }
                 }
+                return false;
             }
-            return false;
+            case "album" -> {
+                if (metaData.has("album") && metaData.get("album").isJsonPrimitive()) {
+                    String albumUUID = metaData.get("album").getAsString();
+                    try {
+                        Album album = AlbumManager.getAlbum(UUID.fromString(albumUUID));
+                        if (album != null) {
+                            String albumTitle = album.getTitle().toLowerCase();
+                            if (operator.isEmpty()) {
+                                return albumTitle.equals(actualValue) || albumTitle.contains(actualValue);
+                            } else {
+                                return compareValues(albumTitle, operator, actualValue);
+                            }
+                        }
+                    } catch (Exception e) {
+                        logger.error("Error processing album search: {}", e.getMessage());
+                    }
+                }
+                return false;
+            }
+            case "date" -> {
+                if (metaData.has("current_time") && metaData.get("current_time").isJsonPrimitive()) {
+                    return compareDate(metaData.get("current_time").getAsLong(), operator, actualValue);
+                } else if (metaData.has("date") && metaData.get("date").isJsonPrimitive()) {
+                    return compareDate(metaData.get("date").getAsLong(), operator, actualValue);
+                }
+                return false;
+            }
         }
 
-
-        if (searchFieldName.equals("date")) {
-            if (metaData.has("current_time") && metaData.get("current_time").isJsonPrimitive()) {
-                return compareDate(metaData.get("current_time").getAsLong(), operator, actualValue);
-            } else if (metaData.has("date") && metaData.get("date").isJsonPrimitive()) {
-                return compareDate(metaData.get("date").getAsLong(), operator, actualValue);
-            }
-            return false;
-        }
 
         if (metaData.has(searchFieldName) && metaData.get(searchFieldName).isJsonPrimitive()) {
             String fieldValue = metaData.get(searchFieldName).getAsString().toLowerCase();
@@ -956,6 +1012,7 @@ public class GalleryScreen extends Screen {
         fieldMappings.put("z:", "z");
 
         fieldMappings.put("tag:", "tags");
+        fieldMappings.put("album:", "album");
 
         return fieldMappings;
     }
@@ -1405,6 +1462,18 @@ public class GalleryScreen extends Screen {
         }
     }
 
+    public void cancelAllAsyncTasks() {
+        if (asyncSortFuture != null && !asyncSortFuture.isDone()) {
+            asyncSortFuture.cancel(true);
+        }
+
+        if (searchDebounceTask != null) {
+            MinecraftClient.getInstance().send(() -> searchDebounceTask = null);
+        }
+
+        sortTaskId.incrementAndGet();
+    }
+
 
     @Override
     public void resize(MinecraftClient client, int width, int height) {
@@ -1462,4 +1531,6 @@ public class GalleryScreen extends Screen {
 
     private record SearchTerm(String fieldName, String fieldValue) {
     }
+
+
 }
