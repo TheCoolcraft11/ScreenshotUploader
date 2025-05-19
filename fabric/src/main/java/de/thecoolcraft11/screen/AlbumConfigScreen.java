@@ -162,7 +162,7 @@ public class AlbumConfigScreen extends Screen {
             Album album = albums.get(albumIndex);
 
             boolean isSelected = albumIndex == selectedAlbumIndex;
-            int bgColor = isSelected ? 0x80808080 : 0x40808080;
+            int bgColor = isSelected ? 0x80808080 : 0x20808080;
 
             context.fill(this.width / 2 - 100, y, this.width / 2 + 100, y + 20, bgColor);
 
@@ -240,10 +240,6 @@ public class AlbumConfigScreen extends Screen {
         if (!colorPattern.matcher(colorField.getText()).matches()) {
             valid = false;
         }
-        if (coverScreenshotField.getText().trim().isEmpty()) {
-            valid = false;
-        }
-
         return valid;
     }
 

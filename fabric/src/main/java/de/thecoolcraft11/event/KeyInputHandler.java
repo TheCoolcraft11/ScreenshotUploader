@@ -18,7 +18,9 @@ public class KeyInputHandler {
     public static void registerKeyInputs() {
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             if (galleryKey.wasPressed()) {
-                client.setScreen(new GalleryScreen());
+                GalleryScreen galleryScreen = new GalleryScreen();
+                galleryScreen.cancelAllAsyncTasks();
+                client.setScreen(galleryScreen);
             }
         });
     }

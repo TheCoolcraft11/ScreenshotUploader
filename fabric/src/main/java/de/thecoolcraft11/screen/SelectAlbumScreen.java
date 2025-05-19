@@ -26,6 +26,7 @@ public class SelectAlbumScreen extends Screen {
     private int selectedAlbumIndex = -1;
     private int scrollOffset = 0;
     private final int maxAlbumsVisible = 6;
+    private boolean setAsCover = false;
 
     public SelectAlbumScreen(Screen parent, String screenshotPath) {
         super(Text.translatable("gui.screenshot_uploader.select_album.title"));
@@ -70,10 +71,24 @@ public class SelectAlbumScreen extends Screen {
         ).position(centerX + buttonWidth / 2 + 10, centerY + 80).size(20, 20).build());
 
         this.addDrawableChild(ButtonWidget.builder(
+                getSetAsCoverToggleText(),
+                button -> {
+                    setAsCover = !setAsCover;
+                    button.setMessage(getSetAsCoverToggleText());
+                }
+        ).position(centerX - 100, centerY + 90).size(200, 20).build());
+
+        this.addDrawableChild(ButtonWidget.builder(
                 Text.translatable("gui.screenshot_uploader.select_album.assign"),
                 button -> {
                     if (selectedAlbumIndex >= 0 && selectedAlbumIndex < albums.size()) {
-                        assignScreenshotToAlbum(albums.get(selectedAlbumIndex).getUuid());
+                        UUID albumUuid = albums.get(selectedAlbumIndex).getUuid();
+                        assignScreenshotToAlbum(albumUuid);
+
+                        if (setAsCover) {
+                            assignScreenshotAsAlbumCover(albumUuid);
+                        }
+
                         if (this.client != null) {
                             if (parent instanceof GalleryScreen galleryScreen) {
                                 galleryScreen.cancelAllAsyncTasks();
@@ -101,6 +116,14 @@ public class SelectAlbumScreen extends Screen {
         ).position(centerX - 100, height - 40).size(200, 20).build());
     }
 
+    private Text getSetAsCoverToggleText() {
+        return Text.translatable("gui.screenshot_uploader.select_album.set_as_cover")
+                .append(": ")
+                .append(setAsCover
+                        ? Text.translatable("options.on")
+                        : Text.translatable("options.off"));
+    }
+
     @Override
     public void render(DrawContext context, int mouseX, int mouseY, float delta) {
         this.renderBackground(context, mouseX, mouseY, delta);
@@ -120,7 +143,7 @@ public class SelectAlbumScreen extends Screen {
             Album album = albums.get(albumIndex);
 
             boolean isSelected = albumIndex == selectedAlbumIndex;
-            int bgColor = isSelected ? 0x80808080 : 0x40808080;
+            int bgColor = isSelected ? 0x80808080 : 0x20808080;
 
             context.fill(centerX - 100, y - 2, centerX + 100, y + 22, bgColor);
 
@@ -204,12 +227,28 @@ public class SelectAlbumScreen extends Screen {
             metaData.addProperty("album", albumUuid.toString());
 
             try (Writer writer = new FileWriter(jsonFile)) {
-                new GsonBuilder().setPrettyPrinting().create(
-
-                ).toJson(metaData, writer);
+                new GsonBuilder().setPrettyPrinting().create().toJson(metaData, writer);
             }
         } catch (IOException e) {
             logger.error("Error updating screenshot metadata file", e);
+        }
+    }
+
+    private void assignScreenshotAsAlbumCover(UUID albumUuid) {
+        try {
+            File screenshotFile = new File(screenshotPath);
+            String screenshotName = screenshotFile.getName();
+
+            Album album = AlbumManager.getAlbum(albumUuid);
+            if (album != null) {
+                album.setCoverScreenshotName(screenshotName);
+                AlbumManager.updateAlbum(album);
+                logger.info("Set screenshot {} as cover for album {}", screenshotName, album.getTitle());
+            } else {
+                logger.error("Could not find album with UUID: {}", albumUuid);
+            }
+        } catch (Exception e) {
+            logger.error("Error setting screenshot as album cover", e);
         }
     }
 

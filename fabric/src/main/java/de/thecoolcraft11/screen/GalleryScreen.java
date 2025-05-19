@@ -1,7 +1,6 @@
 package de.thecoolcraft11.screen;
 
 import com.google.gson.*;
-import com.mojang.blaze3d.systems.RenderSystem;
 import de.thecoolcraft11.config.AlbumManager;
 import de.thecoolcraft11.config.ConfigManager;
 import de.thecoolcraft11.config.data.Album;
@@ -87,16 +86,32 @@ public class GalleryScreen extends Screen {
     private SortBy sortBy = SortBy.DEFAULT;
     private SortOrder sortOrder = SortOrder.ASCENDING;
 
+    private static UUID albumUUID;
+
     public GalleryScreen() {
         super(Text.translatable("gui.screenshot_uploader.screenshot_gallery.title"));
+        albumUUID = null;
+        initializeScreen();
+    }
+
+    public GalleryScreen(UUID passedAlbumUUID) {
+        super(Text.translatable("gui.screenshot_uploader.screenshot_gallery.title"));
+        albumUUID = passedAlbumUUID;
+        initializeScreen();
+    }
+
+    private void initializeScreen() {
         imageIds.clear();
         imagePaths.clear();
         navigatorButtons.clear();
         metaDatas.clear();
+        originalImagePaths.clear();
         clickedImageIndex = -1;
         isImageClicked = false;
         scrollOffset = 0;
         likedScreenshots.clear();
+        cancelAllAsyncTasks();
+        sortTaskId.incrementAndGet();
         if (asyncSortFuture != null && !asyncSortFuture.isDone()) {
             asyncSortFuture.cancel(true);
         }
@@ -111,23 +126,6 @@ public class GalleryScreen extends Screen {
     @Override
     protected void init() {
         super.init();
-        imageIds.clear();
-        imagePaths.clear();
-        navigatorButtons.clear();
-        metaDatas.clear();
-        clickedImageIndex = -1;
-        isImageClicked = false;
-        scrollOffset = 0;
-        likedScreenshots.clear();
-        if (asyncSortFuture != null && !asyncSortFuture.isDone()) {
-            asyncSortFuture.cancel(true);
-        }
-
-        if (searchDebounceTask != null) {
-            MinecraftClient.getInstance().send(() -> searchDebounceTask = null);
-        }
-
-        sortTaskId.incrementAndGet();
 
         int scaledHeight = height / 6;
         int scaledWidth = (scaledHeight * 16) / 9;
@@ -138,7 +136,26 @@ public class GalleryScreen extends Screen {
         IMAGE_HEIGHT = scaledHeight;
         GAP = scaledGap;
 
-        loadAllImagesAsync();
+
+        if (MinecraftClient.getInstance() != null) {
+            MinecraftClient.getInstance().execute(() -> {
+                try {
+                    Thread.sleep(100);
+                } catch (InterruptedException ignored) {
+                }
+                initializeScreen();
+            });
+        }
+        if (MinecraftClient.getInstance() != null) {
+            MinecraftClient.getInstance().execute(() -> {
+                try {
+                    Thread.sleep(0);
+                } catch (InterruptedException ignored) {
+                }
+                loadAllImagesAsync();
+            });
+        }
+
 
         int buttonWidth = width / 8;
         int buttonHeight = height / 25;
@@ -235,7 +252,7 @@ public class GalleryScreen extends Screen {
                 Text.translatable("gui.screenshot_uploader.screenshot_gallery.album_config"),
                 button -> {
                     if (client != null) {
-                        client.setScreen(new AlbumConfigScreen(this));
+                        client.setScreen(new AlbumScreen(this));
                     }
                 }
         ).dimensions(5 + 5 + buttonWidth / 2, 5, buttonWidth / 2, buttonHeight).build();
@@ -530,7 +547,6 @@ public class GalleryScreen extends Screen {
                 logger.error("Image ID is null for index {}", i);
                 continue;
             }
-            RenderSystem.setShaderTexture(0, imageId);
             context.drawTexture(imageId, x, y, 0, 0, IMAGE_WIDTH, IMAGE_HEIGHT, IMAGE_WIDTH, IMAGE_HEIGHT);
 
             if (mouseX > x && mouseX < x + IMAGE_WIDTH && mouseY > y && mouseY < y + IMAGE_HEIGHT) {
@@ -605,18 +621,11 @@ public class GalleryScreen extends Screen {
         int borderWidth = 5;
         context.fill(x - borderWidth, y - borderWidth, x + imageWidth + borderWidth, y + imageHeight + borderWidth, 0xFFFFFFFF);
 
-        RenderSystem.setShaderTexture(0, clickedImageId);
-        RenderSystem.enableBlend();
-
         context.drawTexture(clickedImageId, x, y, 0, 0, imageWidth, imageHeight, imageWidth, imageHeight);
 
-        RenderSystem.disableBlend();
 
         int sidebarWidth = 300;
-        int sidebarHeight = imageHeight;
         int sidebarXLeft = x - sidebarWidth;
-
-        context.fill(sidebarXLeft, y, sidebarXLeft + sidebarWidth, y + sidebarHeight, 0xCC000000);
 
 
         if (clickedImageIndex >= 0 && clickedImageIndex < metaDatas.size()) {
@@ -645,8 +654,9 @@ public class GalleryScreen extends Screen {
             try (Stream<Path> paths = Files.list(screenshotsDir)) {
                 Set<String> likedScreenshotsSet = loadLikedScreenshots();
 
-                List<Path> sortedPaths = paths
-                        .filter(path -> path.toString().endsWith(".png"))
+                Stream<Path> filteredPaths = getFilteredPaths(paths);
+
+                List<Path> sortedPaths = filteredPaths
                         .sorted(Comparator
                                 .comparing((Path path) -> likedScreenshotsSet.contains(path.toString()) ? 0 : 1)
                                 .thenComparing((Path path) -> path.toFile().lastModified(), Comparator.reverseOrder())
@@ -664,6 +674,29 @@ public class GalleryScreen extends Screen {
                 logger.error("Failed to load images: {}", e.getMessage());
             }
         });
+    }
+
+    private static @NotNull Stream<Path> getFilteredPaths(Stream<Path> paths) {
+        Stream<Path> filteredPaths = paths.filter(path -> path.toString().endsWith(".png"));
+
+        if (albumUUID != null) {
+            filteredPaths = filteredPaths.filter(path -> {
+                File jsonData = new File(path.getParent().toString(),
+                        path.getFileName().toString().replace(".png", ".json"));
+
+                if (jsonData.exists()) {
+                    try (FileReader reader = new FileReader(jsonData, StandardCharsets.UTF_8)) {
+                        JsonObject metadata = JsonParser.parseReader(reader).getAsJsonObject();
+                        return metadata.has("album") &&
+                                metadata.get("album").getAsString().equals(albumUUID.toString());
+                    } catch (Exception e) {
+                        logger.error("Error reading metadata for album filtering: {}", e.getMessage());
+                    }
+                }
+                return false;
+            });
+        }
+        return filteredPaths;
     }
 
     private void performSearch(String query) {
@@ -1462,7 +1495,15 @@ public class GalleryScreen extends Screen {
         }
     }
 
+
     public void cancelAllAsyncTasks() {
+        imageIds.clear();
+        imagePaths.clear();
+        navigatorButtons.clear();
+        metaDatas.clear();
+        clickedImageIndex = -1;
+        isImageClicked = false;
+
         if (asyncSortFuture != null && !asyncSortFuture.isDone()) {
             asyncSortFuture.cancel(true);
         }
@@ -1470,10 +1511,7 @@ public class GalleryScreen extends Screen {
         if (searchDebounceTask != null) {
             MinecraftClient.getInstance().send(() -> searchDebounceTask = null);
         }
-
-        sortTaskId.incrementAndGet();
     }
-
 
     @Override
     public void resize(MinecraftClient client, int width, int height) {
