@@ -94,6 +94,7 @@ public class AlbumManager {
             albumObj.addProperty("description", album.getDescription());
             albumObj.addProperty("coverScreenshotName", album.getCoverScreenshotName());
 
+
             root.add(entry.getKey().toString(), albumObj);
         }
         return root;
@@ -124,5 +125,6 @@ public class AlbumManager {
     public static Album getAlbum(UUID uuid) {
         return albums.get(uuid);
     }
+
 
 }

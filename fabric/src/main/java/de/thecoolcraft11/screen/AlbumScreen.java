@@ -31,6 +31,9 @@ public class AlbumScreen extends Screen {
     private static int ALBUM_HEIGHT = 150;
     private static int GAP = 20;
     private static int TOP_PADDING = 40;
+    private static final Identifier FOLDER_ICON = Identifier.of("screenshot-uploader", "textures/gui/album_screen/folder_icon.png");
+    private static final Identifier FOLDER_ICON_COVER = Identifier.of("screenshot-uploader", "textures/gui/album_screen/folder_icon_cover.png");
+
 
     private final List<Album> albums = new ArrayList<>();
     private final Map<String, Identifier> coverImageIds = new HashMap<>();
@@ -125,23 +128,51 @@ public class AlbumScreen extends Screen {
             logger.error("Invalid color format for album: {}", album.getTitle());
         }
 
-        context.fill(x - 2, y - 2, x + ALBUM_WIDTH + 2, y + ALBUM_HEIGHT + 2, color);
+        int iconSizeOffset = (int) (Math.min(ALBUM_WIDTH, ALBUM_HEIGHT) * 0.70);
+        int iconSize = Math.min(ALBUM_WIDTH, ALBUM_HEIGHT) + iconSizeOffset;
+        int iconX = x + (ALBUM_WIDTH - iconSize) / 2;
+        int iconY = y + (ALBUM_HEIGHT - iconSize) / 2;
 
-        context.fill(x, y, x + ALBUM_WIDTH, y + ALBUM_HEIGHT, 0xFF111111);
-
+        int r = (color >> 16) & 0xFF;
+        int g = (color >> 8) & 0xFF;
+        int b = color & 0xFF;
+        context.setShaderColor(r / 255.0f, g / 255.0f, b / 255.0f, 1.0f);
+        context.drawTexture(FOLDER_ICON, iconX, iconY, 0, 0, iconSize, iconSize, iconSize, iconSize);
+        context.setShaderColor(255 / 255.0f, 255 / 255.0f, 255 / 255.0f, 1.0f);
         Identifier coverId = coverImageIds.get(album.getCoverScreenshotName());
         if (coverId != null) {
-            context.drawTexture(coverId, x, y, 0, 0, ALBUM_WIDTH, ALBUM_HEIGHT, ALBUM_WIDTH, ALBUM_HEIGHT);
+            int coverWidth = (int) (ALBUM_WIDTH * 0.65);
+            int coverHeight = (int) (ALBUM_HEIGHT * 0.65);
+            int coverOffsetX = (int) (ALBUM_WIDTH * 0.15);
+            int coverOffsetY = (int) (ALBUM_HEIGHT * 0.12);
+            int coverX = (x + (ALBUM_WIDTH - coverWidth) / 2) + coverOffsetX;
+            int coverY = (y + (ALBUM_HEIGHT - coverHeight) / 2) - coverOffsetY;
+
+            context.drawTexture(coverId, coverX, coverY, 0, 0, coverWidth, coverHeight, coverWidth, coverHeight);
+        }
+        boolean isHovering = mouseX >= x && mouseX <= x + ALBUM_WIDTH && mouseY >= y && mouseY <= y + ALBUM_HEIGHT;
+        if (!isHovering) {
+            context.setShaderColor(r / 255.0f, g / 255.0f, b / 255.0f, 1.0f);
+            context.drawTexture(FOLDER_ICON_COVER, iconX, iconY, 0, 0, iconSize, iconSize, iconSize, iconSize);
+            context.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
         }
 
         int titleX = x + 5;
-        int titleY = y + 5;
+        int titleY = y + ALBUM_HEIGHT - this.textRenderer.fontHeight - 5;
         context.fill(titleX - 2, titleY - 2, titleX + this.textRenderer.getWidth(album.getTitle()) + 2, titleY + this.textRenderer.fontHeight + 2, 0x80000000);
         context.drawText(this.textRenderer, album.getTitle(), titleX, titleY, 0xFFFFFF, false);
 
-        boolean isHovering = mouseX >= x && mouseX <= x + ALBUM_WIDTH && mouseY >= y && mouseY <= y + ALBUM_HEIGHT;
         if (isHovering) {
             context.fill(x, y, x + ALBUM_WIDTH, y + ALBUM_HEIGHT, 0x40FFFFFF);
+
+            List<Text> tooltipLines = new ArrayList<>();
+            tooltipLines.add(Text.literal(album.getTitle()).formatted(net.minecraft.util.Formatting.YELLOW, net.minecraft.util.Formatting.BOLD));
+
+            if (album.getDescription() != null && !album.getDescription().isEmpty()) {
+                tooltipLines.add(Text.literal(album.getDescription()).formatted(net.minecraft.util.Formatting.GRAY));
+            }
+
+            context.drawTooltip(this.textRenderer, tooltipLines, mouseX, mouseY);
         }
     }
 
