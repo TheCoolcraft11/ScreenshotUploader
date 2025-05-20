@@ -27,6 +27,7 @@ public class SelectAlbumScreen extends Screen {
     private int scrollOffset = 0;
     private final int maxAlbumsVisible = 6;
     private boolean setAsCover = false;
+    private ButtonWidget setAsCoverButton;
 
     public SelectAlbumScreen(Screen parent, String screenshotPath) {
         super(Text.translatable("gui.screenshot_uploader.select_album.title"));
@@ -52,6 +53,13 @@ public class SelectAlbumScreen extends Screen {
         int centerY = this.height / 2;
         int buttonWidth = 200;
 
+        if (selectedAlbumIndex >= 0 && selectedAlbumIndex < albums.size()) {
+            Album selectedAlbum = albums.get(selectedAlbumIndex);
+            setAsCover = selectedAlbum.getCoverScreenshotName() == null || selectedAlbum.getCoverScreenshotName().isEmpty() || doesCoverImageNotExist(selectedAlbum);
+            setAsCoverButton.setMessage(getSetAsCoverToggleText());
+        }
+
+
         this.addDrawableChild(ButtonWidget.builder(
                 Text.literal("▲"),
                 button -> {
@@ -70,7 +78,7 @@ public class SelectAlbumScreen extends Screen {
                 }
         ).position(centerX + buttonWidth / 2 + 10, centerY + 80).size(20, 20).build());
 
-        this.addDrawableChild(ButtonWidget.builder(
+        setAsCoverButton = this.addDrawableChild(ButtonWidget.builder(
                 getSetAsCoverToggleText(),
                 button -> {
                     setAsCover = !setAsCover;
@@ -183,7 +191,15 @@ public class SelectAlbumScreen extends Screen {
 
             for (int i = 0; i < visibleCount; i++) {
                 if (mouseY >= y - 2 && mouseY <= y + 22) {
-                    selectedAlbumIndex = i + scrollOffset;
+                    int newSelectedIndex = i + scrollOffset;
+                    if (newSelectedIndex != selectedAlbumIndex) {
+                        selectedAlbumIndex = newSelectedIndex;
+                        if (selectedAlbumIndex >= 0 && selectedAlbumIndex < albums.size()) {
+                            Album selectedAlbum = albums.get(selectedAlbumIndex);
+                            setAsCover = selectedAlbum.getCoverScreenshotName() == null || selectedAlbum.getCoverScreenshotName().isEmpty() || doesCoverImageNotExist(selectedAlbum);
+                            setAsCoverButton.setMessage(getSetAsCoverToggleText());
+                        }
+                    }
                     return true;
                 }
                 y += 30;
@@ -250,6 +266,27 @@ public class SelectAlbumScreen extends Screen {
         } catch (Exception e) {
             logger.error("Error setting screenshot as album cover", e);
         }
+    }
+
+    private boolean doesCoverImageNotExist(Album album) {
+        if (album == null) {
+            logger.error("Cannot check cover image - album is null");
+            return true;
+        }
+
+        String coverName = album.getCoverScreenshotName();
+        if (coverName == null || coverName.isEmpty()) {
+            return true;
+        }
+
+        File coverFile = new File(System.getProperty("user.dir"), "screenshots" + File.separator + coverName);
+        boolean exists = coverFile.exists() && coverFile.isFile();
+
+        if (!exists) {
+            logger.warn("Cover image does not exist at path: {}", coverFile.getAbsolutePath());
+        }
+
+        return !exists;
     }
 
     @Override
