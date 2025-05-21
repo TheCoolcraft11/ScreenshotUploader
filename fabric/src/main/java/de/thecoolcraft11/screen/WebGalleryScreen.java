@@ -46,6 +46,7 @@ public class WebGalleryScreen extends Screen {
     private static final List<Identifier> imageIds = new ArrayList<>();
     private static final List<String> imagePaths = new ArrayList<>();
     private static final List<JsonObject> metaDatas = new ArrayList<>();
+    private static final List<String> newImagePaths = new ArrayList<>();
 
     private static final int IMAGES_PER_ROW = 5;
     private static int IMAGE_WIDTH = 192;
@@ -70,6 +71,7 @@ public class WebGalleryScreen extends Screen {
     private final List<ButtonWidget> navigatorButtons = new ArrayList<>();
 
     private final List<ButtonWidget> buttonsToHideOnOverlap = new ArrayList<>();
+
 
     private ButtonWidget saveButton;
 
@@ -96,6 +98,9 @@ public class WebGalleryScreen extends Screen {
     private SortOrder sortOrder = SortOrder.ASCENDING;
 
     private static String FILE_PATH;
+
+    private int starY = 0;
+    private boolean goingUp = true;
 
     public WebGalleryScreen(Screen parent, String webserverUrl, String initialImageName) {
         super(Text.translatable("gui.screenshot_uploader.screenshot_gallery.web_title", webserverUrl));
@@ -691,6 +696,9 @@ public class WebGalleryScreen extends Screen {
                 if (metaDatas.get(i).has("liked") && metaDatas.get(i).get("liked").getAsBoolean()) {
                     context.drawText(client.textRenderer, "❤", textX + usernameWidth + 10, textY, 0xFFFFFF, false);
                 }
+                if (newImagePaths.contains(imagePaths.get(i))) {
+                    context.drawText(client.textRenderer, "★", textX + usernameWidth + 20, textY - starY, 0xFFFF00, false);
+                }
             }
 
             if (i < metaDatas.size() && metaDatas.get(i) != null) {
@@ -771,6 +779,8 @@ public class WebGalleryScreen extends Screen {
         }
 
         Identifier clickedImageId = imageIds.get(clickedImageIndex);
+
+        newImagePaths.remove(imagePaths.get(clickedImageIndex));
 
         int imageWidth = (int) (1920 * zoomLevel);
         int imageHeight = (int) (1080 * zoomLevel);
@@ -992,6 +1002,7 @@ public class WebGalleryScreen extends Screen {
                                      NativeImage loadedImage = NativeImage.read(fileInputStream)) {
                                     Identifier textureId = Identifier.of("webimage", "temp/" + imageUrl.hashCode());
                                     if (MinecraftClient.getInstance() != null) {
+                                        newImagePaths.add(imageUrl);
                                         MinecraftClient.getInstance().getTextureManager().registerTexture(textureId, new NativeImageBackedTexture(loadedImage));
                                         imageIds.add(textureId);
                                     } else {
@@ -1669,6 +1680,22 @@ public class WebGalleryScreen extends Screen {
     @Override
     public boolean shouldPause() {
         return false;
+    }
+
+    @Override
+    public void tick() {
+        super.tick();
+        if (goingUp) {
+            starY += 4;
+            if (starY >= 12) {
+                goingUp = false;
+            }
+        } else {
+            starY -= 4;
+            if (starY <= 0) {
+                goingUp = true;
+            }
+        }
     }
 
     private enum SortOrder {
