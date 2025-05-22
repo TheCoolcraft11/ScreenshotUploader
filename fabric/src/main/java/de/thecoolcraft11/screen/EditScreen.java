@@ -2,6 +2,7 @@ package de.thecoolcraft11.screen;
 
 
 import com.mojang.blaze3d.systems.RenderSystem;
+import de.thecoolcraft11.config.ConfigManager;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.Element;
 import net.minecraft.client.gui.screen.Screen;
@@ -441,13 +442,13 @@ public class EditScreen extends Screen {
                 int g = (color >> 8) & 0xFF;
                 int b = color & 0xFF;
 
-                r = (int) (((r - 128) * (float) 1.2) + 128); //1.2 = var
-                g = (int) (((g - 128) * (float) 1.2) + 128);
-                b = (int) (((b - 128) * (float) 1.2) + 128);
+                r = (int) (((r - 128) * ConfigManager.getClientConfig().contrastMultiplier) + 128);
+                g = (int) (((g - 128) * ConfigManager.getClientConfig().contrastMultiplier) + 128);
+                b = (int) (((b - 128) * ConfigManager.getClientConfig().contrastMultiplier) + 128);
 
-                r = (int) (r + (float) 20); // 20 = var
-                g = (int) (g + (float) 20);
-                b = (int) (b + (float) 20);
+                r = (int) (r + (float) ConfigManager.getClientConfig().brightnessAdjustment);
+                g = (int) (g + (float) ConfigManager.getClientConfig().brightnessAdjustment);
+                b = (int) (b + (float) ConfigManager.getClientConfig().brightnessAdjustment);
 
                 r = Math.min(Math.max(r, 0), 255);
                 g = Math.min(Math.max(g, 0), 255);
@@ -495,23 +496,26 @@ public class EditScreen extends Screen {
 
                 int r = (color >> 16) & 0xFF;
                 int g = (color >> 8) & 0xFF;
-                int b = color & 0xFF;
-
-
-                int newR = (int) (r + (float) 20); // 20 = var
-                int newG = (int) (g + (float) 20);
-                int newB = (int) (b + (float) 20);
-
-                newR = Math.min(Math.max(newR, 0), 255);
-                newG = Math.min(Math.max(newG, 0), 255);
-                newB = Math.min(Math.max(newB, 0), 255);
-
-                int newColor = (color & 0xFF000000) | (newR << 16) | (newG << 8) | newB;
+                int newColor = getNewHueColor(color, r, g);
                 image.setColor(x, y, newColor);
             }
         }
 
         saveImage();
+    }
+
+    private static int getNewHueColor(int color, int r, int g) {
+        int b = color & 0xFF;
+
+        int newR = (int) (r + (float) ConfigManager.getClientConfig().hueShiftAmount);
+        int newG = (int) (g + (float) ConfigManager.getClientConfig().hueShiftAmount);
+        int newB = (int) (b + (float) ConfigManager.getClientConfig().hueShiftAmount);
+
+        newR = Math.min(Math.max(newR, 0), 255);
+        newG = Math.min(Math.max(newG, 0), 255);
+        newB = Math.min(Math.max(newB, 0), 255);
+
+        return (color & 0xFF000000) | (newR << 16) | (newG << 8) | newB;
     }
 
     private void applyBlur() {
@@ -529,8 +533,8 @@ public class EditScreen extends Screen {
             return;
         }
 
-        int kernelSize = 10;  // 10 = var
-        int iterations = 10; // 10 = var
+        int kernelSize = ConfigManager.getClientConfig().blurKernelSize;
+        int iterations = ConfigManager.getClientConfig().blurIterations;
 
         for (int i = 0; i < iterations; i++) {
             NativeImage blurredImage = new NativeImage(image.getWidth(), image.getHeight(), false);
@@ -641,7 +645,7 @@ public class EditScreen extends Screen {
 
         saveStateForUndo();
 
-        int step = 255 / (5 - 1); //5 = var
+        int step = 255 / (ConfigManager.getClientConfig().posterizeLevels - 1);
 
         for (int y = 0; y < image.getHeight(); y++) {
             for (int x = 0; x < image.getWidth(); x++) {
@@ -679,22 +683,26 @@ public class EditScreen extends Screen {
                 int dx = x - centerX;
                 int dy = y - centerY;
                 int distance = (int) Math.sqrt(dx * dx + dy * dy);
-                float intensity = 1.0f - Math.min(distance / (float) maxDistance, 1.0f);
-
-                int r = (int) (((color >> 16) & 0xFF) * intensity);
-                int g = (int) (((color >> 8) & 0xFF) * intensity);
-                int b = (int) ((color & 0xFF) * intensity);
-
-                r = Math.min(r, 255);
-                g = Math.min(g, 255);
-                b = Math.min(b, 255);
-
-                int newColor = (color & 0xFF000000) | (r << 16) | (g << 8) | b;
+                int newColor = getNewVignetteColor(distance, (float) maxDistance, color);
                 image.setColor(x, y, newColor);
             }
         }
 
         saveImage();
+    }
+
+    private static int getNewVignetteColor(int distance, float maxDistance, int color) {
+        float intensity = ConfigManager.getClientConfig().vignetteIntensity - Math.min(distance / maxDistance, 1.0f);
+
+        int r = (int) (((color >> 16) & 0xFF) * intensity);
+        int g = (int) (((color >> 8) & 0xFF) * intensity);
+        int b = (int) ((color & 0xFF) * intensity);
+
+        r = Math.min(r, 255);
+        g = Math.min(g, 255);
+        b = Math.min(b, 255);
+
+        return (color & 0xFF000000) | (r << 16) | (g << 8) | b;
     }
 
     private void applyEmboss() {
@@ -729,9 +737,9 @@ public class EditScreen extends Screen {
         int g2 = (color2 >> 8) & 0xFF;
         int b2 = color2 & 0xFF;
 
-        int r = Math.min(Math.max(r1 - r2 + 128, 0), 255);
-        int g = Math.min(Math.max(g1 - g2 + 128, 0), 255);
-        int b = Math.min(Math.max(b1 - b2 + 128, 0), 255);
+        int r = Math.min(Math.max(r1 - r2 + ConfigManager.getClientConfig().embossEffect, 0), 255);
+        int g = Math.min(Math.max(g1 - g2 + ConfigManager.getClientConfig().embossEffect, 0), 255);
+        int b = Math.min(Math.max(b1 - b2 + ConfigManager.getClientConfig().embossEffect, 0), 255);
 
         return (color1 & 0xFF000000) | (r << 16) | (g << 8) | b;
     }
@@ -749,9 +757,9 @@ public class EditScreen extends Screen {
                 int g = (color >> 8) & 0xFF;
                 int b = color & 0xFF;
 
-                if (r > 128) r = 255 - r; //128 = var
-                if (g > 128) g = 255 - g;
-                if (b > 128) b = 255 - b;
+                if (r > ConfigManager.getClientConfig().solarizeThreshold) r = 255 - r;
+                if (g > ConfigManager.getClientConfig().solarizeThreshold) g = 255 - g;
+                if (b > ConfigManager.getClientConfig().solarizeThreshold) b = 255 - b;
 
                 int newColor = (color & 0xFF000000) | (r << 16) | (g << 8) | b;
                 image.setColor(x, y, newColor);
@@ -774,9 +782,9 @@ public class EditScreen extends Screen {
                 int g = (color >> 8) & 0xFF;
                 int b = color & 0xFF;
 
-                r += (int) (Math.random() * 2 * 20 - 20);
-                g += (int) (Math.random() * 2 * 20 - 20);
-                b += (int) (Math.random() * 2 * 20 - 20);
+                r += (int) (Math.random() * 2 * ConfigManager.getClientConfig().noiseIntensity - ConfigManager.getClientConfig().noiseIntensity);
+                g += (int) (Math.random() * 2 * ConfigManager.getClientConfig().noiseIntensity - ConfigManager.getClientConfig().noiseIntensity);
+                b += (int) (Math.random() * 2 * ConfigManager.getClientConfig().noiseIntensity - ConfigManager.getClientConfig().noiseIntensity);
 
                 r = Math.min(Math.max(r, 0), 255);
                 g = Math.min(Math.max(g, 0), 255);

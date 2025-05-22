@@ -96,6 +96,37 @@ public class ClientConfig {
     @Comment("config.screenshot_uploader.ask_before_upload")
     public boolean askBeforeUpload = false;
 
+    @Comment("config.screenshot_uploader.solarize_amount")
+    public int solarizeThreshold = 128;
+
+    @Comment("config.screenshot_uploader.contrast_multiplier")
+    public float contrastMultiplier = 1.2f;
+
+    @Comment("config.screenshot_uploader.brightness_adjustment")
+    public int brightnessAdjustment = 20;
+
+    @Comment("config.screenshot_uploader.blur_kernel_size")
+    public int blurKernelSize = 10;
+
+    @Comment("config.screenshot_uploader.blur_iterations")
+    public int blurIterations = 10;
+
+    @Comment("config.screenshot_uploader.posterize_levels")
+    public int posterizeLevels = 5;
+
+    @Comment("config.screenshot_uploader.hue_shift_amount")
+    public int hueShiftAmount = 20;
+
+    @Comment("config.screenshot_uploader.vignette_intensity")
+    public float vignetteIntensity = 1.0f;
+
+    @Comment("config.screenshot_uploader.emboss_effect")
+    public int embossEffect = 128;
+
+    @Comment("config.screenshot_uploader.noise_intensity")
+    public int noiseIntensity = 10;
+
+
     public ClientConfig() {
         Map<String, String> map = new HashMap<>();
         map.put("upload", "https://www.this-should-be-long-enough-so-this-is-a-fake-address.com/upload");
