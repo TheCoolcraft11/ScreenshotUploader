@@ -490,13 +490,21 @@ public class EditScreen extends Screen {
 
         saveStateForUndo();
 
+        float hueShiftAmount = ConfigManager.getClientConfig().hueShiftAmount;
+
         for (int y = 0; y < image.getHeight(); y++) {
             for (int x = 0; x < image.getWidth(); x++) {
                 int color = image.getColor(x, y);
 
+                int a = (color >> 24) & 0xFF;
+                if (a == 0) a = 255;
+
                 int r = (color >> 16) & 0xFF;
                 int g = (color >> 8) & 0xFF;
-                int newColor = getNewHueColor(color, r, g);
+                int b = color & 0xFF;
+
+                int newColor = getNewHueColor(r, g, b, a, hueShiftAmount);
+
                 image.setColor(x, y, newColor);
             }
         }
@@ -504,19 +512,17 @@ public class EditScreen extends Screen {
         saveImage();
     }
 
-    private static int getNewHueColor(int color, int r, int g) {
-        int b = color & 0xFF;
+    private static int getNewHueColor(int r, int g, int b, int a, float hueShift) {
+        float[] hsb = Color.RGBtoHSB(r, g, b, null);
 
-        int newR = (int) (r + (float) ConfigManager.getClientConfig().hueShiftAmount);
-        int newG = (int) (g + (float) ConfigManager.getClientConfig().hueShiftAmount);
-        int newB = (int) (b + (float) ConfigManager.getClientConfig().hueShiftAmount);
+        float newHue = (hsb[0] + hueShift) % 1.0f;
+        if (newHue < 0) newHue += 1.0f;
 
-        newR = Math.min(Math.max(newR, 0), 255);
-        newG = Math.min(Math.max(newG, 0), 255);
-        newB = Math.min(Math.max(newB, 0), 255);
+        int rgb = Color.HSBtoRGB(newHue, hsb[1], hsb[2]);
 
-        return (color & 0xFF000000) | (newR << 16) | (newG << 8) | newB;
+        return (a << 24) | (rgb & 0x00FFFFFF);
     }
+
 
     private void applyBlur() {
         if (image == null || cropStartX < 0 || cropStartY < 0 || cropEndX < 0 || cropEndY < 0) return;

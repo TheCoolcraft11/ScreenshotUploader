@@ -115,7 +115,7 @@ public class ClientConfig {
     public int posterizeLevels = 5;
 
     @Comment("config.screenshot_uploader.hue_shift_amount")
-    public int hueShiftAmount = 20;
+    public float hueShiftAmount = 0.2f;
 
     @Comment("config.screenshot_uploader.vignette_intensity")
     public float vignetteIntensity = 1.0f;

@@ -183,5 +183,15 @@
   "config.screenshot_uploader.delete_old_screenshots": "Delete old screenshots after a certain period",
   "config.screenshot_uploader.delete_after_days": "Number of days after which old screenshots will be deleted",
   "config.screenshot_uploader.save_json_data": "Save the JSON data (like World name, Location, ...) of the screenshot to a file, can be displayed in the gallery",
-  "config.screenshot_uploader.ask_before_upload": "If you want to be asked before uploading a screenshot"
+  "config.screenshot_uploader.ask_before_upload": "If you want to be asked before uploading a screenshot",
+  "config.screenshot_uploader.solarize_amount": "Strength of the solarization effect applied to the image",
+  "config.screenshot_uploader.contrast_multiplier": "Factor by which the image contrast is adjusted",
+  "config.screenshot_uploader.brightness_adjustment": "Amount to adjust the image brightness",
+  "config.screenshot_uploader.blur_kernel_size": "Kernel size used for the blur effect",
+  "config.screenshot_uploader.blur_iterations": "Number of times the blur effect is applied",
+  "config.screenshot_uploader.posterize_levels": "Number of color levels used in the posterization effect",
+  "config.screenshot_uploader.hue_shift_amount": "Amount to shift the image hue (color tone)",
+  "config.screenshot_uploader.vignette_intensity": "Strength of the vignette (darkening around edges) effect",
+  "config.screenshot_uploader.emboss_effect": "Amount of emboss effect applied to the image",
+  "config.screenshot_uploader.noise_intensity": "Level of noise added to the image"
 }
