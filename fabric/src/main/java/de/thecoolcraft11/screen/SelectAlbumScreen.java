@@ -52,6 +52,8 @@ public class SelectAlbumScreen extends Screen {
         int centerX = this.width / 2;
         int centerY = this.height / 2;
         int buttonWidth = 200;
+        int buttonHeight = height / 20;
+
 
         if (selectedAlbumIndex >= 0 && selectedAlbumIndex < albums.size()) {
             Album selectedAlbum = albums.get(selectedAlbumIndex);
@@ -67,7 +69,7 @@ public class SelectAlbumScreen extends Screen {
                         scrollOffset--;
                     }
                 }
-        ).position(centerX + buttonWidth / 2 + 10, centerY - 100).size(20, 20).build());
+        ).position(centerX + 110, centerY - 100).size(20, 20).build());
 
         this.addDrawableChild(ButtonWidget.builder(
                 Text.literal("▼"),
@@ -76,7 +78,7 @@ public class SelectAlbumScreen extends Screen {
                         scrollOffset++;
                     }
                 }
-        ).position(centerX + buttonWidth / 2 + 10, centerY + 80).size(20, 20).build());
+        ).position(centerX + 110, centerY + 80).size(20, 20).build());
 
         setAsCoverButton = this.addDrawableChild(ButtonWidget.builder(
                 getSetAsCoverToggleText(),
@@ -84,7 +86,7 @@ public class SelectAlbumScreen extends Screen {
                     setAsCover = !setAsCover;
                     button.setMessage(getSetAsCoverToggleText());
                 }
-        ).position(centerX - 100, centerY + 90).size(200, 20).build());
+        ).position(centerX - 100, centerY + 90).size(buttonWidth, buttonHeight).build());
 
         this.addDrawableChild(ButtonWidget.builder(
                 Text.translatable("gui.screenshot_uploader.select_album.assign"),
@@ -107,12 +109,12 @@ public class SelectAlbumScreen extends Screen {
                         }
                     }
                 }
-        ).position(centerX - 100, centerY + 120).size(200, 20).build());
+        ).position(centerX - 100, centerY + 90 + buttonHeight + 5).size(buttonWidth, buttonHeight).build());
 
         this.addDrawableChild(ButtonWidget.builder(
                 Text.translatable("gui.cancel"),
                 button -> close()
-        ).position(centerX - 100, centerY + 150).size(200, 20).build());
+        ).position(centerX - 100, centerY + 90 + (buttonHeight + 5) * 3).size(buttonWidth, buttonHeight).build());
 
         this.addDrawableChild(ButtonWidget.builder(
                 Text.translatable("gui.screenshot_uploader.select_album.create"),
@@ -121,7 +123,7 @@ public class SelectAlbumScreen extends Screen {
                         client.setScreen(new AlbumConfigScreen(this));
                     }
                 }
-        ).position(centerX - 100, height - 40).size(200, 20).build());
+        ).position(centerX - 100, centerY + 90 + (buttonHeight + 5) * 2).size(buttonWidth, buttonHeight).build());
     }
 
     private Text getSetAsCoverToggleText() {

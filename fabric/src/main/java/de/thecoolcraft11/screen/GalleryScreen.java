@@ -285,6 +285,18 @@ public class GalleryScreen extends Screen {
             MinecraftClient.getInstance().send(searchDebounceTask);
         });
 
+        addToAlbumButton = ButtonWidget.builder(
+                Text.translatable("gui.screenshot_uploader.screenshot_gallery.add_to_album"),
+                button -> {
+                    if (clickedImageIndex >= 0 && clickedImageIndex < imagePaths.size()) {
+                        Path imagePath = imagePaths.get(clickedImageIndex);
+                        if (client != null) {
+                            client.setScreen(new SelectAlbumScreen(this, imagePath.toString()));
+                        }
+                    }
+                }
+        ).dimensions((buttonWidth * 4) + 50, buttonY, buttonWidth, buttonHeight).build();
+
         viewTagsButton = ButtonWidget.builder(
                         Text.translatable("gui.screenshot_uploader.screenshot_gallery.view_tags"),
                         button -> {
@@ -300,21 +312,8 @@ public class GalleryScreen extends Screen {
                                 }
                             }
                         })
-                .dimensions(this.width - 150, buttonY, 100, 20)
-                .build();
+                .dimensions((buttonWidth * 5) + 55, buttonY, buttonWidth, buttonHeight).build();
 
-
-        addToAlbumButton = ButtonWidget.builder(
-                Text.translatable("gui.screenshot_uploader.screenshot_gallery.add_to_album"),
-                button -> {
-                    if (clickedImageIndex >= 0 && clickedImageIndex < imagePaths.size()) {
-                        Path imagePath = imagePaths.get(clickedImageIndex);
-                        if (client != null) {
-                            client.setScreen(new SelectAlbumScreen(this, imagePath.toString()));
-                        }
-                    }
-                }
-        ).dimensions((5 * buttonWidth) + 30, buttonY, buttonWidth, buttonHeight).build();
 
         addDrawableChild(addToAlbumButton);
 
