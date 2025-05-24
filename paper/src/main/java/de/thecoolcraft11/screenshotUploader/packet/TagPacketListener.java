@@ -45,7 +45,7 @@ public class TagPacketListener implements PluginMessageListener {
         String url = getServerIp();
         String filename = screenshot.replace(url + "/screenshots/", "");
         Path targetFile = BASE_DIR.resolve(filename);
-        Path tagFile = BASE_DIR.resolve(filename.replace(".png", ".json"));
+        Path tagFile = BASE_DIR.resolve(filename.replaceFirst("\\.png$", ".json"));
 
         try {
             if (!Files.exists(targetFile)) {

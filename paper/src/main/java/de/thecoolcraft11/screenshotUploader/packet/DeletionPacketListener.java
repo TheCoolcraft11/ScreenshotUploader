@@ -55,7 +55,7 @@ public class DeletionPacketListener implements PluginMessageListener {
                     return;
                 }
                 Path targetFile = BASE_DIR.resolve(filename);
-                Path jsonFile = BASE_DIR.resolve(filename.replace(".png", ".json"));
+                Path jsonFile = BASE_DIR.resolve(filename.replaceFirst("\\.png$", ".json"));
                 try {
                     if (Files.exists(targetFile)) {
                         Files.delete(targetFile);
@@ -69,7 +69,7 @@ public class DeletionPacketListener implements PluginMessageListener {
             }
             case "deleteAll" -> {
                 Path targetFile = BASE_DIR.resolve(filename);
-                Path jsonFile = BASE_DIR.resolve(filename.replace(".png", ".json"));
+                Path jsonFile = BASE_DIR.resolve(filename.replaceFirst("\\.png$", ".json"));
                 try {
                     if (Files.exists(targetFile)) {
                         Files.delete(targetFile);
@@ -83,7 +83,7 @@ public class DeletionPacketListener implements PluginMessageListener {
             }
             case "deleteOwn" -> {
                 Path targetFile = BASE_DIR.resolve(filename);
-                Path jsonFile = BASE_DIR.resolve(filename.replace(".png", ".json"));
+                Path jsonFile = BASE_DIR.resolve(filename.replaceFirst("\\.png$", ".json"));
                 try {
                     if (Files.exists(targetFile)) {
                         String jsonContent = new String(Files.readAllBytes(jsonFile));

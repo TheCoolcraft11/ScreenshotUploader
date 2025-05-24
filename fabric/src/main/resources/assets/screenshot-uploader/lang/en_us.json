@@ -185,7 +185,7 @@
   "config.screenshot_uploader.save_json_data": "Save the JSON data (like World name, Location, ...) of the screenshot to a file, can be displayed in the gallery",
   "config.screenshot_uploader.ask_before_upload": "If you want to be asked before uploading a screenshot",
   "config.screenshot_uploader.solarize_amount": "Strength of the solarization effect applied to the image",
-  "config.screenshot_uploader.contrast_multiplier": "Factor by which the image contrast is adjusted",
+  "config.screenshot_uploader.contrast_multiplier": "Amount by which the image contrast is adjusted",
   "config.screenshot_uploader.brightness_adjustment": "Amount to adjust the image brightness",
   "config.screenshot_uploader.blur_kernel_size": "Kernel size used for the blur effect",
   "config.screenshot_uploader.blur_iterations": "Number of times the blur effect is applied",

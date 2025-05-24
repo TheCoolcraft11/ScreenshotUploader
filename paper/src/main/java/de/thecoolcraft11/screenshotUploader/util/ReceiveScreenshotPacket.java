@@ -145,7 +145,7 @@ public class ReceiveScreenshotPacket {
     public static void applyCommentToScreenshot(String comment, String filename, String author, UUID uuid) {
         Path BASE_DIR = Paths.get("./screenshotUploader/screenshots/");
         Path targetFile = BASE_DIR.resolve(filename);
-        Path commentFile = BASE_DIR.resolve(filename.replace(".png", ".json"));
+        Path commentFile = BASE_DIR.resolve(filename.replaceFirst("\\.png$", ".json"));
 
         try {
             if (!Files.exists(targetFile)) {

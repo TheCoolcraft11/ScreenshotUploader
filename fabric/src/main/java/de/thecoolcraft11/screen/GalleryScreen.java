@@ -681,7 +681,7 @@ public class GalleryScreen extends Screen {
         if (albumUUID != null) {
             filteredPaths = filteredPaths.filter(path -> {
                 File jsonData = new File(path.getParent().toString(),
-                        path.getFileName().toString().replace(".png", ".json"));
+                        path.getFileName().toString().replaceFirst("\\.png$", ".json"));
 
                 if (jsonData.exists()) {
                     try (FileReader reader = new FileReader(jsonData, StandardCharsets.UTF_8)) {
@@ -723,8 +723,7 @@ public class GalleryScreen extends Screen {
             for (Path path : originalImagePaths) {
                 try {
                     JsonObject metaData = new JsonObject();
-                    File jsonData = new File(path.getParent().toString(), path.getFileName().toString().replace(".png", ".json"));
-
+                    File jsonData = new File(path.getParent().toString(), path.getFileName().toString().replaceFirst("\\.png$", ".json"));
                     if (jsonData.exists()) {
                         try (FileReader reader = new FileReader(jsonData, StandardCharsets.UTF_8)) {
                             metaData = JsonParser.parseReader(reader).getAsJsonObject();
@@ -1071,7 +1070,7 @@ public class GalleryScreen extends Screen {
                         likedScreenshots.put(imagePathString, true);
                     }
                     JsonObject metaData = new JsonObject();
-                    File jsonData = new File(path.getParent().toString(), path.getFileName().toString().replace(".png", ".json"));
+                    File jsonData = new File(path.getParent().toString(), path.getFileName().toString().replaceFirst("\\.png$", ".json"));
                     if (jsonData.exists()) {
                         try (FileReader reader = new FileReader(jsonData, StandardCharsets.UTF_8)) {
                             metaData = JsonParser.parseReader(reader).getAsJsonObject();
@@ -1310,7 +1309,7 @@ public class GalleryScreen extends Screen {
                             .map(path -> {
                                 JsonObject metadata = new JsonObject();
                                 File jsonData = new File(path.getParent().toString(),
-                                        path.getFileName().toString().replace(".png", ".json"));
+                                        path.getFileName().toString().replaceFirst("\\.png$", ".json"));
                                 if (jsonData.exists()) {
                                     try (FileReader reader = new FileReader(jsonData, StandardCharsets.UTF_8)) {
                                         metadata = JsonParser.parseReader(reader).getAsJsonObject();
@@ -1380,7 +1379,7 @@ public class GalleryScreen extends Screen {
                 for (Path path : sortedPaths) {
                     if (sortTaskId.get() != currentTaskId) return;
                     JsonObject metaData = new JsonObject();
-                    File jsonData = new File(path.getParent().toString(), path.getFileName().toString().replace(".png", ".json"));
+                    File jsonData = new File(path.getParent().toString(), path.getFileName().toString().replaceFirst("\\.png$", ".json"));
                     if (jsonData.exists()) {
                         try (FileReader reader = new FileReader(jsonData, StandardCharsets.UTF_8)) {
                             metaData = JsonParser.parseReader(reader).getAsJsonObject();

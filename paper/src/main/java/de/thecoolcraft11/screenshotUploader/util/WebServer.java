@@ -278,7 +278,7 @@ public class WebServer {
 
             if (matcher.matches()) {
                 String filename = matcher.group(1);
-                Path commentFile = Paths.get("./screenshotUploader/screenshots/" + filename.replace(".png", ".json"));
+                Path commentFile = Paths.get("./screenshotUploader/screenshots/" + filename.replaceFirst("\\.png$", ".json"));
 
                 try {
                     if (Files.exists(commentFile)) {

@@ -247,6 +247,7 @@ public class SelectAlbumScreen extends Screen {
             try (Writer writer = new FileWriter(jsonFile)) {
                 new GsonBuilder().setPrettyPrinting().create().toJson(metaData, writer);
             }
+            logger.info("Assigned screenshot {} to album {}", screenshotPath, albumUuid);
         } catch (IOException e) {
             logger.error("Error updating screenshot metadata file", e);
         }

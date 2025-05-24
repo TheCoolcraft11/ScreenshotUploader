@@ -85,7 +85,7 @@ public class ScreenshotUploaderServer implements DedicatedServerModInitializer {
                             return;
                         }
                         Path targetFile = BASE_DIR.resolve(filename);
-                        Path jsonFile = BASE_DIR.resolve(filename.replace(".png", ".json"));
+                        Path jsonFile = BASE_DIR.resolve(filename.replaceFirst("\\.png$", ".json"));
                         try {
                             if (Files.exists(targetFile)) {
                                 Files.delete(targetFile);
@@ -99,7 +99,7 @@ public class ScreenshotUploaderServer implements DedicatedServerModInitializer {
                     }
                     case "deleteAll" -> {
                         Path targetFile = BASE_DIR.resolve(filename);
-                        Path jsonFile = BASE_DIR.resolve(filename.replace(".png", ".json"));
+                        Path jsonFile = BASE_DIR.resolve(filename.replaceFirst("\\.png$", ".json"));
                         try {
                             if (Files.exists(targetFile)) {
                                 Files.delete(targetFile);
@@ -113,7 +113,7 @@ public class ScreenshotUploaderServer implements DedicatedServerModInitializer {
                     }
                     case "deleteOwn" -> {
                         Path targetFile = BASE_DIR.resolve(filename);
-                        Path jsonFile = BASE_DIR.resolve(filename.replace(".png", ".json"));
+                        Path jsonFile = BASE_DIR.resolve(filename.replaceFirst("\\.png$", ".json"));
                         try {
                             if (Files.exists(targetFile)) {
                                 String jsonContent = new String(Files.readAllBytes(jsonFile));
@@ -151,7 +151,7 @@ public class ScreenshotUploaderServer implements DedicatedServerModInitializer {
         String url = getServerIp();
         String filename = screenshot.replace(url + "/screenshots/", "");
         Path targetFile = BASE_DIR.resolve(filename);
-        Path tagFile = BASE_DIR.resolve(filename.replace(".png", ".json"));
+        Path tagFile = BASE_DIR.resolve(filename.replaceFirst("\\.png$", ".json"));
 
         try {
             if (!Files.exists(targetFile)) {
@@ -243,7 +243,7 @@ public class ScreenshotUploaderServer implements DedicatedServerModInitializer {
     public void applyCommentToScreenshot(String comment, String filename, String author, UUID uuid) {
         Path BASE_DIR = Paths.get("./screenshotUploader/screenshots/");
         Path targetFile = BASE_DIR.resolve(filename);
-        Path commentFile = BASE_DIR.resolve(filename.replace(".png", ".json"));
+        Path commentFile = BASE_DIR.resolve(filename.replaceFirst("\\.png$", ".json"));
 
         try {
             if (!Files.exists(targetFile)) {
