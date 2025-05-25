@@ -29,6 +29,12 @@ public class ServerConfig {
     public boolean useCustomWebURL = false;
     @Comment("The custom URL to send to players")
     public String customWebURL = "";
+    @Comment("The comment URL to send to players")
+    public String customCommentURL = "";
+    @Comment("The custom deletion URL to send to players")
+    public String customDeletionURL = "";
+    @Comment("The custom tag URL to send to players")
+    public String customTagURL = "";
     @Comment("If the server should send a Discord Message in a channel (Requires Thread Channel webhookUrl needs to be set in order to work)")
     public boolean sendDiscordWebhook = false;
     @Comment("The Url of the Discord webhook")

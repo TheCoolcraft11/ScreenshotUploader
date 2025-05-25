@@ -75,8 +75,8 @@ public class ScreenshotUploaderClient implements ClientModInitializer {
         ClientPlayConnectionEvents.JOIN.register(this::registerJoinEvent);
         createConfig();
         KeyInputHandler.register();
-        ClientReceiveMessageEvents.CHAT.register(this::regsiterChatEvent);
-        ClientCommandRegistrationCallback.EVENT.register(this::regsiterCommands);
+        ClientReceiveMessageEvents.CHAT.register(this::registerChatEvent);
+        ClientCommandRegistrationCallback.EVENT.register(this::registerCommands);
 
         UseBlockCallback.EVENT.register(ScreenshotUploaderClient::signBlockClick);
 
@@ -114,7 +114,7 @@ public class ScreenshotUploaderClient implements ClientModInitializer {
         );
     }
 
-    private void regsiterCommands(CommandDispatcher<FabricClientCommandSource> dispatcher, CommandRegistryAccess commandRegistryAccess) {
+    private void registerCommands(CommandDispatcher<FabricClientCommandSource> dispatcher, CommandRegistryAccess commandRegistryAccess) {
         dispatcher.register(ClientCommandManager.literal("open-gallery")
                 .then(ClientCommandManager.argument("server", StringArgumentType.string())
                         .then(ClientCommandManager.argument("image", StringArgumentType.string())
@@ -146,7 +146,7 @@ public class ScreenshotUploaderClient implements ClientModInitializer {
         );
     }
 
-    private void regsiterChatEvent(Text message, @Nullable SignedMessage signedMessage, @Nullable GameProfile gameProfile, MessageType.Parameters parameters, Instant instant) {
+    private void registerChatEvent(Text message, @Nullable SignedMessage signedMessage, @Nullable GameProfile gameProfile, MessageType.Parameters parameters, Instant instant) {
         MinecraftClient client = MinecraftClient.getInstance();
 
         boolean hasServerSaved = false;
@@ -200,6 +200,9 @@ public class ScreenshotUploaderClient implements ClientModInitializer {
         ReceivePackets.gallerySiteAddress = null;
         ReceivePackets.serverSiteAddress = null;
         ReceivePackets.homeSiteAddress = null;
+        ReceivePackets.commentSiteAddress = null;
+        ReceivePackets.deletionSiteAddress = null;
+        ReceivePackets.tagSiteAddress = null;
         ReceivePackets.allowDelete = false;
         ReceivePackets.allowDeleteOwn = false;
     }

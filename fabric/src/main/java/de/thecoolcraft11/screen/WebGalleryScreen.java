@@ -236,15 +236,7 @@ public class WebGalleryScreen extends Screen {
         ).dimensions(buttonWidth * 3 + 20, buttonY, 20, 20).build();
         deleteButton = ButtonWidget.builder(
                 Text.translatable("gui.screenshot_uploader.screenshot_gallery.delete_screenshot"),
-                button -> {
-                    if (clickedImageIndex >= 0 && clickedImageIndex < imageIds.size()) {
-                        String screenshotId = String.valueOf(imagePaths.get(clickedImageIndex));
-                        ClientPlayNetworking.send(new DeletionPacket(screenshotId));
-                        if (client != null) {
-                            client.setScreen(null);
-                        }
-                    }
-                }
+                button -> deleteScreenshot()
         ).dimensions(buttonWidth * 4 - (buttonWidth - 20) + 25, buttonY, buttonWidth, buttonHeight).build();
 
 
@@ -1320,9 +1312,96 @@ public class WebGalleryScreen extends Screen {
         int lastSlash = screenshot.lastIndexOf("/");
         screenshot = (lastSlash != -1) ? screenshot.substring(lastSlash + 1) : null;
         if (comment != null && !comment.isEmpty() && screenshot != null && !screenshot.isEmpty()) {
-            ClientPlayNetworking.send(new CommentPayload(comment, screenshot));
+            if (ReceivePackets.commentSiteAddress == null || ReceivePackets.commentSiteAddress.isEmpty()) {
+                ClientPlayNetworking.send(new CommentPayload(comment, screenshot));
+                commentWidget.setText("");
+                performSearch(lastSearchQuery);
+            } else {
+                try {
+                    int responseCode = getCommentResponse(comment, screenshot);
+                    if (responseCode == HttpURLConnection.HTTP_OK) {
+                        commentWidget.setText("");
+                        performSearch(lastSearchQuery);
+                    } else {
+                        logger.error("Failed to send comment. Response code: {}", responseCode);
+                    }
+                } catch (Exception e) {
+                    logger.error("Error while sending comment: {}", e.getMessage());
+                }
+            }
         }
 
+    }
+
+    private static int getCommentResponse(String comment, String screenshot) throws URISyntaxException, IOException {
+        URI uri = new URI(ReceivePackets.commentSiteAddress);
+        URL url = uri.toURL();
+        HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+        connection.setRequestMethod("POST");
+        connection.setDoOutput(true);
+        connection.setRequestProperty("Content-Type", "application/json");
+
+        JsonObject commentJson = new JsonObject();
+        commentJson.addProperty("comment", comment);
+        commentJson.addProperty("screenshot", screenshot);
+        commentJson.addProperty("author", MinecraftClient.getInstance().getSession().getUsername());
+        commentJson.addProperty("authorUUID", MinecraftClient.getInstance().getSession().getUuidOrNull().toString());
+
+        try (OutputStream os = connection.getOutputStream()) {
+            byte[] input = commentJson.toString().getBytes(StandardCharsets.UTF_8);
+            os.write(input, 0, input.length);
+        }
+
+        return connection.getResponseCode();
+    }
+
+    private void deleteScreenshot() {
+        if (clickedImageIndex >= 0 && clickedImageIndex < imageIds.size()) {
+            String screenshotId = String.valueOf(imagePaths.get(clickedImageIndex));
+            if (ReceivePackets.deletionSiteAddress == null || ReceivePackets.deletionSiteAddress.isEmpty()) {
+                ClientPlayNetworking.send(new DeletionPacket(screenshotId));
+                if (client != null) {
+                    client.setScreen(null);
+                }
+            } else {
+                try {
+                    int responseCode = getDeletionResponse(screenshotId);
+                    if (responseCode == HttpURLConnection.HTTP_OK) {
+                        imageIds.remove(clickedImageIndex);
+                        imagePaths.remove(clickedImageIndex);
+                        metaDatas.remove(clickedImageIndex);
+                        clickedImageIndex = -1;
+                        scrollOffset = 0;
+                        performSearch(lastSearchQuery);
+                    } else {
+                        logger.error("Failed to delete screenshot. Response code: {}", responseCode);
+                    }
+                } catch (Exception e) {
+                    logger.error("Error while deleting screenshot: {}", e.getMessage());
+                }
+            }
+        }
+    }
+
+    private static int getDeletionResponse(String screenshotId) throws URISyntaxException, IOException {
+        URI uri = new URI(ReceivePackets.deletionSiteAddress);
+        URL url = uri.toURL();
+        HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+        connection.setRequestMethod("POST");
+        connection.setDoOutput(true);
+        connection.setRequestProperty("Content-Type", "application/json");
+
+        JsonObject deletionJson = new JsonObject();
+        deletionJson.addProperty("screenshotId", screenshotId);
+        deletionJson.addProperty("author", MinecraftClient.getInstance().getSession().getUsername());
+        deletionJson.addProperty("authorUUID", MinecraftClient.getInstance().getSession().getUuidOrNull().toString());
+
+        try (OutputStream os = connection.getOutputStream()) {
+            byte[] input = deletionJson.toString().getBytes(StandardCharsets.UTF_8);
+            os.write(input, 0, input.length);
+        }
+
+        return connection.getResponseCode();
     }
 
     public static Text getTimestamp(long millis) {

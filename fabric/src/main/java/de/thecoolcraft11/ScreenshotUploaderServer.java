@@ -230,6 +230,12 @@ public class ScreenshotUploaderServer implements DedicatedServerModInitializer {
         if (ConfigManager.getServerConfig().useCustomWebURL) {
             jsonObject.remove("upload");
             jsonObject.addProperty("upload", ConfigManager.getServerConfig().customWebURL);
+            jsonObject.remove("comment");
+            jsonObject.addProperty("comment", ConfigManager.getServerConfig().customCommentURL);
+            jsonObject.remove("delete");
+            jsonObject.addProperty("delete", ConfigManager.getServerConfig().customDeletionURL);
+            jsonObject.remove("tag");
+            jsonObject.addProperty("tag", ConfigManager.getServerConfig().customTagURL);
         }
         if ((ConfigManager.getServerConfig().allowOpsToDelete && playerEntity.hasPermissionLevel(3)) || ConfigManager.getServerConfig().allowPlayersToDelete) {
             jsonObject.addProperty("allowDelete", true);

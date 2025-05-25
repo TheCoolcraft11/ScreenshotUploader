@@ -2,7 +2,9 @@ package de.thecoolcraft11.screen;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
 import de.thecoolcraft11.packet.TagPayload;
+import de.thecoolcraft11.util.ReceivePackets;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
@@ -13,6 +15,13 @@ import net.minecraft.text.Text;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
+import java.io.OutputStream;
+import java.net.HttpURLConnection;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -185,6 +194,42 @@ public class ScreenshotWebTaggingScreen extends Screen {
         tagsJson.append("]}");
         String jsonString = tagsJson.toString();
         logger.info("Saving tags: {}", jsonString);
-        ClientPlayNetworking.send(new TagPayload(jsonString, screenshotId));
+        if (ReceivePackets.tagSiteAddress == null || ReceivePackets.tagSiteAddress.isEmpty()) {
+            ClientPlayNetworking.send(new TagPayload(jsonString, screenshotId));
+        } else {
+            try {
+                int responseCode = getTagResponse(screenshotId, jsonString);
+                if (responseCode == HttpURLConnection.HTTP_OK) {
+                    logger.info("Tags saved successfully: {}", jsonString);
+                    MinecraftClient.getInstance().setScreen(this.parent);
+                } else {
+                    logger.error("Failed to delete screenshot. Response code: {}", responseCode);
+                }
+            } catch (Exception e) {
+                logger.error("Error while deleting screenshot: {}", e.getMessage());
+            }
+        }
+    }
+
+    private static int getTagResponse(String screenshotId, String jsonString) throws URISyntaxException, IOException {
+        URI uri = new URI(ReceivePackets.deletionSiteAddress);
+        URL url = uri.toURL();
+        HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+        connection.setRequestMethod("POST");
+        connection.setDoOutput(true);
+        connection.setRequestProperty("Content-Type", "application/json");
+
+        JsonObject deletionJson = new JsonObject();
+        deletionJson.addProperty("screenshotId", screenshotId);
+        deletionJson.addProperty("author", MinecraftClient.getInstance().getSession().getUsername());
+        deletionJson.addProperty("authorUUID", MinecraftClient.getInstance().getSession().getUuidOrNull().toString());
+        deletionJson.addProperty("tags", jsonString);
+
+        try (OutputStream os = connection.getOutputStream()) {
+            byte[] input = deletionJson.toString().getBytes(StandardCharsets.UTF_8);
+            os.write(input, 0, input.length);
+        }
+
+        return connection.getResponseCode();
     }
 }

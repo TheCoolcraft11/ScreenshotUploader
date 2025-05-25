@@ -38,6 +38,9 @@ public class ReceivePackets {
     public static String serverSiteAddress = null;
     public static String gallerySiteAddress = null;
     public static String homeSiteAddress = null;
+    public static String commentSiteAddress = null;
+    public static String deletionSiteAddress = null;
+    public static String tagSiteAddress = null;
     public static boolean allowDelete = false;
     public static boolean allowDeleteOwn = false;
 
@@ -55,6 +58,12 @@ public class ReceivePackets {
         gallerySiteAddress = jsonObject.get("gallery").getAsString();
 
         homeSiteAddress = homeAddr;
+
+        commentSiteAddress = jsonObject.has("comment") && !jsonObject.get("comment").isJsonNull() ? jsonObject.get("comment").getAsString() : null;
+
+        deletionSiteAddress = jsonObject.has("delete") && !jsonObject.get("delete").isJsonNull() ? jsonObject.get("delete").getAsString() : null;
+
+        tagSiteAddress = jsonObject.has("tag") && !jsonObject.get("tag").isJsonNull() ? jsonObject.get("tag").getAsString() : null;
 
         if (jsonObject.has("allowDelete")) allowDelete = jsonObject.get("allowDelete").getAsBoolean();
         if (jsonObject.has("allowDeleteOwn")) allowDeleteOwn = jsonObject.get("allowDeleteOwn").getAsBoolean();
