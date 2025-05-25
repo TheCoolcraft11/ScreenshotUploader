@@ -9,7 +9,9 @@ public class GalleryBuilder {
         List<Map<String, String>> imagesWithUsernames = files != null
                 ? Arrays.stream(files).map(file -> {
             String filename = file.getName();
-            String username = filename.split("-")[1].split("_")[0];
+            String base = filename.substring(filename.indexOf("-") + 1, filename.lastIndexOf("."));
+            int lastUnderscore = base.lastIndexOf("_");
+            String username = base.substring(0, lastUnderscore);
             Map<String, String> imageData = new HashMap<>();
             imageData.put("filename", filename);
             imageData.put("username", username);
