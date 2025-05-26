@@ -24,6 +24,12 @@ sendUrlToClient: true
 useCustomWebURL: false
 #The custom URL to send to players
 customWebURL: ""
+#The comment URL to send to players
+customCommentURL: ""
+#The custom deletion URL to send to players
+customDeletionURL: ""
+#The custom tag URL to send to players
+customTagURL: ""
 #If the server should send a Discord Message in a channel (Requires Thread Channel webhookUrl needs to be set to work)
 sendDiscordWebhook: false
 #The Url of the Discord webhook

@@ -68,6 +68,12 @@ public class PlayJoinListener implements Listener {
         if (config.getFileConfiguration().getBoolean("useCustomWebURL")) {
             jsonObject.remove("upload");
             jsonObject.addProperty("upload", config.getFileConfiguration().getString("customWebURL"));
+            jsonObject.remove("comment");
+            jsonObject.addProperty("comment", config.getFileConfiguration().getString("customCommentURL"));
+            jsonObject.remove("delete");
+            jsonObject.addProperty("delete", config.getFileConfiguration().getString("customDeletionURL"));
+            jsonObject.remove("tag");
+            jsonObject.addProperty("tag", config.getFileConfiguration().getString("customTagURL"));
         }
         if ((config.getFileConfiguration().getBoolean("allowOpsToDelete") && player.isOp()) || config.getFileConfiguration().getBoolean("allowPlayersToDelete")) {
             jsonObject.addProperty("allowDelete", true);
