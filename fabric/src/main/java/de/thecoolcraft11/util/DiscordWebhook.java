@@ -4,6 +4,8 @@ import com.google.gson.Gson;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.awt.*;
+import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
@@ -19,8 +21,10 @@ import static de.thecoolcraft11.ScreenshotUploaderServer.MOD_ID;
 
 public class DiscordWebhook {
     private static final Logger logger = LoggerFactory.getLogger(MOD_ID);
-    public static void sendMessage(String webhookURL, String username, String server, String world, String coordinates, String direction, String biome, String screenshotUrl, String worldInfo)  {
-        String jsonPayload = createPayload(username, server, world, coordinates, direction, biome, screenshotUrl, worldInfo);
+
+    public static void sendMessage(String webhookURL, String username, BufferedImage image, String server, String world, String coordinates, String direction, String biome, String screenshotUrl, String worldInfo) {
+        Integer color = extractDominantColor(image);
+        String jsonPayload = createPayload(username, server, world, coordinates, direction, biome, screenshotUrl, worldInfo, color);
         try {
             int responseCode = getResponseCode(webhookURL, jsonPayload);
             if (responseCode == HttpURLConnection.HTTP_OK || responseCode == HttpURLConnection.HTTP_NO_CONTENT) {
@@ -46,15 +50,14 @@ public class DiscordWebhook {
             byte[] input = jsonPayload.getBytes(StandardCharsets.UTF_8);
             os.write(input, 0, input.length);
         }
-
         return connection.getResponseCode();
     }
 
-    private static String createPayload(String username, String server, String world, String coordinates, String direction, String biome, String screenshotUrl, String worldInfo) {
+    private static String createPayload(String username, String server, String world, String coordinates, String direction, String biome, String screenshotUrl, String worldInfo, Integer color) {
         Map<String, Object> payload = new HashMap<>();
         Map<String, Object> embed = new HashMap<>();
         embed.put("description", "**" + (username == null ? "Unknown" : username) + "** has made a new screenshot:");
-        embed.put("color", null);
+        embed.put("color", color == null ? 0xD2D2D2 : color);
 
         Map<String, String> field = new HashMap<>();
         field.put("name", "\u200B");
@@ -77,5 +80,33 @@ public class DiscordWebhook {
 
         Gson gson = new Gson();
         return gson.toJson(payload);
+    }
+
+    private static Integer extractDominantColor(BufferedImage image) {
+        if (image == null) {
+            return null;
+        }
+
+        long sumRed = 0, sumGreen = 0, sumBlue = 0;
+        int count = 0;
+
+        for (int y = 0; y < image.getHeight(); y += 10) {
+            for (int x = 0; x < image.getWidth(); x += 10) {
+                int rgb = image.getRGB(x, y);
+                Color color = new Color(rgb);
+                sumRed += color.getRed();
+                sumGreen += color.getGreen();
+                sumBlue += color.getBlue();
+                count++;
+            }
+        }
+
+        if (count == 0) return null;
+
+        int avgRed = (int) (sumRed / count);
+        int avgGreen = (int) (sumGreen / count);
+        int avgBlue = (int) (sumBlue / count);
+
+        return (avgRed << 16) | (avgGreen << 8) | avgBlue;
     }
 }

@@ -16,7 +16,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.imageio.ImageIO;
-import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.FileWriter;
@@ -24,7 +23,6 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.util.Map;
 import java.util.Objects;
 import java.util.regex.Matcher;
@@ -162,11 +160,8 @@ public class ReceivePackets {
                 logger.error("Error saving JSON data: {}", e.getMessage());
             }
 
-            String uploadedFilePath = "screenshotUploader/" + screenshotFileName;
             String outputFilePath = "screenshotUploader/screenshots/" + formatFileName(screenshotFileName, playerName);
-            convertToJpeg(uploadedFilePath, outputFilePath);
 
-            Files.delete(Paths.get(uploadedFilePath));
 
             String urlString = getServerIp();
             if (!urlString.matches("^https?://.*")) {
@@ -177,6 +172,8 @@ public class ReceivePackets {
                 urlString = urlString.replaceFirst("^(https?://[^/]+)", "$1:" + ConfigManager.getServerConfig().port);
             }
 
+            BufferedImage image = ImageIO.read(new File(screenshotFile.getAbsolutePath()));
+
             JsonObject jsonObject = getJsonObject(urlString, outputFilePath);
             try {
                 JsonObject webhookJson = JsonParser.parseString(jsonData).getAsJsonObject();
@@ -184,6 +181,7 @@ public class ReceivePackets {
                     DiscordWebhook.sendMessage(
                             ConfigManager.getServerConfig().webhookUrl,
                             playerName,
+                            image,
                             webhookJson.get("server_address").getAsString(),
                             webhookJson.get("dimension").getAsString(),
                             webhookJson.get("coordinates").getAsString(),
@@ -214,33 +212,6 @@ public class ReceivePackets {
         jsonObject.addProperty("gallery", galleryUrl);
         jsonObject.addProperty("status", "success");
         return jsonObject;
-    }
-
-
-    private static void convertToJpeg(String uploadedFilePath, String outputFilePath) throws IOException {
-        File outputFile = new File(outputFilePath);
-        File parentDir = outputFile.getParentFile();
-        if (parentDir != null && !parentDir.exists()) {
-            if (parentDir.mkdirs()) {
-                logger.info("Created Upload Folder");
-            }
-        }
-
-        BufferedImage originalImage = ImageIO.read(new File(uploadedFilePath));
-        if (originalImage == null) {
-            throw new IOException("Unable to read the image from the file: " + uploadedFilePath);
-        }
-
-        BufferedImage resizedImage = new BufferedImage(originalImage.getWidth(), originalImage.getHeight(), BufferedImage.TYPE_INT_RGB);
-        Graphics2D graphics = resizedImage.createGraphics();
-        graphics.drawImage(originalImage, 0, 0, null);
-        graphics.dispose();
-
-        boolean success = ImageIO.write(resizedImage, "jpg", outputFile);
-        if (!success) {
-            throw new IOException("Failed to save the image to: " + outputFilePath);
-        }
-
     }
 
     private static String formatFileName(String originalFilename, String username) {
