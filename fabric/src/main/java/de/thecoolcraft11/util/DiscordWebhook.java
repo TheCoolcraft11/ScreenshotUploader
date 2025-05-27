@@ -4,7 +4,6 @@ import com.google.gson.Gson;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -23,7 +22,7 @@ public class DiscordWebhook {
     private static final Logger logger = LoggerFactory.getLogger(MOD_ID);
 
     public static void sendMessage(String webhookURL, String username, BufferedImage image, String server, String world, String coordinates, String direction, String biome, String screenshotUrl, String worldInfo) {
-        Integer color = extractDominantColor(image);
+        Integer color = extractDominantColorHistogram(image);
         String jsonPayload = createPayload(username, server, world, coordinates, direction, biome, screenshotUrl, worldInfo, color);
         try {
             int responseCode = getResponseCode(webhookURL, jsonPayload);
@@ -82,31 +81,40 @@ public class DiscordWebhook {
         return gson.toJson(payload);
     }
 
-    private static Integer extractDominantColor(BufferedImage image) {
-        if (image == null) {
-            return null;
-        }
 
-        long sumRed = 0, sumGreen = 0, sumBlue = 0;
-        int count = 0;
+    private static Integer extractDominantColorHistogram(BufferedImage image) {
+        if (image == null) return null;
 
-        for (int y = 0; y < image.getHeight(); y += 10) {
-            for (int x = 0; x < image.getWidth(); x += 10) {
-                int rgb = image.getRGB(x, y);
-                Color color = new Color(rgb);
-                sumRed += color.getRed();
-                sumGreen += color.getGreen();
-                sumBlue += color.getBlue();
-                count++;
+        Map<Integer, Integer> colorCount = new HashMap<>();
+
+        for (int y = 0; y < image.getHeight(); y += 5) {
+            for (int x = 0; x < image.getWidth(); x += 5) {
+                int rgb = image.getRGB(x, y) & 0xFFFFFF;
+
+                int red = (rgb >> 16) & 0xFF;
+                int green = (rgb >> 8) & 0xFF;
+                int blue = rgb & 0xFF;
+
+                red = reduceColorChannel(red);
+                green = reduceColorChannel(green);
+                blue = reduceColorChannel(blue);
+
+                if ((red + green + blue) < 60) continue;
+
+                int reducedRgb = (red << 16) | (green << 8) | blue;
+
+                colorCount.put(reducedRgb, colorCount.getOrDefault(reducedRgb, 0) + 1);
             }
         }
 
-        if (count == 0) return null;
+        return colorCount.entrySet().stream()
+                .max(Map.Entry.comparingByValue())
+                .map(Map.Entry::getKey)
+                .orElse(null);
+    }
 
-        int avgRed = (int) (sumRed / count);
-        int avgGreen = (int) (sumGreen / count);
-        int avgBlue = (int) (sumBlue / count);
-
-        return (avgRed << 16) | (avgGreen << 8) | avgBlue;
+    private static int reduceColorChannel(int color) {
+        int shift = 2;
+        return (color >> shift) << shift;
     }
 }
