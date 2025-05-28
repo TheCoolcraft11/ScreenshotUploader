@@ -173,6 +173,10 @@ public class EditScreen extends Screen {
                 .dimensions(startX, startY, buttonWidth, buttonHeight)
                 .build());
 
+        addDrawableChild(ButtonWidget.builder(Text.translatable("gui.screenshot_uploader.editor.watermark"), button -> applyWatermark())
+                .dimensions(startX + buttonWidth + padding, startY, buttonWidth, buttonHeight)
+                .build());
+
         loadImage();
 
         this.colorField = colorField;
@@ -802,6 +806,113 @@ public class EditScreen extends Screen {
         }
 
         saveImage();
+    }
+
+    private void applyWatermark() {
+        if (image == null || client == null) return;
+
+        saveStateForUndo();
+
+        try {
+            String playerName = client.getSession().getUsername();
+
+            int padding = 24;
+            int headPadding = 8;
+            int headSize = 96;
+            int textY = image.getHeight() - padding - headSize / 2;
+            int headY = image.getHeight() - padding - headSize;
+
+            BufferedImage watermarkImage = new BufferedImage(image.getWidth(), image.getHeight(), BufferedImage.TYPE_INT_ARGB);
+            Graphics2D g2d = watermarkImage.createGraphics();
+            g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            g2d.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+            g2d.setFont(new Font("Minecraft", Font.BOLD, headSize));
+
+            g2d.setColor(new Color(0, 0, 0, 200));
+            g2d.drawString(playerName, headPadding + padding + headSize + padding / 2 + 2, textY + padding / 2 + 15 + 2);
+
+            g2d.setColor(Color.WHITE);
+            g2d.drawString(playerName, headPadding + padding + headSize + padding / 2, textY + padding / 2 + 15);
+
+            g2d.setColor(new Color(0, 0, 0, 160));
+            g2d.fillRect(padding - 3, headY - 3, headSize + 6, headSize + 6);
+
+            g2d.dispose();
+
+            for (int y = 0; y < watermarkImage.getHeight(); y++) {
+                for (int x = 0; x < watermarkImage.getWidth(); x++) {
+                    int color = watermarkImage.getRGB(x, y);
+                    if ((color >> 24) != 0x00) {
+                        image.setColor(x, y, color);
+                    }
+                }
+            }
+
+            NativeImage playerSkin = loadPlayerSkinTexture();
+            if (playerSkin != null) {
+                for (int y = 0; y < 8; y++) {
+                    for (int x = 0; x < 8; x++) {
+                        int skinColor = playerSkin.getColor(8 + x, 8 + y);
+
+                        int scale = headSize / 8;
+                        for (int sy = 0; sy < scale; sy++) {
+                            for (int sx = 0; sx < scale; sx++) {
+                                int drawX = padding + x * scale + sx;
+                                int drawY = headY + y * scale + sy;
+
+                                if (drawY >= 0 && drawY < image.getHeight()) {
+                                    image.setColor(drawX, drawY, skinColor);
+                                }
+                            }
+                        }
+                    }
+                }
+
+                for (int y = 0; y < 8; y++) {
+                    for (int x = 0; x < 8; x++) {
+                        int overlayColor = playerSkin.getColor(40 + x, 8 + y);
+
+                        if ((overlayColor >> 24) != 0x00) {
+                            int scale = headSize / 8;
+                            for (int sy = 0; sy < scale; sy++) {
+                                for (int sx = 0; sx < scale; sx++) {
+                                    int drawX = padding + x * scale + sx;
+                                    int drawY = headY + y * scale + sy;
+
+                                    if (drawY >= 0 && drawY < image.getHeight()) {
+                                        image.setColor(drawX, drawY, overlayColor);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                playerSkin.close();
+            }
+
+            saveImage();
+            logger.info("Watermark applied with player name: {}", playerName);
+        } catch (Exception e) {
+            logger.error("Failed to apply watermark: {}", e.getMessage());
+        }
+    }
+
+    private NativeImage loadPlayerSkinTexture() {
+        try {
+            if (client == null || client.player == null) return null;
+
+            Identifier skinId = client.player.getSkinTextures().texture();
+            if (skinId == null) return null;
+
+            if (client.getResourceManager().getResource(skinId).isPresent()) {
+                return NativeImage.read(client.getResourceManager().getResource(skinId).get().getInputStream());
+            }
+            return null;
+        } catch (Exception e) {
+            logger.error("Failed to load player skin texture: {}", e.getMessage());
+            return null;
+        }
     }
 
 

@@ -107,6 +107,7 @@
   "gui.screenshot_uploader.editor.set_text_pos": "Set Text Position",
   "gui.screenshot_uploader.editor.fill_image": "Fill Selection with Color",
   "gui.screenshot_uploader.editor.blur": "Blur",
+  "gui.screenshot_uploader.editor.watermark": "Watermark",
   "gui.screenshot_uploader.screenshot_sign.set_text": "Paste Link",
   "gui.screenshot_uploader.screenshot_sign.close": "Close",
   "gui.screenshot_uploader.screenshot_sign.tooltip": "You need to wax the sign in order to open the screenshot",
