@@ -112,6 +112,7 @@
   "gui.screenshot_uploader.editor.set_text_pos": "Définir la position du texte",
   "gui.screenshot_uploader.editor.fill_image": "Remplir la sélection avec la couleur",
   "gui.screenshot_uploader.editor.blur": "Flouter",
+  "gui.screenshot_uploader.editor.watermark": "Filigrane",
   "gui.screenshot_uploader.screenshot_sign.set_text": "Collez le lien",
   "gui.screenshot_uploader.screenshot_sign.close": "Fermer",
   "gui.screenshot_uploader.screenshot_sign.tooltip": "Vous devez cirer le panneau pour ouvrir la capture d'écran",
