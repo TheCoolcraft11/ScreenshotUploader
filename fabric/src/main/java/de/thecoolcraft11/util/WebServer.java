@@ -35,6 +35,7 @@ public class WebServer {
         server.createContext("/screenshots", new ScreenshotFileHandler());
         server.createContext("/screenshot-list", new ScreenshotListHandler(urlString));
         server.createContext("/comments", new GetCommentsHandler());
+        server.createContext("/statistics", new StatisticsHandler());
 
         server.start();
     }
@@ -311,5 +312,253 @@ public class WebServer {
         }
     }
 
-}
+    private static class StatisticsHandler implements HttpHandler {
+        @Override
+        public void handle(HttpExchange exchange) throws IOException {
+            if (!"GET".equals(exchange.getRequestMethod())) {
+                exchange.sendResponseHeaders(405, -1);
+                return;
+            }
 
+            try {
+                File screenshotsDir = new File("./screenshotUploader/screenshots/");
+                File[] files = screenshotsDir.listFiles((dir, name) -> name.endsWith(".jpg") || name.endsWith(".png"));
+
+                if (files == null) {
+                    exchange.sendResponseHeaders(404, -1);
+                    return;
+                }
+
+                JsonObject statistics = new JsonObject();
+
+                JsonObject globalStats = new JsonObject();
+
+                JsonObject serverStats = new JsonObject();
+                JsonObject fileStats = new JsonObject();
+                JsonObject timeStats = new JsonObject();
+                JsonObject worldStats = new JsonObject();
+
+                JsonObject userStats = new JsonObject();
+
+                JsonArray recentUploads = new JsonArray();
+
+                JsonObject globalBiomeStats = new JsonObject();
+                JsonObject globalDimensionStats = new JsonObject();
+                JsonObject fileSizeStats = new JsonObject();
+
+                long[] sizeCategories = {50_000, 100_000, 500_000, 1_000_000, 5_000_000};
+                String[] sizeCategoryNames = {"0-50KB", "50-100KB", "100-500KB", "500KB-1MB", "1-5MB", "5MB+"};
+                int[] sizeCategoryCounts = new int[sizeCategories.length + 1];
+
+                JsonObject fileTypeStats = new JsonObject();
+                String[] supportedExtensions = {".jpg", ".jpeg", ".png"};
+                for (String ext : supportedExtensions) {
+                    fileTypeStats.addProperty(ext, 0);
+                }
+
+                long totalSize = 0;
+
+                java.util.PriorityQueue<File> mostRecentFiles = new java.util.PriorityQueue<>(10,
+                        (f1, f2) -> Long.compare(f2.lastModified(), f1.lastModified()));
+
+                serverStats.addProperty("totalScreenshots", files.length);
+
+                for (File file : files) {
+                    String username = getUsername(file.getName());
+
+                    if (!userStats.has(username)) {
+                        JsonObject newUserObject = new JsonObject();
+                        newUserObject.addProperty("uploadCount", 0);
+                        newUserObject.addProperty("totalSizeBytes", 0L);
+                        newUserObject.addProperty("totalSizeMB", 0.0);
+                        userStats.add(username, newUserObject);
+                    }
+
+                    JsonObject userObject = userStats.getAsJsonObject(username);
+                    int currentCount = userObject.get("uploadCount").getAsInt();
+                    userObject.addProperty("uploadCount", currentCount + 1);
+
+                    long fileSize = file.length();
+                    long currentUserSize = userObject.get("totalSizeBytes").getAsLong();
+                    userObject.addProperty("totalSizeBytes", currentUserSize + fileSize);
+
+                    String fileName = file.getName();
+                    String jsonFileName = fileName.replace(".png", ".json");
+                    File jsonFile = new File(file.getParent(), jsonFileName);
+
+                    long timestamp = file.lastModified();
+                    JsonObject metaData;
+
+                    if (jsonFile.exists() && jsonFile.isFile()) {
+                        try (FileReader reader = new FileReader(jsonFile)) {
+                            metaData = JsonParser.parseReader(reader).getAsJsonObject();
+
+                            if (metaData.has("current_time")) {
+                                try {
+                                    timestamp = Long.parseLong(metaData.get("current_time").getAsString());
+                                } catch (NumberFormatException ignored) {
+                                }
+                            }
+
+                            if (metaData.has("biome")) {
+                                String biome = metaData.get("biome").getAsString();
+                                if (globalBiomeStats.has(biome)) {
+                                    globalBiomeStats.addProperty(biome,
+                                            globalBiomeStats.get(biome).getAsInt() + 1);
+                                } else {
+                                    globalBiomeStats.addProperty(biome, 1);
+                                }
+                            }
+
+                            if (metaData.has("dimension")) {
+                                String dimension = metaData.get("dimension").getAsString();
+                                if (globalDimensionStats.has(dimension)) {
+                                    globalDimensionStats.addProperty(dimension,
+                                            globalDimensionStats.get(dimension).getAsInt() + 1);
+                                } else {
+                                    globalDimensionStats.addProperty(dimension, 1);
+                                }
+                            }
+                        } catch (IOException ignored) {
+                        }
+                    }
+
+                    String month = new java.text.SimpleDateFormat("yyyy-MM").format(new java.util.Date(timestamp));
+                    if (timeStats.has(month)) {
+                        timeStats.addProperty(month, timeStats.get(month).getAsInt() + 1);
+                    } else {
+                        timeStats.addProperty(month, 1);
+                    }
+
+                    java.util.Calendar calendar = java.util.Calendar.getInstance();
+                    calendar.setTimeInMillis(timestamp);
+                    int hour = calendar.get(java.util.Calendar.HOUR_OF_DAY);
+
+                    if (!userObject.has("activityByHour")) {
+                        userObject.add("activityByHour", new JsonObject());
+                    }
+                    JsonObject hourStats = userObject.getAsJsonObject("activityByHour");
+                    String hourKey = String.format("%02d:00", hour);
+
+                    if (hourStats.has(hourKey)) {
+                        hourStats.addProperty(hourKey, hourStats.get(hourKey).getAsInt() + 1);
+                    } else {
+                        hourStats.addProperty(hourKey, 1);
+                    }
+
+                    String extension = file.getName().substring(file.getName().lastIndexOf(".")).toLowerCase();
+                    if (fileTypeStats.has(extension)) {
+                        fileTypeStats.addProperty(extension, fileTypeStats.get(extension).getAsInt() + 1);
+                    }
+
+                    totalSize += fileSize;
+
+                    int categoryIndex = sizeCategories.length;
+                    for (int i = 0; i < sizeCategories.length; i++) {
+                        if (fileSize < sizeCategories[i]) {
+                            categoryIndex = i;
+                            break;
+                        }
+                    }
+                    sizeCategoryCounts[categoryIndex]++;
+
+                    mostRecentFiles.offer(file);
+                    if (mostRecentFiles.size() > 10) {
+                        mostRecentFiles.poll();
+                    }
+                }
+
+
+                for (String username : userStats.keySet()) {
+                    JsonObject userObject = userStats.getAsJsonObject(username);
+                    int uploadCount = userObject.get("uploadCount").getAsInt();
+                    long totalUserSize = userObject.get("totalSizeBytes").getAsLong();
+
+                    if (uploadCount > 0) {
+                        userObject.addProperty("averageFileSizeBytes", (double) totalUserSize / uploadCount);
+                    } else {
+                        userObject.addProperty("averageFileSizeBytes", 0);
+                    }
+                    if (userObject.has("activityByHour")) {
+                        JsonObject hourStats = userObject.getAsJsonObject("activityByHour");
+                        String mostActiveHour = getMostFrequentHour(hourStats);
+                        if (mostActiveHour != null) {
+                            int hour = Integer.parseInt(mostActiveHour.substring(0, 2));
+                            userObject.addProperty("mostActiveTime", String.format("%02d:00-%02d:59", hour, hour));
+                        }
+                    }
+                }
+
+                for (int i = 0; i < sizeCategoryNames.length; i++) {
+                    fileSizeStats.addProperty(sizeCategoryNames[i], i < sizeCategoryCounts.length ? sizeCategoryCounts[i] : 0);
+                }
+
+
+                double averageSize = files.length > 0 ? (double) totalSize / files.length : 0;
+                serverStats.addProperty("averageFileSizeBytes", averageSize);
+                serverStats.addProperty("totalFileSizeBytes", totalSize);
+
+                java.util.ArrayList<File> sortedRecentFiles = new java.util.ArrayList<>(mostRecentFiles);
+                sortedRecentFiles.sort((f1, f2) -> Long.compare(f2.lastModified(), f1.lastModified()));
+
+                for (File file : sortedRecentFiles) {
+                    JsonObject fileObj = new JsonObject();
+                    fileObj.addProperty("filename", file.getName());
+                    fileObj.addProperty("username", getUsername(file.getName()));
+                    fileObj.addProperty("timestamp", file.lastModified());
+                    fileObj.addProperty("date", new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new java.util.Date(file.lastModified())));
+                    fileObj.addProperty("sizeBytes", file.length());
+                    recentUploads.add(fileObj);
+                }
+
+                fileStats.add("typeDistribution", fileTypeStats);
+                fileStats.add("sizeDistribution", fileSizeStats);
+
+                worldStats.add("biomes", globalBiomeStats);
+                worldStats.add("dimensions", globalDimensionStats);
+
+                globalStats.add("serverStats", serverStats);
+                globalStats.add("fileStats", fileStats);
+                globalStats.add("timeStats", timeStats);
+                globalStats.add("worldStats", worldStats);
+
+                statistics.add("globalStats", globalStats);
+                statistics.add("userStats", userStats);
+                statistics.add("recentUploads", recentUploads);
+
+                String jsonResponse = statistics.toString();
+                exchange.getResponseHeaders().set("Content-Type", "application/json");
+                exchange.sendResponseHeaders(200, jsonResponse.getBytes().length);
+                exchange.getResponseBody().write(jsonResponse.getBytes());
+            } catch (Exception e) {
+                exchange.sendResponseHeaders(500, -1);
+            } finally {
+                exchange.getResponseBody().close();
+            }
+        }
+
+        private String getUsername(String name) {
+            if (name.split("-").length > 1) {
+                if (name.split("-")[1].split("_").length > 1) {
+                    return name.split("-")[1].split("_")[0];
+                }
+            }
+            return "Unknown";
+        }
+
+        private String getMostFrequentHour(JsonObject hourStats) {
+            String mostFrequentHour = null;
+            int maxCount = 0;
+
+            for (String hour : hourStats.keySet()) {
+                int count = hourStats.get(hour).getAsInt();
+                if (count > maxCount) {
+                    maxCount = count;
+                    mostFrequentHour = hour;
+                }
+            }
+
+            return mostFrequentHour;
+        }
+    }
+}
