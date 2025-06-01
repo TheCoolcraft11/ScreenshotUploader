@@ -72,6 +72,7 @@
   "gui.screenshot_uploader.screenshot_gallery.search": "Search",
   "gui.screenshot_uploader.screenshot_gallery.album_config": "Collections",
   "gui.screenshot_uploader.screenshot_gallery.search_placeholder": "Search Screenshots by Metadata or Name",
+  "gui.screenshot_uploader.screenshot_gallery.server_stats": "Server Statistics",
   "gui.screenshot_uploader.config.title": "Config",
   "gui.screenshot_uploader.config.not_edit": "Head to /config/screenshotUploader/config.json to edit",
   "gui.screenshot_uploader.config.manage_servers": "Manage Servers",

@@ -85,6 +85,8 @@ public class WebGalleryScreen extends Screen {
     private ButtonWidget sortByButton;
     private ButtonWidget sortOrderButton;
     private ButtonWidget deleteButton;
+    private ButtonWidget serverStatsButton;
+    private ButtonWidget viewTagsButton;
 
     private TextFieldWidget commentWidget;
 
@@ -239,6 +241,15 @@ public class WebGalleryScreen extends Screen {
                 button -> deleteScreenshot()
         ).dimensions(buttonWidth * 4 - (buttonWidth - 20) + 25, buttonY, buttonWidth, buttonHeight).build();
 
+        serverStatsButton = ButtonWidget.builder(
+                Text.translatable("gui.screenshot_uploader.screenshot_gallery.server_stats"),
+                button -> {
+                    if (client != null) {
+                        client.setScreen(new ServerStatisticsScreen(this, webserverUrl));
+                    }
+                }
+        ).dimensions(5, 5, buttonWidth / 2, buttonHeight).build();
+
 
         commentWidget = new TextFieldWidget(textRenderer, 0, 0, 100, 20, Text.of(""));
         addSelectableChild(commentWidget);
@@ -274,7 +285,7 @@ public class WebGalleryScreen extends Screen {
             MinecraftClient.getInstance().send(searchDebounceTask);
         });
 
-        this.addDrawableChild(ButtonWidget.builder(
+        viewTagsButton = ButtonWidget.builder(
                         Text.translatable("gui.screenshot_uploader.screenshot_gallery.view_tags"),
                         button -> {
                             String screenshotName = null;
@@ -299,7 +310,7 @@ public class WebGalleryScreen extends Screen {
                             }
                         })
                 .dimensions(this.width - 150, this.height - 40, 100, 20)
-                .build());
+                .build();
 
 
         addDrawableChild(sortByButton);
@@ -311,6 +322,8 @@ public class WebGalleryScreen extends Screen {
         addDrawableChild(likeButton);
         addDrawableChild(searchField);
         if (ReceivePackets.allowDelete || ReceivePackets.allowDeleteOwn) addDrawableChild(deleteButton);
+        addDrawableChild(serverStatsButton);
+        addDrawableChild(viewTagsButton);
 
         saveButton.visible = false;
         openInAppButton.visible = false;
@@ -322,12 +335,15 @@ public class WebGalleryScreen extends Screen {
         searchField.visible = true;
         searchField.setMaxLength(100);
         deleteButton.visible = false;
+        serverStatsButton.visible = true;
+        viewTagsButton.visible = false;
 
         buttonsToHideOnOverlap.add(saveButton);
         buttonsToHideOnOverlap.add(openInAppButton);
         buttonsToHideOnOverlap.add(shareButton);
         buttonsToHideOnOverlap.add(likeButton);
         buttonsToHideOnOverlap.add(deleteButton);
+
 
         int initialImageIndex = imagePaths.indexOf(initialImageName);
         if (initialImageIndex >= 0) {
@@ -540,6 +556,8 @@ public class WebGalleryScreen extends Screen {
             commentWidget.visible = true;
             sendCommentButton.visible = true;
             searchField.visible = false;
+            serverStatsButton.visible = false;
+            viewTagsButton.visible = true;
             boolean isAllowDelete = false;
             if (client != null) {
                 if (client.player != null) {
@@ -559,6 +577,8 @@ public class WebGalleryScreen extends Screen {
             likeButton.visible = false;
             searchField.visible = true;
             deleteButton.visible = false;
+            serverStatsButton.visible = true;
+            viewTagsButton.visible = false;
             navigatorButtons.forEach(buttonWidget -> buttonWidget.visible = true);
         }
         boolean isImageOverlappingButtons = clickedImageIndex >= 0 && isImageOverlappingButtons();

@@ -3,6 +3,7 @@ package de.thecoolcraft11.screen;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.widget.ButtonWidget;
@@ -35,9 +36,12 @@ public class ServerStatisticsScreen extends Screen {
 
     private String serverUrl;
 
-    public ServerStatisticsScreen(String serverUrl) {
+    private final Screen parent;
+
+    public ServerStatisticsScreen(Screen parent, String serverUrl) {
         super(Text.translatable("screen.screenshot_uploader.statistics.title"));
         this.serverUrl = serverUrl;
+        this.parent = parent;
         fetchStatistics();
     }
 
@@ -699,6 +703,12 @@ public class ServerStatisticsScreen extends Screen {
             this.key = key;
             this.value = value;
         }
+    }
+
+    @Override
+    public void close() {
+        MinecraftClient.getInstance().setScreen(parent);
+        super.close();
     }
 }
 
