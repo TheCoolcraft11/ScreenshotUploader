@@ -172,7 +172,7 @@
   "gui.screenshot_uploader.server_statistics.users_statistics": "User Statistics",
   "gui.screenshot_uploader.server_statistics.total_users": "Total Users",
   "gui.screenshot_uploader.server_statistics.total_uploads": "Total Uploads",
-  "gui.screenshot_uploader.server_statistics.averagle_upload_per_user": "Average Uploads Per User",
+  "gui.screenshot_uploader.server_statistics.average_upload_per_user": "Average Uploads Per User",
   "gui.screenshot_uploader.server_statistics.user_statistics.average_uploads_per_user": "%.1f uploads per user",
   "gui.screenshot_uploader.server_statistics.top_contributers": "Top Contributors",
   "gui.screenshot_uploader.server_statistics.user_statistics.top_contributors.entry": "%d uploads",

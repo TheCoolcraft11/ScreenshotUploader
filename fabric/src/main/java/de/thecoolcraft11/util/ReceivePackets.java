@@ -146,11 +146,13 @@ public class ReceivePackets {
 
     public static void handleReceivedScreenshot(byte[] screenshotData, String jsonData, ServerPlayerEntity player) {
         try {
+            logger.error("Received screenshot from player: {}", player.getName().getString());
             String playerName = player.getName().getString();
             String baseFileName = "screenshot-" + playerName + "_" + System.currentTimeMillis();
             String screenshotFileName = baseFileName + ".png";
-            File screenshotFile = new File("screenshotUploader/" + screenshotFileName);
-            Files.write(screenshotFile.toPath(), screenshotData);
+            String outputFilePath = "screenshotUploader/screenshots/" + formatFileName(screenshotFileName, playerName);
+            File outputFile = new File(outputFilePath);
+            Files.write(outputFile.toPath(), screenshotData);
             logger.info("Screenshot received from {} and saved as {}", player.getName().getString(), screenshotFileName);
             String jsonFileName = "screenshotUploader/screenshots/" + baseFileName + ".json";
             try (FileWriter fileWriter = new FileWriter(jsonFileName)) {
@@ -159,8 +161,6 @@ public class ReceivePackets {
             } catch (IOException e) {
                 logger.error("Error saving JSON data: {}", e.getMessage());
             }
-
-            String outputFilePath = "screenshotUploader/screenshots/" + formatFileName(screenshotFileName, playerName);
 
 
             String urlString = getServerIp();
@@ -172,7 +172,9 @@ public class ReceivePackets {
                 urlString = urlString.replaceFirst("^(https?://[^/]+)", "$1:" + ConfigManager.getServerConfig().port);
             }
 
-            BufferedImage image = ImageIO.read(new File(screenshotFile.getAbsolutePath()));
+            BufferedImage image = ImageIO.read(new File(outputFile.getAbsolutePath()));
+
+            logger.error(outputFile.getAbsolutePath());
 
             JsonObject jsonObject = getJsonObject(urlString, outputFilePath);
             try {

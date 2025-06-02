@@ -29,7 +29,7 @@ public class ServerStatisticsScreen extends Screen {
     private static final int SECTION_SPACING = 15;
 
     private int currentTab = 0;
-    private final String[] tabs = {"Overview", "Users", "Screenshots", "Performance"};
+    private final String[] tabs = {"Overview", "Users", "Screenshots", "Performance", "Heatmap"};
 
     private String selectedUser = null;
     private final Map<String, List<StatisticsSection>> userDetailSections = new HashMap<>();
@@ -37,6 +37,16 @@ public class ServerStatisticsScreen extends Screen {
     private String serverUrl;
 
     private final Screen parent;
+
+    private boolean isHeatmapActive = false;
+    private final List<LocationPoint> locationPoints = new ArrayList<>();
+    //private static final String[] DIMENSIONS = {"overworld", "the_nether", "the_end"};
+    private static final int MAX_POINT_SIZE = 30;
+    private static final int MIN_POINT_SIZE = 5;
+
+    private int heatmapOffsetX = 0;
+    private int heatmapOffsetY = 0;
+    private float heatmapScale = 1.0f;
 
     public ServerStatisticsScreen(Screen parent, String serverUrl) {
         super(Text.translatable("screen.screenshot_uploader.statistics.title"));
@@ -229,6 +239,8 @@ public class ServerStatisticsScreen extends Screen {
                 sections.add(recentSection);
             }
 
+            processLocationData();
+
         } catch (Exception e) {
             errorMessage = "Error processing data: " + e.getMessage();
         }
@@ -247,7 +259,7 @@ public class ServerStatisticsScreen extends Screen {
         userSection.addEntry(Text.translatable("gui.screenshot_uploader.server_statistics.total_uploads"), Text.of(String.valueOf(totalUploads)));
 
         double avgUploadsPerUser = !userStats.isEmpty() ? (double) totalUploads / userStats.size() : 0;
-        userSection.addEntry(Text.translatable("gui.screenshot_uploader.server_statistics.averagle_upload_per_user"), Text.translatable("gui.screenshot_uploader.server_statistics.user_statistics.average_uploads_per_user", avgUploadsPerUser));
+        userSection.addEntry(Text.translatable("gui.screenshot_uploader.server_statistics.average_upload_per_user"), Text.translatable("gui.screenshot_uploader.server_statistics.user_statistics.average_uploads_per_user", avgUploadsPerUser));
 
         List<Map.Entry<String, JsonElement>> sortedUsers = new ArrayList<>(userStats.entrySet());
         sortedUsers.sort((u1, u2) -> {
@@ -355,6 +367,40 @@ public class ServerStatisticsScreen extends Screen {
         }
     }
 
+    private void processLocationData() {
+        locationPoints.clear();
+
+        if (statisticsData == null || !statisticsData.has("globalStats")) {
+            return;
+        }
+
+        JsonObject globalStats = statisticsData.getAsJsonObject("globalStats");
+        if (!globalStats.has("worldStats")) {
+            return;
+        }
+
+        JsonObject worldStats = globalStats.getAsJsonObject("worldStats");
+        if (!worldStats.has("clusteredLocations")) {
+            return;
+        }
+
+        for (JsonElement element : worldStats.getAsJsonArray("clusteredLocations")) {
+            JsonObject point = element.getAsJsonObject();
+
+            if (point.has("x") && point.has("z") && point.has("dimension")) {
+                int x = point.get("x").getAsInt();
+                int y = point.has("y") ? point.get("y").getAsInt() : 64;
+                int z = point.get("z").getAsInt();
+                String dimension = point.get("dimension").getAsString();
+                int count = point.has("count") ? point.get("count").getAsInt() : 1;
+
+                locationPoints.add(new LocationPoint(x, y, z, dimension, count));
+            }
+        }
+
+        isHeatmapActive = true;
+    }
+
     private String calculateAverageUploads(JsonObject uploadsPerDay) {
         if (uploadsPerDay.isEmpty()) return "0";
 
@@ -416,6 +462,12 @@ public class ServerStatisticsScreen extends Screen {
         super.render(context, mouseX, mouseY, delta);
 
         context.drawCenteredTextWithShadow(this.textRenderer, this.title, width / 2, 10, 0xFFFFFF);
+
+
+        if (currentTab == 4 && isHeatmapActive && !isLoading && errorMessage == null) {
+            renderHeatmap(context, mouseX, mouseY);
+        }
+
 
         if (isLoading) {
             String loadingText = "Loading statistics...";
@@ -491,6 +543,194 @@ public class ServerStatisticsScreen extends Screen {
             }
         }
     }
+
+    private void renderHeatmap(DrawContext context, int mouseX, int mouseY) {
+        if (locationPoints.isEmpty()) return;
+
+        int minX = Integer.MAX_VALUE;
+        int maxX = Integer.MIN_VALUE;
+        int minZ = Integer.MAX_VALUE;
+        int maxZ = Integer.MIN_VALUE;
+        int maxCount = 0;
+
+        List<LocationPoint> pointsInCurrentDimension = new ArrayList<>();
+        String selectedDimension = "minecraft:overworld";
+        for (LocationPoint point : locationPoints) {
+            if (point.dimension.equals(selectedDimension)) {
+                pointsInCurrentDimension.add(point);
+                minX = Math.min(minX, point.x);
+                maxX = Math.max(maxX, point.x);
+                minZ = Math.min(minZ, point.z);
+                maxZ = Math.max(maxZ, point.z);
+                maxCount = Math.max(maxCount, point.count);
+            }
+        }
+
+        if (pointsInCurrentDimension.isEmpty()) {
+            context.drawCenteredTextWithShadow(this.textRenderer,
+                    "No data available for dimension: " + formatDimensionName(selectedDimension),
+                    width / 2, height / 2, 0xFFFFFF);
+            return;
+        }
+
+        int centerX = (minX + maxX) / 2;
+        int centerZ = (minZ + maxZ) / 2;
+        int rangeX = Math.max(1, maxX - minX);
+        int rangeZ = Math.max(1, maxZ - minZ);
+
+        float scaleFactor = Math.min(
+                (float) (width - 100) / rangeX,
+                (float) (height - 150) / rangeZ
+        ) * heatmapScale * 0.8f;
+
+        int mapCenterX = width / 2 + heatmapOffsetX;
+        int mapCenterY = height / 2 + 30 + heatmapOffsetY;
+        int mapWidth = (int) (rangeX * scaleFactor);
+        int mapHeight = (int) (rangeZ * scaleFactor);
+
+        context.fill(mapCenterX - mapWidth / 2 - 5, mapCenterY - mapHeight / 2 - 5,
+                mapCenterX + mapWidth / 2 + 5, mapCenterY + mapHeight / 2 + 5,
+                0x80000000);
+
+        int gridSize = 100;
+        int gridColor = 0x40FFFFFF;
+
+        for (int x = (minX / gridSize) * gridSize; x <= maxX; x += gridSize) {
+            int screenX = mapCenterX + (int) ((x - centerX) * scaleFactor);
+            context.fill(screenX, mapCenterY - mapHeight / 2, screenX + 1, mapCenterY + mapHeight / 2, gridColor);
+
+            if (x % 500 == 0) {
+                context.drawTextWithShadow(textRenderer, String.valueOf(x),
+                        screenX - textRenderer.getWidth(String.valueOf(x)) / 2,
+                        mapCenterY + mapHeight / 2 + 5, 0xFFFFFF);
+            }
+        }
+
+        for (int z = (minZ / gridSize) * gridSize; z <= maxZ; z += gridSize) {
+            int screenY = mapCenterY + (int) ((z - centerZ) * scaleFactor);
+            context.fill(mapCenterX - mapWidth / 2, screenY, mapCenterX + mapWidth / 2, screenY + 1, gridColor);
+
+            if (z % 500 == 0) {
+                context.drawTextWithShadow(textRenderer, String.valueOf(z),
+                        mapCenterX - mapWidth / 2 - 25,
+                        screenY - textRenderer.fontHeight / 2, 0xFFFFFF);
+            }
+        }
+
+        context.drawCenteredTextWithShadow(textRenderer, "X", mapCenterX, mapCenterY + mapHeight / 2 + 20, 0xFFFFFF);
+        context.drawTextWithShadow(textRenderer, "Z", mapCenterX - mapWidth / 2 - 20, mapCenterY, 0xFFFFFF);
+
+        int spawnX = mapCenterX + (int) ((-centerX) * scaleFactor);
+        int spawnZ = mapCenterY + (int) ((-centerZ) * scaleFactor);
+        if (spawnX >= mapCenterX - mapWidth / 2 && spawnX <= mapCenterX + mapWidth / 2 &&
+                spawnZ >= mapCenterY - mapHeight / 2 && spawnZ <= mapCenterY + mapHeight / 2) {
+
+            context.fill(spawnX - 3, spawnZ - 3, spawnX + 3, spawnZ + 3, 0xFFFFFFFF);
+            context.drawTextWithShadow(textRenderer, "Spawn (0,0)", spawnX + 5, spawnZ - 5, 0xFFFFFF);
+        }
+
+        LocationPoint hoveredPoint = null;
+        int hoveredDistance = Integer.MAX_VALUE;
+
+        for (LocationPoint point : pointsInCurrentDimension) {
+            int screenX = mapCenterX + (int) ((point.x - centerX) * scaleFactor);
+            int screenY = mapCenterY + (int) ((point.z - centerZ) * scaleFactor);
+
+            if (screenX < mapCenterX - mapWidth / 2 - 15 || screenX > mapCenterX + mapWidth / 2 + 15 ||
+                    screenY < mapCenterY - mapHeight / 2 - 15 || screenY > mapCenterY + mapHeight / 2 + 15) {
+                continue;
+            }
+
+            float normalizedCount = (float) point.count / maxCount;
+            int pointSize = (int) (MIN_POINT_SIZE + normalizedCount * (MAX_POINT_SIZE - MIN_POINT_SIZE));
+
+            int color = getHeatmapColor(normalizedCount);
+
+            drawFilledCircle(context, screenX, screenY, pointSize / 2, color);
+
+            int distance = (int) Math.sqrt(Math.pow(mouseX - screenX, 2) + Math.pow(mouseY - screenY, 2));
+            if (distance < pointSize / 2 + 2 && distance < hoveredDistance) {
+                hoveredPoint = point;
+                hoveredDistance = distance;
+            }
+        }
+
+        if (hoveredPoint != null) {
+            List<String> tooltipLines = new ArrayList<>();
+            tooltipLines.add("Position: X:" + hoveredPoint.x + " Y:" + hoveredPoint.y + " Z:" + hoveredPoint.z);
+            tooltipLines.add("Screenshots: " + hoveredPoint.count);
+            tooltipLines.add("Dimension: " + formatDimensionName(hoveredPoint.dimension));
+
+            int tooltipWidth = 0;
+            for (String line : tooltipLines) {
+                tooltipWidth = Math.max(tooltipWidth, textRenderer.getWidth(line));
+            }
+
+            int tooltipX = mouseX + 10;
+
+            if (tooltipX + tooltipWidth + 10 > width) {
+                tooltipX = mouseX - tooltipWidth - 10;
+            }
+
+            context.fill(tooltipX - 3, mouseY - 3,
+                    tooltipX + tooltipWidth + 3, mouseY + tooltipLines.size() * 10 + 3,
+                    0xF0100010);
+            context.fill(tooltipX - 2, mouseY - 2,
+                    tooltipX + tooltipWidth + 2, mouseY + tooltipLines.size() * 10 + 2,
+                    0xF0100010);
+
+            for (int i = 0; i < tooltipLines.size(); i++) {
+                context.drawTextWithShadow(textRenderer, tooltipLines.get(i), tooltipX, mouseY + i * 10, 0xFFFFFF);
+            }
+        }
+
+        context.drawCenteredTextWithShadow(textRenderer,
+                "Dimension: " + formatDimensionName(selectedDimension) + " | Scale: " + String.format("%.1fx", heatmapScale),
+                width / 2, height - 40, 0xFFFFFF);
+
+        context.drawCenteredTextWithShadow(textRenderer,
+                "Drag to move, scroll to zoom",
+                width / 2, height - 25, 0xAAAAAA);
+    }
+
+    private void drawFilledCircle(DrawContext context, int centerX, int centerY, int radius, int color) {
+        for (int y = -radius; y <= radius; y++) {
+            for (int x = -radius; x <= radius; x++) {
+                if (x * x + y * y <= radius * radius) {
+                    context.fill(centerX + x, centerY + y, centerX + x + 1, centerY + y + 1, color);
+                }
+            }
+        }
+    }
+
+    private int getHeatmapColor(float intensity) {
+        int r, g, b;
+
+        float adjIntensity;
+        if (intensity < 0.5) {
+            adjIntensity = intensity * 2;
+            r = (int) (255 * adjIntensity);
+            g = 255;
+        } else {
+            adjIntensity = (intensity - 0.5f) * 2;
+            r = 255;
+            g = (int) (255 * (1 - adjIntensity));
+        }
+        b = 0;
+
+        return 0xFF000000 | (r << 16) | (g << 8) | b;
+    }
+
+    private String formatDimensionName(String dimension) {
+        return switch (dimension) {
+            case "overworld" -> "Overworld";
+            case "the_nether" -> "The Nether";
+            case "the_end" -> "The End";
+            default -> dimension.substring(0, 1).toUpperCase() + dimension.substring(1)
+                    .replace('_', ' ');
+        };
+    }
+
 
     private void renderUserDetails(DrawContext context, int mouseX, int mouseY) {
         context.drawCenteredTextWithShadow(this.textRenderer,
@@ -594,6 +834,26 @@ public class ServerStatisticsScreen extends Screen {
 
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double amount, double verticalAmount) {
+        if (currentTab == 4 && isHeatmapActive && !isLoading && errorMessage == null) {
+            float oldScale = heatmapScale;
+
+            float zoomFactor = 0.1f;
+            heatmapScale += (float) (verticalAmount * zoomFactor);
+            heatmapScale = Math.max(0.25f, Math.min(10.0f, heatmapScale));
+
+            int mapCenterX = width / 2 + heatmapOffsetX;
+            int mapCenterY = height / 2 + 30 + heatmapOffsetY;
+
+            double relX = mouseX - mapCenterX;
+            double relY = mouseY - mapCenterY;
+
+            double scaleRatio = heatmapScale / oldScale;
+            heatmapOffsetX -= (int) ((scaleRatio - 1) * relX);
+            heatmapOffsetY -= (int) ((scaleRatio - 1) * relY);
+
+            return true;
+        }
+
         List<StatisticsSection> relevantSections = selectedUser != null ?
                 userDetailSections.get(selectedUser) : getTabSections();
 
@@ -601,8 +861,8 @@ public class ServerStatisticsScreen extends Screen {
         int visibleHeight = selectedUser != null ? height - 100 : height - 80;
 
         if (contentHeight > visibleHeight) {
-            int maxScrollSpeed = 10;
-            scrollOffset -= (int) (amount * maxScrollSpeed);
+            int scrollSpeed = 20;
+            scrollOffset -= (int) (verticalAmount * scrollSpeed);
             scrollOffset = Math.max(0, Math.min(scrollOffset, contentHeight - visibleHeight));
             return true;
         }
@@ -656,6 +916,7 @@ public class ServerStatisticsScreen extends Screen {
         return false;
     }
 
+
     private String formatFileSize(long bytes) {
         if (bytes < 1024) return bytes + " B";
         int exp = (int) (Math.log(bytes) / Math.log(1024));
@@ -705,12 +966,13 @@ public class ServerStatisticsScreen extends Screen {
         }
     }
 
+    private record LocationPoint(int x, int y, int z, String dimension, int count) {
+    }
+
     @Override
     public void close() {
         MinecraftClient.getInstance().setScreen(parent);
         super.close();
     }
 }
-
-
 
