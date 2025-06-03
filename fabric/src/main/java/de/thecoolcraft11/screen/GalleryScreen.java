@@ -1522,9 +1522,12 @@ public class GalleryScreen extends Screen {
         if (isImageClicked) {
             isImageClicked = false;
             clickedImageIndex = -1;
-        } else {
-            super.close();
         }
+        imageIds.clear();
+        imagePaths.clear();
+        metaDatas.clear();
+        lastSearchQuery = "";
+        super.close();
     }
 
     @Override

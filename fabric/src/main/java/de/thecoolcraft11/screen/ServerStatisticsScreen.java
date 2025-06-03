@@ -40,13 +40,20 @@ public class ServerStatisticsScreen extends Screen {
 
     private boolean isHeatmapActive = false;
     private final List<LocationPoint> locationPoints = new ArrayList<>();
-    //private static final String[] DIMENSIONS = {"overworld", "the_nether", "the_end"};
+    private static final String[] DIMENSIONS = {"minecraft:overworld", "minecraft:the_nether", "minecraft:the_end"};
     private static final int MAX_POINT_SIZE = 30;
     private static final int MIN_POINT_SIZE = 5;
 
     private int heatmapOffsetX = 0;
     private int heatmapOffsetY = 0;
     private float heatmapScale = 1.0f;
+    private String selectedDimension = "minecraft:overworld";
+
+    private boolean isDraggingMap = false;
+    private int dragStartX = 0;
+    private int dragStartY = 0;
+    private int dragStartOffsetX = 0;
+    private int dragStartOffsetY = 0;
 
     public ServerStatisticsScreen(Screen parent, String serverUrl) {
         super(Text.translatable("screen.screenshot_uploader.statistics.title"));
@@ -440,10 +447,51 @@ public class ServerStatisticsScreen extends Screen {
             ButtonWidget tabButton = ButtonWidget.builder(Text.of(tabs[i]), button -> {
                 currentTab = tabIndex;
                 scrollOffset = 0;
+                this.init();
             }).dimensions(startX + (buttonWidth * i), 25, buttonWidth, 20).build();
 
 
             this.addDrawableChild(tabButton);
+        }
+
+        String playerName = MinecraftClient.getInstance().getSession().getUsername();
+        this.addDrawableChild(ButtonWidget.builder(
+                Text.literal("My Statistics"),
+                button -> {
+                    selectedUser = playerName;
+                    scrollOffset = 0;
+                    this.init();
+                }
+        ).dimensions(10, height - 30, 100, 20).build());
+
+        if (currentTab == 4) {
+            int dimensionButtonWidth = 100;
+            int dimensionButtonSpacing = 10;
+            int totalDimensionButtonsWidth = DIMENSIONS.length * dimensionButtonWidth + (DIMENSIONS.length - 1) * dimensionButtonSpacing;
+            int dimensionStartX = (width - totalDimensionButtonsWidth) / 2;
+
+            for (int i = 0; i < DIMENSIONS.length; i++) {
+                final String dimension = DIMENSIONS[i];
+                ButtonWidget dimensionButton = ButtonWidget.builder(
+                        Text.of(formatDimensionName(dimension)),
+                        button -> {
+                            selectedDimension = dimension;
+                            heatmapOffsetX = 0;
+                            heatmapOffsetY = 0;
+                        }
+                ).dimensions(
+                        dimensionStartX + i * (dimensionButtonWidth + dimensionButtonSpacing),
+                        60,
+                        dimensionButtonWidth,
+                        20
+                ).build();
+
+                if (dimension.equals(selectedDimension)) {
+                    dimensionButton.active = false;
+                }
+
+                this.addDrawableChild(dimensionButton);
+            }
         }
 
         this.addDrawableChild(ButtonWidget.builder(Text.of("Refresh"), button -> {
@@ -554,7 +602,6 @@ public class ServerStatisticsScreen extends Screen {
         int maxCount = 0;
 
         List<LocationPoint> pointsInCurrentDimension = new ArrayList<>();
-        String selectedDimension = "minecraft:overworld";
         for (LocationPoint point : locationPoints) {
             if (point.dimension.equals(selectedDimension)) {
                 pointsInCurrentDimension.add(point);
@@ -879,6 +926,17 @@ public class ServerStatisticsScreen extends Screen {
             return false;
         }
 
+        if (currentTab == 4 && isHeatmapActive && button == 0) {
+            if (mouseY > 90 && mouseY < height - 50) {
+                isDraggingMap = true;
+                dragStartX = (int) mouseX;
+                dragStartY = (int) mouseY;
+                dragStartOffsetX = heatmapOffsetX;
+                dragStartOffsetY = heatmapOffsetY;
+                return true;
+            }
+        }
+
         List<StatisticsSection> sectionsToCheck;
         if (selectedUser != null) {
             sectionsToCheck = userDetailSections.getOrDefault(selectedUser, Collections.emptyList());
@@ -916,6 +974,34 @@ public class ServerStatisticsScreen extends Screen {
         return false;
     }
 
+    @Override
+    public boolean mouseDragged(double mouseX, double mouseY, int button, double deltaX, double deltaY) {
+        if (super.mouseDragged(mouseX, mouseY, button, deltaX, deltaY)) {
+            return true;
+        }
+
+        if (isDraggingMap && button == 0 && currentTab == 4 && isHeatmapActive) {
+            heatmapOffsetX = dragStartOffsetX + (int) (mouseX - dragStartX);
+            heatmapOffsetY = dragStartOffsetY + (int) (mouseY - dragStartY);
+            return true;
+        }
+
+        return false;
+    }
+
+    @Override
+    public boolean mouseReleased(double mouseX, double mouseY, int button) {
+        if (super.mouseReleased(mouseX, mouseY, button)) {
+            return true;
+        }
+
+        if (isDraggingMap && button == 0) {
+            isDraggingMap = false;
+            return true;
+        }
+
+        return false;
+    }
 
     private String formatFileSize(long bytes) {
         if (bytes < 1024) return bytes + " B";

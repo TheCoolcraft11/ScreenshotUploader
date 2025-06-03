@@ -787,7 +787,7 @@ public class WebGalleryScreen extends Screen {
                 }
             }
 
-            if (metaDatas.get(i) != null && metaDatas.get(i).has("uuid")) {
+            if (i < metaDatas.size() && metaDatas.get(i) != null && metaDatas.get(i).has("uuid")) {
                 String playerHead = getPlayerHeadTexture(UUID.fromString(metaDatas.get(i).get("uuid").getAsString()));
                 Identifier playerHeadId = null;
 
@@ -1820,8 +1820,15 @@ public class WebGalleryScreen extends Screen {
             if (client != null) {
                 client.setScreen(parent);
             }
-            super.close();
         }
+        if (asyncSortFuture != null && !asyncSortFuture.isDone()) {
+            asyncSortFuture.cancel(true);
+        }
+        imageIds.clear();
+        imagePaths.clear();
+        metaDatas.clear();
+        lastSearchQuery = "";
+        super.close();
     }
 
     @Override
@@ -1863,4 +1870,3 @@ public class WebGalleryScreen extends Screen {
     private record SearchTerm(String fieldName, String fieldValue) {
     }
 }
-
