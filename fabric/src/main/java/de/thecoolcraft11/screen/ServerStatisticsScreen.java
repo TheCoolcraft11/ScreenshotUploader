@@ -689,7 +689,7 @@ public class ServerStatisticsScreen extends Screen {
                 width / 2, height - 40, 0xFFFFFF);
 
         context.drawCenteredTextWithShadow(textRenderer,
-                "Drag to move, scroll to zoom",
+                "scroll to zoom / move",
                 width / 2, height - 25, 0xAAAAAA);
     }
 

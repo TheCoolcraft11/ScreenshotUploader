@@ -72,7 +72,6 @@ public class WebGalleryScreen extends Screen {
 
     private final List<ButtonWidget> buttonsToHideOnOverlap = new ArrayList<>();
 
-
     private ButtonWidget saveButton;
 
     private ButtonWidget openInAppButton;
@@ -95,6 +94,8 @@ public class WebGalleryScreen extends Screen {
     private String lastSearchQuery = "";
     private Runnable searchDebounceTask = null;
 
+    private CompletableFuture<?> asyncSortFuture;
+    private final java.util.concurrent.atomic.AtomicInteger sortTaskId = new java.util.concurrent.atomic.AtomicInteger();
 
     private SortBy sortBy = SortBy.DEFAULT;
     private SortOrder sortOrder = SortOrder.ASCENDING;
@@ -116,9 +117,7 @@ public class WebGalleryScreen extends Screen {
     @Override
     protected void init() {
         super.init();
-        imageIds.clear();
-        imagePaths.clear();
-        navigatorButtons.clear();
+        initializeScreen();
 
         int scaledHeight = height / 6;
         int scaledWidth = (scaledHeight * 16) / 9;
@@ -129,7 +128,11 @@ public class WebGalleryScreen extends Screen {
         IMAGE_HEIGHT = scaledHeight;
         GAP = scaledGap;
 
-        loadScreenshotsFromServer(webserverUrl);
+        asyncSortFuture = CompletableFuture.runAsync(() -> loadScreenshotsFromServer(webserverUrl))
+                .exceptionally(e -> {
+                    logger.error("Error loading screenshots: {}", e.getMessage());
+                    return null;
+                });
 
         int buttonWidth = width / 8;
         int buttonHeight = height / 25;
@@ -357,6 +360,37 @@ public class WebGalleryScreen extends Screen {
 
     }
 
+    private void initializeScreen() {
+        imageIds.clear();
+        imagePaths.clear();
+        navigatorButtons.clear();
+        metaDatas.clear();
+        newImagePaths.clear();
+        clickedImageIndex = -1;
+        isImageClicked = false;
+        scrollOffset = 0;
+        cancelAllAsyncTasks();
+        sortTaskId.incrementAndGet();
+        if (asyncSortFuture != null && !asyncSortFuture.isDone()) {
+            asyncSortFuture.cancel(true);
+        }
+
+        if (searchDebounceTask != null) {
+            MinecraftClient.getInstance().send(() -> searchDebounceTask = null);
+        }
+
+        sortTaskId.incrementAndGet();
+    }
+
+    public void cancelAllAsyncTasks() {
+        if (asyncSortFuture != null && !asyncSortFuture.isDone()) {
+            asyncSortFuture.cancel(true);
+        }
+
+        if (searchDebounceTask != null) {
+            MinecraftClient.getInstance().send(() -> searchDebounceTask = null);
+        }
+    }
 
     private static void likeScreenshot() {
         if (imageIds.isEmpty() || clickedImageIndex < 0 || clickedImageIndex >= imageIds.size()) {
@@ -705,11 +739,15 @@ public class WebGalleryScreen extends Screen {
 
                 context.drawText(client.textRenderer, username, textX, textY, 0xFFFFFF, false);
 
-                if (metaDatas.get(i).has("liked") && metaDatas.get(i).get("liked").getAsBoolean()) {
-                    context.drawText(client.textRenderer, "❤", textX + usernameWidth + 10, textY, 0xFFFFFF, false);
+                if (metaDatas.size() > i) {
+                    if (metaDatas.get(i).has("liked") && metaDatas.get(i).get("liked").getAsBoolean()) {
+                        context.drawText(client.textRenderer, "❤", textX + usernameWidth + 10, textY, 0xFFFFFF, false);
+                    }
                 }
-                if (newImagePaths.contains(imagePaths.get(i))) {
-                    context.drawText(client.textRenderer, "★", textX + usernameWidth + 20, textY - starY, 0xFFFF00, false);
+                if (imagePaths.size() > i) {
+                    if (newImagePaths.contains(imagePaths.get(i))) {
+                        context.drawText(client.textRenderer, "★", textX + usernameWidth + 20, textY - starY, 0xFFFF00, false);
+                    }
                 }
             }
 
@@ -959,16 +997,23 @@ public class WebGalleryScreen extends Screen {
 
         if (cachedImage.exists()) {
             try {
-                try (InputStream fileInputStream = Files.newInputStream(cachedImage.toPath());
-                     NativeImage loadedImage = NativeImage.read(fileInputStream)) {
-                    Identifier textureId = Identifier.of("webimage", "temp/" + imageUrl.hashCode());
-                    if (MinecraftClient.getInstance() != null) {
-                        MinecraftClient.getInstance().getTextureManager().registerTexture(textureId, new NativeImageBackedTexture(loadedImage));
-                        imageIds.add(textureId);
-                    } else {
-                        logger.error("Failed to get client while loading web image!");
+                final NativeImage finalLoadedImage = NativeImage.read(Files.newInputStream(cachedImage.toPath()));
+                MinecraftClient.getInstance().execute(() -> {
+                    try {
+                        Identifier textureId = Identifier.of("webimage", "temp/" + imageUrl.hashCode());
+                        if (MinecraftClient.getInstance() != null) {
+                            MinecraftClient.getInstance().getTextureManager().registerTexture(textureId,
+                                    new NativeImageBackedTexture(finalLoadedImage));
+                            imageIds.add(textureId);
+                        } else {
+                            logger.error("Failed to get client while loading web image!");
+                            finalLoadedImage.close();
+                        }
+                    } catch (Exception e) {
+                        logger.error("Error while registering cached texture: {}", e.getMessage());
+                        finalLoadedImage.close();
                     }
-                }
+                });
             } catch (IOException e) {
                 logger.error("Failed to load cached image: {}", e.getMessage());
             }
@@ -996,31 +1041,28 @@ public class WebGalleryScreen extends Screen {
                             ImageIO.write(bufferedImage, "PNG", cachedImage);
                             logger.info("Image saved to cache: {}", cachedImage.getAbsolutePath());
 
-                            try (NativeImage nativeImage = new NativeImage(bufferedImage.getWidth(), bufferedImage.getHeight(), false)) {
-                                for (int y = 0; y < bufferedImage.getHeight(); y++) {
-                                    for (int x = 0; x < bufferedImage.getWidth(); x++) {
-                                        int rgb = bufferedImage.getRGB(x, y);
-                                        int alpha = (rgb >> 24) & 0xFF;
-                                        int red = (rgb >> 16) & 0xFF;
-                                        int green = (rgb >> 8) & 0xFF;
-                                        int blue = rgb & 0xFF;
+                            try {
 
-                                        int argb = (alpha << 24) | (red << 16) | (green << 8) | blue;
-                                        nativeImage.setColor(x, y, argb);
+                                final NativeImage finalLoadedImage = NativeImage.read(Files.newInputStream(cachedImage.toPath()));
+                                MinecraftClient.getInstance().execute(() -> {
+                                    try {
+                                        Identifier textureId = Identifier.of("webimage", "temp/" + imageUrl.hashCode());
+                                        if (MinecraftClient.getInstance() != null) {
+                                            newImagePaths.add(imageUrl);
+                                            MinecraftClient.getInstance().getTextureManager().registerTexture(textureId,
+                                                    new NativeImageBackedTexture(finalLoadedImage));
+                                            imageIds.add(textureId);
+                                        } else {
+                                            logger.error("Failed to get client while saving the web image!");
+                                            finalLoadedImage.close();
+                                        }
+                                    } catch (Exception e) {
+                                        logger.error("Error while registering texture: {}", e.getMessage());
+                                        finalLoadedImage.close();
                                     }
-                                }
-
-                                try (InputStream fileInputStream = Files.newInputStream(cachedImage.toPath());
-                                     NativeImage loadedImage = NativeImage.read(fileInputStream)) {
-                                    Identifier textureId = Identifier.of("webimage", "temp/" + imageUrl.hashCode());
-                                    if (MinecraftClient.getInstance() != null) {
-                                        newImagePaths.add(imageUrl);
-                                        MinecraftClient.getInstance().getTextureManager().registerTexture(textureId, new NativeImageBackedTexture(loadedImage));
-                                        imageIds.add(textureId);
-                                    } else {
-                                        logger.error("Failed to get client while saving the web image!");
-                                    }
-                                }
+                                });
+                            } catch (IOException e) {
+                                logger.error("Failed to load image from cache after saving: {}", e.getMessage());
                             }
                         }
                     }
@@ -1141,73 +1183,79 @@ public class WebGalleryScreen extends Screen {
     }
 
     private void loadScreenshotsSorted(SortOrder sortOrder, SortBy sortBy) {
-        List<AbstractMap.SimpleEntry<String, JsonObject>> entries = requestScreenshotListFromServer(webserverUrl);
 
-        Set<String> likedScreenshotsSet = loadLikedScreenshots();
+        CompletableFuture.runAsync(() -> {
+            List<AbstractMap.SimpleEntry<String, JsonObject>> entries = requestScreenshotListFromServer(webserverUrl);
+            Set<String> likedScreenshotsSet = loadLikedScreenshots();
 
-        entries.sort((entry1, entry2) -> {
-            int result;
-            if (sortBy == SortBy.DEFAULT) {
-                boolean liked1 = likedScreenshotsSet.contains(entry1.getKey());
-                boolean liked2 = likedScreenshotsSet.contains(entry2.getKey());
-                result = Boolean.compare(!liked1, !liked2);
-            } else {
-                result = switch (sortBy) {
-                    case NAME -> entry1.getKey().compareTo(entry2.getKey());
-                    case DATE -> {
-                        long date1 = entry1.getValue().get("date").getAsLong();
-                        long date2 = entry2.getValue().get("date").getAsLong();
-                        yield Long.compare(date2, date1);
-                    }
-                    case PLAYER -> {
-                        String player1 = (entry1.getValue().get("username") != null) ? entry1.getValue().get("username").getAsString() : entry1.getValue().get("fileUsername").getAsString();
-                        String player2 = (entry2.getValue().get("username") != null) ? entry2.getValue().get("username").getAsString() : entry2.getValue().get("fileUsername").getAsString();
-                        yield player1.compareTo(player2);
-                    }
-                    case DIMENSION -> {
-                        String dimension1 = (entry1.getValue().get("world_name") != null) ? entry1.getValue().get("world_name").getAsString() : "N/A";
-                        String dimension2 = (entry2.getValue().get("world_name") != null) ? entry2.getValue().get("world_name").getAsString() : "N/A";
-                        yield dimension1.compareTo(dimension2);
-                    }
-                    case BIOME -> {
-                        String biome1 = (entry1.getValue().get("biome") != null) ? entry1.getValue().get("biome").getAsString() : "N/A";
-                        String biome2 = (entry2.getValue().get("biome") != null) ? entry2.getValue().get("biome").getAsString() : "N/A";
-                        yield biome1.compareTo(biome2);
-                    }
-                    case POSITION -> {
-                        if (entry1.getValue().get("coordinates") == null || entry2.getValue().get("coordinates") == null) {
-                            yield 0;
+            entries.sort((entry1, entry2) -> {
+                int result;
+                if (sortBy == SortBy.DEFAULT) {
+                    boolean liked1 = likedScreenshotsSet.contains(entry1.getKey());
+                    boolean liked2 = likedScreenshotsSet.contains(entry2.getKey());
+                    result = Boolean.compare(!liked1, !liked2);
+                } else {
+                    result = switch (sortBy) {
+                        case NAME -> entry1.getKey().compareTo(entry2.getKey());
+                        case DATE -> {
+                            long date1 = entry1.getValue().get("date").getAsLong();
+                            long date2 = entry2.getValue().get("date").getAsLong();
+                            yield Long.compare(date2, date1);
                         }
-                        String[] pos1 = entry1.getValue().get("coordinates").getAsString().split(", ");
-                        String[] pos2 = entry2.getValue().get("coordinates").getAsString().split(", ");
-                        int x1 = Integer.parseInt(pos1[0].split(": ")[1]);
-                        int y1 = Integer.parseInt(pos1[1].split(": ")[1]);
-                        int z1 = Integer.parseInt(pos1[2].split(": ")[1]);
-                        int x2 = Integer.parseInt(pos2[0].split(": ")[1]);
-                        int y2 = Integer.parseInt(pos2[1].split(": ")[1]);
-                        int z2 = Integer.parseInt(pos2[2].split(": ")[1]);
-                        BlockPos pos1Block = new BlockPos(x1, y1, z1);
-                        BlockPos pos2Block = new BlockPos(x2, y2, z2);
-                        yield pos1Block.compareTo(pos2Block);
-                    }
-                    default -> 0;
-                };
-            }
+                        case PLAYER -> {
+                            String player1 = (entry1.getValue().get("username") != null) ? entry1.getValue().get("username").getAsString() : entry1.getValue().get("fileUsername").getAsString();
+                            String player2 = (entry2.getValue().get("username") != null) ? entry2.getValue().get("username").getAsString() : entry2.getValue().get("fileUsername").getAsString();
+                            yield player1.compareTo(player2);
+                        }
+                        case DIMENSION -> {
+                            String dimension1 = (entry1.getValue().get("world_name") != null) ? entry1.getValue().get("world_name").getAsString() : "N/A";
+                            String dimension2 = (entry2.getValue().get("world_name") != null) ? entry2.getValue().get("world_name").getAsString() : "N/A";
+                            yield dimension1.compareTo(dimension2);
+                        }
+                        case BIOME -> {
+                            String biome1 = (entry1.getValue().get("biome") != null) ? entry1.getValue().get("biome").getAsString() : "N/A";
+                            String biome2 = (entry2.getValue().get("biome") != null) ? entry2.getValue().get("biome").getAsString() : "N/A";
+                            yield biome1.compareTo(biome2);
+                        }
+                        case POSITION -> {
+                            if (entry1.getValue().get("coordinates") == null || entry2.getValue().get("coordinates") == null) {
+                                yield 0;
+                            }
+                            String[] pos1 = entry1.getValue().get("coordinates").getAsString().split(", ");
+                            String[] pos2 = entry2.getValue().get("coordinates").getAsString().split(", ");
+                            int x1 = Integer.parseInt(pos1[0].split(": ")[1]);
+                            int y1 = Integer.parseInt(pos1[1].split(": ")[1]);
+                            int z1 = Integer.parseInt(pos1[2].split(": ")[1]);
+                            int x2 = Integer.parseInt(pos2[0].split(": ")[1]);
+                            int y2 = Integer.parseInt(pos2[1].split(": ")[1]);
+                            int z2 = Integer.parseInt(pos2[2].split(": ")[1]);
+                            BlockPos pos1Block = new BlockPos(x1, y1, z1);
+                            BlockPos pos2Block = new BlockPos(x2, y2, z2);
+                            yield pos1Block.compareTo(pos2Block);
+                        }
+                        default -> 0;
+                    };
+                }
 
-            return sortOrder == SortOrder.ASCENDING ? result : -result;
+                return sortOrder == SortOrder.ASCENDING ? result : -result;
+            });
+
+            MinecraftClient.getInstance().execute(() -> {
+                imageIds.clear();
+                imagePaths.clear();
+                metaDatas.clear();
+
+                for (AbstractMap.SimpleEntry<String, JsonObject> entry : entries) {
+                    imagePaths.add(entry.getKey());
+                    metaDatas.add(entry.getValue());
+                    loadWebImage(entry.getKey());
+                }
+            });
+        }).exceptionally(e -> {
+            logger.error("Error loading sorted screenshots: {}", e.getMessage());
+            return null;
         });
-
-        imageIds.clear();
-        imagePaths.clear();
-        metaDatas.clear();
-
-        for (AbstractMap.SimpleEntry<String, JsonObject> entry : entries) {
-            imagePaths.add(entry.getKey());
-            metaDatas.add(entry.getValue());
-            loadWebImage(entry.getKey());
-        }
     }
-
 
     private static List<AbstractMap.SimpleEntry<String, JsonObject>> requestScreenshotListFromServer(String server) {
         List<AbstractMap.SimpleEntry<String, JsonObject>> screenshotData = new ArrayList<>();
@@ -1474,7 +1522,7 @@ public class WebGalleryScreen extends Screen {
 
         List<SearchTerm> searchTerms = parseSearchTerms(query);
 
-        CompletableFuture.runAsync(() -> {
+        asyncSortFuture = CompletableFuture.runAsync(() -> {
             List<String> matchingPaths = new ArrayList<>();
             List<JsonObject> matchingMetadata = new ArrayList<>();
             List<Integer> matchingIndices = new ArrayList<>();
@@ -1815,3 +1863,4 @@ public class WebGalleryScreen extends Screen {
     private record SearchTerm(String fieldName, String fieldValue) {
     }
 }
+
