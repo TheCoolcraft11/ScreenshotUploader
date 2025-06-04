@@ -71,6 +71,7 @@ public class GalleryScreen extends Screen {
     private ButtonWidget configButton;
     private TextFieldWidget searchField;
     private ButtonWidget albumConfigButton;
+    private ButtonWidget screenshotStatisticsButton;
 
     private final List<Path> originalImagePaths = new ArrayList<>();
     private String lastSearchQuery = "";
@@ -257,6 +258,15 @@ public class GalleryScreen extends Screen {
                 }
         ).dimensions(5 + 5 + buttonWidth / 2, 5, buttonWidth / 2, buttonHeight).build();
 
+        screenshotStatisticsButton = ButtonWidget.builder(
+                Text.translatable("gui.screenshot_uploader.screenshot_gallery.album_config"),
+                button -> {
+                    if (client != null) {
+                        client.setScreen(new ScreenshotStatisticsScreen(this));
+                    }
+                }
+        ).dimensions(5 + 5 + 5 + buttonWidth, 5, buttonWidth / 2, buttonHeight).build();
+
         sortByButton = ButtonWidget.builder(
                 Text.literal(sortBy.toString()),
                 button -> {
@@ -339,6 +349,8 @@ public class GalleryScreen extends Screen {
 
         addDrawableChild(albumConfigButton);
 
+        addDrawableChild(screenshotStatisticsButton);
+
         saveButton.visible = false;
         deleteButton.visible = false;
         openInAppButton.visible = false;
@@ -352,6 +364,7 @@ public class GalleryScreen extends Screen {
         searchField.setPlaceholder(Text.translatable("gui.screenshot_uploader.screenshot_gallery.search_placeholder"));
         addToAlbumButton.visible = false;
         albumConfigButton.visible = true;
+        screenshotStatisticsButton.visible = true;
 
         buttonsToHideOnOverlap.add(saveButton);
         buttonsToHideOnOverlap.add(deleteButton);
@@ -469,6 +482,7 @@ public class GalleryScreen extends Screen {
             viewTagsButton.visible = true;
             addToAlbumButton.visible = true;
             albumConfigButton.visible = false;
+            screenshotStatisticsButton.visible = false;
             navigatorButtons.forEach(buttonWidget -> buttonWidget.visible = false);
         } else {
             renderGallery(context, mouseX, mouseY);
@@ -485,6 +499,7 @@ public class GalleryScreen extends Screen {
             viewTagsButton.visible = false;
             addToAlbumButton.visible = false;
             albumConfigButton.visible = true;
+            screenshotStatisticsButton.visible = true;
 
             navigatorButtons.forEach(buttonWidget -> buttonWidget.visible = true);
         }
