@@ -275,7 +275,7 @@ public class ServerStatisticsScreen extends Screen {
             return count2 - count1;
         });
 
-        userSection.addEntry(Text.translatable("gui.screenshot_uploader.server_statistics.top_contributers"), Text.empty());
+        userSection.addEntry(Text.translatable("gui.screenshot_uploader.server_statistics.top_contributors"), Text.empty());
         int userCount = 0;
         for (Map.Entry<String, JsonElement> entry : sortedUsers) {
             if (userCount++ < 10) {
@@ -506,8 +506,8 @@ public class ServerStatisticsScreen extends Screen {
 
     @Override
     public void render(DrawContext context, int mouseX, int mouseY, float delta) {
-        this.renderBackground(context, mouseX, mouseY, delta);
-        super.render(context, mouseX, mouseY, delta);
+        //   renderBackground(context, mouseX, mouseY, delta);
+        // super.render(context, mouseX, mouseY, delta);
 
         context.drawCenteredTextWithShadow(this.textRenderer, this.title, width / 2, 10, 0xFFFFFF);
 
