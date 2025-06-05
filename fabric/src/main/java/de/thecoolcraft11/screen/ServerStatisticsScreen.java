@@ -506,8 +506,7 @@ public class ServerStatisticsScreen extends Screen {
 
     @Override
     public void render(DrawContext context, int mouseX, int mouseY, float delta) {
-        //   renderBackground(context, mouseX, mouseY, delta);
-        // super.render(context, mouseX, mouseY, delta);
+        super.render(context, mouseX, mouseY, delta);
 
         context.drawCenteredTextWithShadow(this.textRenderer, this.title, width / 2, 10, 0xFFFFFF);
 
@@ -770,9 +769,9 @@ public class ServerStatisticsScreen extends Screen {
 
     private String formatDimensionName(String dimension) {
         return switch (dimension) {
-            case "overworld" -> "Overworld";
-            case "the_nether" -> "The Nether";
-            case "the_end" -> "The End";
+            case "minecraft:overworld" -> "Overworld";
+            case "minecraft:the_nether" -> "The Nether";
+            case "minecraft:the_end" -> "The End";
             default -> dimension.substring(0, 1).toUpperCase() + dimension.substring(1)
                     .replace('_', ' ');
         };
