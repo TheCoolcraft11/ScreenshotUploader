@@ -259,13 +259,13 @@ public class GalleryScreen extends Screen {
         ).dimensions(5 + 5 + buttonWidth / 2, 5, buttonWidth / 2, buttonHeight).build();
 
         screenshotStatisticsButton = ButtonWidget.builder(
-                Text.translatable("gui.screenshot_uploader.screenshot_gallery.album_config"),
+                Text.translatable("gui.screenshot_uploader.screenshot_gallery.local_statistics"),
                 button -> {
                     if (client != null) {
                         client.setScreen(new ScreenshotStatisticsScreen(this));
                     }
                 }
-        ).dimensions(5 + 5 + 5 + buttonWidth, 5, buttonWidth / 2, buttonHeight).build();
+        ).dimensions(5, 5 + 5 + buttonHeight, (int) (buttonWidth / 1.5f), buttonHeight).build();
 
         sortByButton = ButtonWidget.builder(
                 Text.literal(sortBy.toString()),

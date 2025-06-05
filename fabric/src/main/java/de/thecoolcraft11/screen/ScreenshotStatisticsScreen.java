@@ -8,6 +8,7 @@ import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.widget.ButtonWidget;
+import net.minecraft.client.network.ServerInfo;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
 
@@ -29,6 +30,8 @@ public class ScreenshotStatisticsScreen extends Screen {
 
     private int currentTab = 0;
     private final String[] tabs = {"Overview", "Users", "Screenshots", "Performance", "Heatmap"};
+
+    private boolean filterCurrentWorld = false;
 
     private String selectedUser = null;
     private final Map<String, List<StatisticsSection>> userDetailSections = new HashMap<>();
@@ -53,7 +56,7 @@ public class ScreenshotStatisticsScreen extends Screen {
     private int dragStartOffsetY = 0;
 
     public ScreenshotStatisticsScreen(Screen parent) {
-        super(Text.translatable("screen.screenshot_uploader.local_statistics.title"));
+        super(Text.translatable("gui.screenshot_uploader.local_statistics.title"));
         this.parent = parent;
         generateStatistics();
     }
@@ -90,15 +93,45 @@ public class ScreenshotStatisticsScreen extends Screen {
         JsonObject userStats = new JsonObject();
         JsonArray recentUploads = new JsonArray();
 
-        collectStandardStatistics(files, statistics, globalStats, serverStats, fileStats,
+        File[] filteredFiles = files;
+        if (filterCurrentWorld) {
+            List<File> currentWorldFiles = new ArrayList<>();
+            for (File file : files) {
+                String jsonFileName = file.getName().replace(".png", ".json").replace(".jpg", ".json");
+                File jsonFile = new File(file.getParent(), jsonFileName);
+
+                if (jsonFile.exists() && jsonFile.isFile()) {
+                    try (FileReader reader = new FileReader(jsonFile)) {
+                        JsonObject metadata = JsonParser.parseReader(reader).getAsJsonObject();
+
+                        String serverAddress = metadata.has("server_address") ? metadata.get("server_address").getAsString() : null;
+
+                        if (isFromCurrentWorld(serverAddress)) {
+                            currentWorldFiles.add(file);
+                        }
+                    } catch (IOException ignored) {
+                    }
+                }
+            }
+
+            filteredFiles = currentWorldFiles.toArray(new File[0]);
+
+            if (filteredFiles.length == 0) {
+                errorMessage = "No screenshots found for the current world";
+                isLoading = false;
+                return null;
+            }
+        }
+
+        collectStandardStatistics(filteredFiles, statistics, globalStats, serverStats, fileStats,
                 timeStats, worldStats, userStats, recentUploads);
 
-        addPerformanceMetrics(statistics, files);
+        addPerformanceMetrics(statistics, filteredFiles);
 
-        JsonObject metadataStats = getMetadataStats(files);
+        JsonObject metadataStats = getMetadataStats(filteredFiles);
         globalStats.add("metadataStats", metadataStats);
 
-        addLocationHeatMap(worldStats, files);
+        addLocationHeatMap(worldStats, filteredFiles);
 
         return statistics;
     }
@@ -842,7 +875,7 @@ public class ScreenshotStatisticsScreen extends Screen {
 
         String playerName = MinecraftClient.getInstance().getSession().getUsername();
         this.addDrawableChild(ButtonWidget.builder(
-                Text.literal("My Statistics"),
+                Text.translatable("gui.screenshot_uploader.local_statistics.my_statistics"),
                 button -> {
                     selectedUser = playerName;
                     scrollOffset = 0;
@@ -874,6 +907,20 @@ public class ScreenshotStatisticsScreen extends Screen {
 
                 this.addDrawableChild(dimensionButton);
             }
+
+            this.addDrawableChild(ButtonWidget.builder(
+                    Text.translatable(filterCurrentWorld ?
+                            "gui.screenshot_uploader.local_statistics.current_world_enabled" :
+                            "gui.screenshot_uploader.local_statistics.current_world"),
+                    button -> {
+                        filterCurrentWorld = !filterCurrentWorld;
+                        scrollOffset = 0;
+                        isLoading = true;
+                        errorMessage = null;
+                        generateStatistics();
+                        this.init();
+                    }
+            ).dimensions(width - 130, 60, 120, 20).build());
         }
 
         this.addDrawableChild(ButtonWidget.builder(Text.of("Refresh"), button -> {
@@ -896,7 +943,7 @@ public class ScreenshotStatisticsScreen extends Screen {
         }
 
         if (isLoading) {
-            String loadingText = "Loading statistics...";
+            Text loadingText = Text.translatable("gui.screenshot_uploader.local_statistics.loading");
             context.drawCenteredTextWithShadow(this.textRenderer, loadingText, width / 2, height / 2, 0xFFFFFF);
             return;
         }
@@ -910,7 +957,7 @@ public class ScreenshotStatisticsScreen extends Screen {
 
         if ((sections.isEmpty() && selectedUser == null) ||
                 (selectedUser != null && !userDetailSections.containsKey(selectedUser))) {
-            context.drawCenteredTextWithShadow(this.textRenderer, "No statistics available", width / 2, height / 2, 0xFFFFFF);
+            context.drawCenteredTextWithShadow(this.textRenderer, Text.translatable("gui.screenshot_uploader.local_statistics.no_statistics"), width / 2, height / 2, 0xFFFFFF);
             return;
         }
 
@@ -962,10 +1009,10 @@ public class ScreenshotStatisticsScreen extends Screen {
         int contentHeight = getTotalContentHeight(filteredSections);
         if (contentHeight > height - 80) {
             if (scrollOffset > 0) {
-                context.drawCenteredTextWithShadow(this.textRenderer, "▲", width / 2, 50, 0xFFFFFF);
+                context.drawCenteredTextWithShadow(this.textRenderer, Text.translatable("gui.screenshot_uploader.local_statistics.up_arrow"), width / 2, 50, 0xFFFFFF);
             }
             if (scrollOffset < contentHeight - (height - 80)) {
-                context.drawCenteredTextWithShadow(this.textRenderer, "▼", width / 2, height - 10, 0xFFFFFF);
+                context.drawCenteredTextWithShadow(this.textRenderer, Text.translatable("gui.screenshot_uploader.local_statistics.down_arrow"), width / 2, height - 10, 0xFFFFFF);
             }
         }
     }
@@ -993,7 +1040,7 @@ public class ScreenshotStatisticsScreen extends Screen {
 
         if (pointsInCurrentDimension.isEmpty()) {
             context.drawCenteredTextWithShadow(this.textRenderer,
-                    "No data available for dimension: " + formatDimensionName(selectedDimension),
+                    Text.translatable("gui.screenshot_uploader.local_statistics.no_statistics_for_dimension", formatDimensionName(selectedDimension)),
                     width / 2, height / 2, 0xFFFFFF);
             return;
         }
@@ -1110,11 +1157,11 @@ public class ScreenshotStatisticsScreen extends Screen {
         }
 
         context.drawCenteredTextWithShadow(textRenderer,
-                "Dimension: " + formatDimensionName(selectedDimension) + " | Scale: " + String.format("%.1fx", heatmapScale),
+                Text.translatable("gui.screenshot_uploader.local_statistics.heatmap_info", formatDimensionName(selectedDimension), String.format("%.1f", heatmapScale)).getString(),
                 width / 2, height - 40, 0xFFFFFF);
 
         context.drawCenteredTextWithShadow(textRenderer,
-                "scroll to zoom / move",
+                Text.translatable("gui.screenshot_uploader.local_statistics.heatmap_controls").getString(),
                 width / 2, height - 25, 0xAAAAAA);
     }
 
@@ -1148,7 +1195,7 @@ public class ScreenshotStatisticsScreen extends Screen {
 
     private void renderUserDetails(DrawContext context, int mouseX, int mouseY) {
         context.drawCenteredTextWithShadow(this.textRenderer,
-                Text.literal("User Profile: " + selectedUser).formatted(Formatting.GOLD),
+                Text.translatable("gui.screenshot_uploader.local_statistics.user_profile", selectedUser).formatted(Formatting.GOLD),
                 width / 2, 55, 0xFFFFFF);
 
         List<StatisticsSection> userSections = userDetailSections.get(selectedUser);
@@ -1408,6 +1455,37 @@ public class ScreenshotStatisticsScreen extends Screen {
         }
 
         return mostFrequentHour;
+    }
+
+    private static String getCurrentWorldIdentifier() {
+        MinecraftClient client = MinecraftClient.getInstance();
+
+        if (client.world == null) {
+            return null;
+        }
+
+        if (client.isInSingleplayer()) {
+
+            if (client.getServer() != null && client.getServer().getSaveProperties() != null) {
+                return client.getServer().getSaveProperties().getLevelName();
+            }
+        } else {
+
+            ServerInfo serverInfo = client.getCurrentServerEntry();
+            if (serverInfo != null) {
+                return serverInfo.address;
+            }
+        }
+
+        return null;
+    }
+
+    private static boolean isFromCurrentWorld(String serverAddress) {
+        String currentIdentifier = getCurrentWorldIdentifier();
+        if (currentIdentifier == null) {
+            return false;
+        }
+        return currentIdentifier.equals(serverAddress);
     }
 
     @Override
