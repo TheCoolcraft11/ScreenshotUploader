@@ -17,6 +17,15 @@ public class GalleryBuilder {
             imageData.put("username", username);
             imageData.put("playerHeadUrl", "https://mc-heads.net/avatar/" + username + "/50");
 
+            String jsonFileName = filename.replaceFirst("\\.png$", ".json");
+            File jsonFile = new File(file.getParent(), jsonFileName);
+            if (jsonFile.exists()) {
+                imageData.put("hasMetadata", "true");
+            } else {
+                imageData.put("hasMetadata", "false");
+            }
+            imageData.put("timestamp", String.valueOf(file.lastModified()));
+
             return imageData;
         }).toList()
                 : new ArrayList<>();
@@ -57,7 +66,6 @@ public class GalleryBuilder {
                 .append("<div id='modal-left'>")
                 .append("<img id='modalImage' src='' alt='Full Image'>")
                 .append("<div id='imageCount'></div>")
-                .append("<div id='thumbnails'></div>")
                 .append("<div id='buttonContainer'>")
                 .append("<button id='prevBtn' onclick='previousImage()'>Previous</button>")
                 .append("<button id='nextBtn' onclick='nextImage()'>Next</button>")
@@ -79,8 +87,11 @@ public class GalleryBuilder {
         htmlContent.append("</div>")
                 .append("</div>")
                 .append("<div id='modal-right'>")
+                .append("<div id='metadataContainer'>")
+                .append("<h3>Screenshot Info</h3>")
+                .append("<div id='screenshotMetadata'></div>")
+                .append("</div>")
                 .append("<div id='commentsContainer'>")
-
                 .append("</div>")
                 .append("</div>");
         htmlContent.append("</div>")
@@ -102,7 +113,20 @@ public class GalleryBuilder {
         }
 
         htmlContent.append("];")
-                .append("</script>")
+                .append("const imageMetadata = {};");
+
+        for (Map<String, String> imageData : imagesWithUsernames) {
+            htmlContent.append("imageMetadata['/screenshots/")
+                    .append(imageData.get("filename"))
+                    .append("'] = {")
+                    .append("username:'").append(imageData.get("username")).append("',")
+                    .append("filename:'").append(imageData.get("filename")).append("',")
+                    .append("timestamp:").append(imageData.get("timestamp")).append(",")
+                    .append("hasMetadata:").append(imageData.get("hasMetadata"))
+                    .append("};");
+        }
+
+        htmlContent.append("</script>")
                 .append("<script src=\"/static/js/script.js\"></script>")
                 .append("</body>")
                 .append("</html>");
