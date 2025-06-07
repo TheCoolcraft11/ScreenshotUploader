@@ -20,6 +20,7 @@ function showModal(src) {
             document.addEventListener('keydown', keyNavigation);
             fetchComments(src);
             displayImageMetadata(src);
+            modal.focus();
         }
 
         function loadImage(src) {
@@ -45,8 +46,42 @@ function showModal(src) {
                 nextImage();
             } else if (e.key === 'ArrowLeft') {
                 previousImage();
+            }else if (e.key === 'Escape') {
+               const modal = document.getElementById('modal');
+                  if (modal.style.display === 'flex') {
+                     modal.style.display = 'none';
+                     document.getElementById('modalImage').src = '';
+                     clearInterval(intervalId);
+                     slideshowActive = false;
+                     document.removeEventListener('keydown', keyNavigation);
+                 }
             }
         }
+
+        function addSwipeSupport() {
+            const modalContent = document.getElementById('modal-content-wrapper');
+            let startX, startY;
+
+            modalContent.addEventListener('touchstart', (e) => {
+                startX = e.touches[0].clientX;
+                startY = e.touches[0].clientY;
+            });
+
+            modalContent.addEventListener('touchend', (e) => {
+                const diffX = startX - e.changedTouches[0].clientX;
+                const diffY = startY - e.changedTouches[0].clientY;
+
+                if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 50) {
+                    if (diffX > 0) {
+                        nextImage();
+                    } else {
+                        previousImage();
+                    }
+                }
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', addSwipeSupport);
 
         function previousImage() {
             currentIndex = (currentIndex - 1 + images.length) % images.length;

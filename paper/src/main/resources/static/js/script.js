@@ -5,10 +5,10 @@ function showModal(src) {
 
             modal.style.display = 'flex';
             currentSrc = src;
+            currentFilename = src.split('/').pop();
             currentIndex = images.indexOf(src) + 1;
             updateImageCount(images.length);
             loadImage(src);
-            createThumbnails();
 
             loading.style.display = 'block';
             modalImg.onload = () => {
@@ -19,6 +19,8 @@ function showModal(src) {
             stopSlideshow();
             document.addEventListener('keydown', keyNavigation);
             fetchComments(src);
+            displayImageMetadata(src);
+            modal.focus();
         }
 
         function loadImage(src) {
@@ -44,19 +46,57 @@ function showModal(src) {
                 nextImage();
             } else if (e.key === 'ArrowLeft') {
                 previousImage();
+            }else if (e.key === 'Escape') {
+               const modal = document.getElementById('modal');
+                  if (modal.style.display === 'flex') {
+                     modal.style.display = 'none';
+                     document.getElementById('modalImage').src = '';
+                     clearInterval(intervalId);
+                     slideshowActive = false;
+                     document.removeEventListener('keydown', keyNavigation);
+                 }
             }
         }
+
+        function addSwipeSupport() {
+            const modalContent = document.getElementById('modal-content-wrapper');
+            let startX, startY;
+
+            modalContent.addEventListener('touchstart', (e) => {
+                startX = e.touches[0].clientX;
+                startY = e.touches[0].clientY;
+            });
+
+            modalContent.addEventListener('touchend', (e) => {
+                const diffX = startX - e.changedTouches[0].clientX;
+                const diffY = startY - e.changedTouches[0].clientY;
+
+                if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 50) {
+                    if (diffX > 0) {
+                        nextImage();
+                    } else {
+                        previousImage();
+                    }
+                }
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', addSwipeSupport);
 
         function previousImage() {
             currentIndex = (currentIndex - 1 + images.length) % images.length;
             loadImage(images[currentIndex]);
             updateImageCount(images.length);
+            fetchComments(images[currentIndex]);
+            displayImageMetadata(images[currentIndex]);
         }
 
         function nextImage() {
             currentIndex = (currentIndex + 1) % images.length;
             loadImage(images[currentIndex]);
             updateImageCount(images.length);
+            fetchComments(images[currentIndex]);
+            displayImageMetadata(images[currentIndex]);
         }
 
         function updateImageCount(total) {
@@ -88,6 +128,9 @@ function showModal(src) {
         function randomImage() {
             const randomIndex = Math.floor(Math.random() * images.length);
             loadImage(images[randomIndex]);
+            updateImageCount(images.length);
+            fetchComments(images[randomIndex]);
+            displayImageMetadata(images[randomIndex]);
         }
 
         function toggleFullScreen() {
@@ -107,19 +150,74 @@ function showModal(src) {
             a.click();
         }
 
-        function createThumbnails() {
-            const thumbnailsContainer = document.getElementById('thumbnails');
-            thumbnailsContainer.innerHTML = '';
-            images.forEach((image, index) => {
-                const thumbnail = document.createElement('img');
-                thumbnail.src = image;
-                thumbnail.onclick = () => loadImage(image);
-                if (image === currentSrc) {
-                    thumbnail.classList.add('selected');
+
+function displayImageMetadata(src) {
+    const metadataContainer = document.getElementById('screenshotMetadata');
+    metadataContainer.innerHTML = '';
+
+    const basicData = imageMetadata[src];
+    if (!basicData) {
+        metadataContainer.innerHTML = '<p>No metadata available</p>';
+        return;
+    }
+
+    const username = basicData.username;
+    const filename = basicData.filename;
+    const timestamp = new Date(basicData.timestamp).toLocaleString();
+
+    let html = `
+        <div class="metadata-item">
+            <strong>Filename:</strong> ${filename}
+        </div>
+        <div class="metadata-item">
+            <strong>Username:</strong> ${username}
+        </div>
+        <div class="metadata-item">
+            <strong>Date:</strong> ${timestamp}
+        </div>
+    `;
+
+    if (basicData.hasMetadata) {
+        const jsonFilename = filename.replace('.png', '.json').replace('.jpg', '.json');
+
+        fetch(`/screenshots/${jsonFilename}`)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Metadata file not found');
                 }
-                thumbnailsContainer.appendChild(thumbnail);
+                return response.json();
+            })
+            .then(data => {
+                if (data.coordinates) {
+                    html += `<div class="metadata-item"><strong>Coordinates:</strong> ${data.coordinates}</div>`;
+                }
+                if (data.dimension) {
+                    html += `<div class="metadata-item"><strong>Dimension:</strong> ${data.dimension}</div>`;
+                }
+                if (data.biome) {
+                    html += `<div class="metadata-item"><strong>Biome:</strong> ${data.biome}</div>`;
+                }
+                if (data.system_info) {
+                    html += `<div class="metadata-item"><strong>System:</strong> ${data.system_info}</div>`;
+                }
+                if (data.current_time) {
+                    const gameTime = new Date(parseInt(data.current_time)).toLocaleString();
+                    html += `<div class="metadata-item"><strong>Game Time:</strong> ${gameTime}</div>`;
+                }
+                if (data.client_settings) {
+                    html += `<div class="metadata-item"><strong>Settings:</strong> ${data.client_settings}</div>`;
+                }
+
+                metadataContainer.innerHTML = html;
+            })
+            .catch(error => {
+                metadataContainer.innerHTML = html;
+                console.error('Error fetching metadata:', error);
             });
-        }
+    } else {
+        metadataContainer.innerHTML = html;
+    }
+}
 
 function deleteImage() {
     const imageName = currentSrc.split('/').pop();
@@ -190,7 +288,7 @@ function deleteImage() {
                 .then(response => response.json())
                 .then(comments => {
                     const commentsContainer = document.getElementById('commentsContainer');
-                    commentsContainer.innerHTML = '';
+                    commentsContainer.innerHTML = '<h3>Comments</h3>';
                     comments.forEach(comment => {
                         const commentDiv = document.createElement('div');
                         commentDiv.classList.add('comment');
