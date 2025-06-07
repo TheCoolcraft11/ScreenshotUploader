@@ -305,7 +305,7 @@ public class ScreenshotUploaderServer implements DedicatedServerModInitializer {
     }
 
     private void startWebServer() {
-        String ipAddress = "127.0.0.1";
+        String ipAddress = ConfigManager.getServerConfig().host == null || Objects.requireNonNull(ConfigManager.getServerConfig().host).isEmpty() ? "0.0.0.0" : ConfigManager.getServerConfig().host;
         int port = ConfigManager.getServerConfig().port;
         String urlString = getServerIp();
         if (!urlString.matches("^https?://.*")) {
@@ -326,6 +326,7 @@ public class ScreenshotUploaderServer implements DedicatedServerModInitializer {
     private void onServerStarting(MinecraftServer server) {
         copyResourceToServerDir("/static/js/script.js", "screenshotUploader/static/js/script.js");
         copyResourceToServerDir("/static/css/style.css", "screenshotUploader/static/css/style.css");
+        copyResourceToServerDir("/static/css/styleOld.css", "screenshotUploader/static/css/styleOld.css");
     }
 
     private void copyResourceToServerDir(String resourcePath, String targetPath) {

@@ -27,14 +27,9 @@ public final class ScreenshotUploader extends JavaPlugin {
     public void onEnable() {
         instance = this;
         config = new Config("config.yml", ScreenshotUploader.getProvidingPlugin(ScreenshotUploader.class).getDataFolder());
-        File jsFile = new File(getDataFolder(), "static/js/script.js");
-        File cssFile = new File(getDataFolder(), "static/css/script.js");
-        if (!jsFile.exists()) {
-            saveResource("static/js/script.js", config.getFileConfiguration().getBoolean("replaceStaticFilesOnStart"));
-        }
-        if (!cssFile.exists()) {
-            saveResource("static/css/style.css", config.getFileConfiguration().getBoolean("replaceStaticFilesOnStart"));
-        }
+        saveResource("static/js/script.js", config.getFileConfiguration().getBoolean("replaceStaticFilesOnStart"));
+        saveResource("static/css/style.css", config.getFileConfiguration().getBoolean("replaceStaticFilesOnStart"));
+        saveResource("static/css/styleOld.css", config.getFileConfiguration().getBoolean("replaceStaticFilesOnStart"));
         createModFolder();
         prepareWebServerStart();
         deleteOldScreenshots();
@@ -67,7 +62,7 @@ public final class ScreenshotUploader extends JavaPlugin {
 
     private void prepareWebServerStart() {
         if (config.getFileConfiguration().getBoolean("screenshotWebserver")) {
-            String ipAddress = "127.0.0.1";
+            String ipAddress = config.getFileConfiguration().getString("ipAddress") == null || Objects.requireNonNull(config.getFileConfiguration().getString("ipAddress")).isEmpty() ? "0.0.0.0" : config.getFileConfiguration().getString("ipAddress");
             int port = config.getFileConfiguration().getInt("port");
             getLogger().info("Starting web server on" + ipAddress + ":" + port + "...");
             startWebServer();
