@@ -50,7 +50,7 @@ public class WebServer {
             }
             File dir = new File("./screenshotUploader/screenshots/");
             File[] files = dir.listFiles((dir1, name) -> name.endsWith(".jpg") || name.endsWith(".png"));
-            String response = GalleryBuilder.buildGallery(files, config.getFileConfiguration().getBoolean("allowDelete"), Objects.requireNonNull(config.getFileConfiguration().getString("deletionPassphrase")).isEmpty());
+            String response = GalleryBuilder.buildGallery(files, config.getFileConfiguration().getBoolean("allowDelete"), Objects.requireNonNull(config.getFileConfiguration().getString("deletionPassphrase")).isEmpty(), config.getFileConfiguration().getBoolean("useOldStyle"));
             exchange.getResponseHeaders().add("Content-Type", "text/html; charset=UTF-8");
             exchange.sendResponseHeaders(200, response.getBytes().length);
             try (OutputStream os = exchange.getResponseBody()) {

@@ -40,3 +40,5 @@ deleteOldScreenshots: false
 deleteAfterDays: 30
 #If static files should be replaced on server start, Turn off if you want to use custom js / css, Note: You wont be able to use new features if you turn this off
 replaceStaticFilesOnStart: true
+#Use the old css instead of the new one. The old css may not support all new features
+useOldStyle: false

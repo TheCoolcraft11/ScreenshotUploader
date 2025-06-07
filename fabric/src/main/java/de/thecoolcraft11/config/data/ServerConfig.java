@@ -45,5 +45,7 @@ public class ServerConfig {
     public int deleteAfterDays = 30;
     @Comment("If static files should be replaced on server start, Turn off if you want to use custom js / css, Note: You wont be able to use new features if you turn this off")
     public boolean replaceStaticFilesOnStart = true;
+    @Comment("Use the old css instead of the new one. The old css may not support all new features")
+    public boolean useOldCss = false;
 }
 

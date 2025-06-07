@@ -5,7 +5,7 @@ import java.util.*;
 
 public class GalleryBuilder {
 
-    public static String buildGallery(File[] files, boolean allowDelete, boolean allowEmptyPassphrase) {
+    public static String buildGallery(File[] files, boolean allowDelete, boolean allowEmptyPassphrase, boolean useOldStyle) {
         List<Map<String, String>> imagesWithUsernames = files != null
                 ? Arrays.stream(files).map(file -> {
             String filename = file.getName();
@@ -36,7 +36,7 @@ public class GalleryBuilder {
                 .append("<head>")
                 .append("<meta charset=\"UTF-8\">")
                 .append("<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">")
-                .append("<link rel=\"stylesheet\" href=\"/static/css/style.css\">")
+                .append(!useOldStyle ? "<link rel=\"stylesheet\" href=\"/static/css/style.css\">" : "<link rel=\"stylesheet\" href=\"/static/css/styleOld.css\">")
                 .append("<title>Gallery</title>")
                 .append("</head>")
                 .append("<body>")
