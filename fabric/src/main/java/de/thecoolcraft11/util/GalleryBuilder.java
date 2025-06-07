@@ -17,7 +17,7 @@ public class GalleryBuilder {
             imageData.put("username", username);
             imageData.put("playerHeadUrl", "https://mc-heads.net/avatar/" + username + "/50");
 
-            String jsonFileName = filename.replaceFirst("\\.png$", ".json");
+            String jsonFileName = filename.replaceFirst("(?i)\\.(png|jpg|jpeg|gif|bmp|webp)$", ".json");
             File jsonFile = new File(file.getParent(), jsonFileName);
             if (jsonFile.exists()) {
                 imageData.put("hasMetadata", "true");

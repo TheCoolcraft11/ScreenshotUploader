@@ -97,7 +97,7 @@ public class ScreenshotStatisticsScreen extends Screen {
         if (filterCurrentWorld) {
             List<File> currentWorldFiles = new ArrayList<>();
             for (File file : files) {
-                String jsonFileName = file.getName().replace(".png", ".json").replace(".jpg", ".json");
+                String jsonFileName = file.getName().replaceFirst("(?i)\\.(png|jpg|jpeg|gif|bmp|webp)$", ".json");
                 File jsonFile = new File(file.getParent(), jsonFileName);
 
                 if (jsonFile.exists() && jsonFile.isFile()) {
@@ -180,7 +180,7 @@ public class ScreenshotStatisticsScreen extends Screen {
             userObject.addProperty("totalSizeBytes", currentUserSize + fileSize);
 
             String fileName = file.getName();
-            String jsonFileName = fileName.replace(".png", ".json").replace(".jpg", ".json");
+            String jsonFileName = fileName.replaceFirst("(?i)\\.(png|jpg|jpeg|gif|bmp|webp)$", ".json");
             File jsonFile = new File(file.getParent(), jsonFileName);
 
             long timestamp = file.lastModified();
@@ -373,7 +373,7 @@ public class ScreenshotStatisticsScreen extends Screen {
         JsonObject graphicsSettings = new JsonObject();
 
         for (File file : files) {
-            String jsonFileName = file.getName().replace(".png", ".json").replace(".jpg", ".json");
+            String jsonFileName = file.getName().replaceFirst("(?i)\\.(png|jpg|jpeg|gif|bmp|webp)$", ".json");
             File jsonFile = new File(file.getParent(), jsonFileName);
 
             if (jsonFile.exists()) {
@@ -422,7 +422,7 @@ public class ScreenshotStatisticsScreen extends Screen {
         int gridSize = 100;
 
         for (File file : files) {
-            String jsonFileName = file.getName().replace(".png", ".json").replace(".jpg", ".json");
+            String jsonFileName = file.getName().replaceFirst("(?i)\\.(png|jpg|jpeg|gif|bmp|webp)$", ".json");
             File jsonFile = new File(file.getParent(), jsonFileName);
 
             if (jsonFile.exists()) {

@@ -121,7 +121,7 @@ public class WebServer {
                 String filename = matcher.group(1);
                 Path gameDir = FabricLoader.getInstance().getGameDir();
                 Path targetFile = gameDir.resolve("./screenshotUploader/screenshots/" + filename);
-                Path jsonFile = gameDir.resolve("./screenshotUploader/screenshots/" + filename.replaceFirst("\\.png$", ".json"));
+                Path jsonFile = gameDir.resolve("./screenshotUploader/screenshots/" + filename.replaceFirst("(?i)\\.(png|jpg|jpeg|gif|bmp|webp)$", ".json"));
 
                 try {
                     if (Files.exists(targetFile)) {
@@ -286,7 +286,7 @@ public class WebServer {
             if (matcher.matches()) {
                 String filename = matcher.group(1);
                 Path gameDir = FabricLoader.getInstance().getGameDir();
-                Path commentFile = gameDir.resolve("./screenshotUploader/screenshots/" + filename.replaceFirst("\\.png$", ".json"));
+                Path commentFile = gameDir.resolve("./screenshotUploader/screenshots/" + filename.replaceFirst("(?i)\\.(png|jpg|jpeg|gif|bmp|webp)$", ".json"));
 
                 try {
                     if (Files.exists(commentFile)) {
@@ -467,7 +467,7 @@ public class WebServer {
                 userObject.addProperty("totalSizeBytes", currentUserSize + fileSize);
 
                 String fileName = file.getName();
-                String jsonFileName = fileName.replace(".png", ".json");
+                String jsonFileName = fileName.replaceFirst("(?i)\\.(png|jpg|jpeg|gif|bmp|webp)$", ".json");
                 File jsonFile = new File(file.getParent(), jsonFileName);
 
                 long timestamp = file.lastModified();
@@ -660,7 +660,7 @@ public class WebServer {
             JsonObject graphicsSettings = new JsonObject();
 
             for (File file : files) {
-                String jsonFileName = file.getName().replace(".png", ".json").replace(".jpg", ".json");
+                String jsonFileName = file.getName().replaceFirst("(?i)\\.(png|jpg|jpeg|gif|bmp|webp)$", ".json");
                 File jsonFile = new File(file.getParent(), jsonFileName);
 
                 if (jsonFile.exists()) {
@@ -709,7 +709,7 @@ public class WebServer {
             int gridSize = 100;
 
             for (File file : files) {
-                String jsonFileName = file.getName().replace(".png", ".json").replace(".jpg", ".json");
+                String jsonFileName = file.getName().replaceFirst("(?i)\\.(png|jpg|jpeg|gif|bmp|webp)$", ".json");
                 File jsonFile = new File(file.getParent(), jsonFileName);
 
                 if (jsonFile.exists()) {

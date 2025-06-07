@@ -103,7 +103,7 @@ public abstract class ScreenshotMixin {
         String filename = Objects.requireNonNull(getScreenshotFilename(Paths.get(client.runDirectory.getName(), "screenshots").toFile())).getName();
 
         if (ConfigManager.getClientConfig().saveJsonData) {
-            File jsonFile = new File(client.runDirectory, "screenshots/" + filename.replaceFirst("\\.png$", ".json"));
+            File jsonFile = new File(client.runDirectory, "screenshots/" + filename.replaceFirst("(?i)\\.(png|jpg|jpeg|gif|bmp|webp)$", ".json"));
             try {
                 boolean wasCreated = jsonFile.createNewFile();
                 if (!wasCreated) {

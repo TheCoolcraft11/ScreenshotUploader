@@ -165,7 +165,7 @@ public class ScreenshotTaggingScreen extends Screen {
 
     private void loadExistingTags() {
         try {
-            File jsonFile = new File(screenshotPath.replaceFirst("\\.png$", ".json"));
+            File jsonFile = new File(screenshotPath.replaceFirst("(?i)\\.(png|jpg|jpeg|gif|bmp|webp)$", ".json"));
             if (!jsonFile.exists()) {
                 boolean wasCreated = jsonFile.createNewFile();
                 if (wasCreated) {
@@ -195,7 +195,7 @@ public class ScreenshotTaggingScreen extends Screen {
 
     private void saveTags() {
         try {
-            File jsonFile = new File(screenshotPath.replaceFirst("\\.png$", ".json"));
+            File jsonFile = new File(screenshotPath.replaceFirst("(?i)\\.(png|jpg|jpeg|gif|bmp|webp)$", ".json"));
             JsonObject json;
 
             if (jsonFile.exists()) {
