@@ -182,46 +182,30 @@ function displayImageMetadata(src) {
         </div>
     `;
 
-    if (basicData.hasMetadata) {
-        const jsonFilename = filename.replace('.png', '.json').replace('.jpg', '.json');
+    if (basicData.hasMetadata && basicData.metadata) {
+        const metadata = basicData.metadata;
 
-        fetch(`/screenshots/${jsonFilename}`)
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('Metadata file not found');
-                }
-                return response.json();
-            })
-            .then(data => {
-                if (data.coordinates) {
-                    html += `<div class="metadata-item"><strong>Coordinates:</strong> ${data.coordinates}</div>`;
-                }
-                if (data.dimension) {
-                    html += `<div class="metadata-item"><strong>Dimension:</strong> ${data.dimension}</div>`;
-                }
-                if (data.biome) {
-                    html += `<div class="metadata-item"><strong>Biome:</strong> ${data.biome}</div>`;
-                }
-                if (data.system_info) {
-                    html += `<div class="metadata-item"><strong>System:</strong> ${data.system_info}</div>`;
-                }
-                if (data.current_time) {
-                    const gameTime = new Date(parseInt(data.current_time)).toLocaleString();
-                    html += `<div class="metadata-item"><strong>Game Time:</strong> ${gameTime}</div>`;
-                }
-                if (data.client_settings) {
-                    html += `<div class="metadata-item"><strong>Settings:</strong> ${data.client_settings}</div>`;
-                }
-
-                metadataContainer.innerHTML = html;
-            })
-            .catch(error => {
-                metadataContainer.innerHTML = html;
-                console.error('Error fetching metadata:', error);
-            });
-    } else {
-        metadataContainer.innerHTML = html;
+        if (metadata.coordinates) {
+            html += `<div class="metadata-item"><strong>Coordinates:</strong> ${metadata.coordinates}</div>`;
+        }
+        if (metadata.dimension) {
+            html += `<div class="metadata-item"><strong>Dimension:</strong> ${metadata.dimension}</div>`;
+        }
+        if (metadata.biome) {
+            html += `<div class="metadata-item"><strong>Biome:</strong> ${metadata.biome}</div>`;
+        }
+        if (metadata.system_info) {
+            html += `<div class="metadata-item"><strong>System:</strong> ${metadata.system_info}</div>`;
+        }
+        if (metadata.world_info) {
+            html += `<div class="metadata-item"><strong>World Info:</strong> ${metadata.world_info}</div>`;
+        }
+        if (metadata.client_settings) {
+            html += `<div class="metadata-item"><strong>Settings:</strong> ${metadata.client_settings}</div>`;
+        }
     }
+
+    metadataContainer.innerHTML = html;
 }
 
 function deleteImage() {

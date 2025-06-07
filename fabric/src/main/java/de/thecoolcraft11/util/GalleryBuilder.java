@@ -1,30 +1,44 @@
 package de.thecoolcraft11.util;
 
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
+
 import java.io.File;
+import java.io.FileReader;
+import java.io.IOException;
 import java.util.*;
 
 public class GalleryBuilder {
 
     public static String buildGallery(File[] files, boolean allowDelete, boolean allowEmptyPassphrase, boolean useOldStyle) {
-        List<Map<String, String>> imagesWithUsernames = files != null
+        List<Map<String, Object>> imagesWithUsernames = files != null
                 ? Arrays.stream(files).map(file -> {
             String filename = file.getName();
             String base = filename.substring(filename.indexOf("-") + 1, filename.lastIndexOf("."));
             int lastUnderscore = base.lastIndexOf("_");
             String username = base.substring(0, lastUnderscore);
-            Map<String, String> imageData = new HashMap<>();
+            Map<String, Object> imageData = new HashMap<>();
             imageData.put("filename", filename);
             imageData.put("username", username);
             imageData.put("playerHeadUrl", "https://mc-heads.net/avatar/" + username + "/50");
 
             String jsonFileName = filename.replaceFirst("(?i)\\.(png|jpg|jpeg|gif|bmp|webp)$", ".json");
             File jsonFile = new File(file.getParent(), jsonFileName);
+
+            JsonObject metadata;
             if (jsonFile.exists()) {
-                imageData.put("hasMetadata", "true");
+                imageData.put("hasMetadata", true);
+                try (FileReader reader = new FileReader(jsonFile)) {
+                    metadata = JsonParser.parseReader(reader).getAsJsonObject();
+                    imageData.put("metadata", metadata);
+                } catch (IOException e) {
+                    System.err.println("Error reading metadata for " + filename + ": " + e.getMessage());
+                }
             } else {
-                imageData.put("hasMetadata", "false");
+                imageData.put("hasMetadata", false);
             }
-            imageData.put("timestamp", String.valueOf(file.lastModified()));
+
+            imageData.put("timestamp", file.lastModified());
 
             return imageData;
         }).toList()
@@ -44,10 +58,19 @@ public class GalleryBuilder {
                 .append("<h1 class='header' id='header'>Screenshots</h1>")
                 .append("<div class='gallery'>");
 
-        for (Map<String, String> imageData : imagesWithUsernames) {
+        for (Map<String, Object> imageData : imagesWithUsernames) {
             htmlContent.append("<div class='gallery-item'>")
-                    .append("<div class='image-container'>")
-                    .append("<img src='/screenshots/").append(imageData.get("filename")).append("' ")
+                    .append("<div class='image-container'>");
+
+            if ((boolean) imageData.get("hasMetadata") && imageData.get("metadata") != null) {
+                JsonObject metadata = (JsonObject) imageData.get("metadata");
+                if (metadata.has("tags") && metadata.get("tags").isJsonArray() && !metadata.getAsJsonArray("tags").isEmpty()) {
+                    String firstTag = metadata.getAsJsonArray("tags").get(0).getAsString();
+                    htmlContent.append("<div class='tag-badge'>").append(firstTag).append("</div>");
+                }
+            }
+
+            htmlContent.append("<img src='/screenshots/").append(imageData.get("filename")).append("' ")
                     .append("alt='").append(imageData.get("filename")).append("' ")
                     .append("class='gallery-image' onclick='showModal(\"/screenshots/").append(imageData.get("filename")).append("\")' loading='lazy'>")
                     .append("<div class='text-with-head'>")
@@ -107,7 +130,7 @@ public class GalleryBuilder {
                 .append("let slideshowActive = false;")
                 .append("const images = [");
 
-        for (Map<String, String> imageData : imagesWithUsernames) {
+        for (Map<String, Object> imageData : imagesWithUsernames) {
             htmlContent.append("'/screenshots/").append(imageData.get("filename")).append("',");
         }
 
@@ -118,15 +141,63 @@ public class GalleryBuilder {
         htmlContent.append("];")
                 .append("const imageMetadata = {};");
 
-        for (Map<String, String> imageData : imagesWithUsernames) {
+        for (Map<String, Object> imageData : imagesWithUsernames) {
             htmlContent.append("imageMetadata['/screenshots/")
                     .append(imageData.get("filename"))
                     .append("'] = {")
                     .append("username:'").append(imageData.get("username")).append("',")
                     .append("filename:'").append(imageData.get("filename")).append("',")
                     .append("timestamp:").append(imageData.get("timestamp")).append(",")
-                    .append("hasMetadata:").append(imageData.get("hasMetadata"))
-                    .append("};");
+                    .append("hasMetadata:").append(imageData.get("hasMetadata")).append(",");
+
+            if ((boolean) imageData.get("hasMetadata") && imageData.get("metadata") != null) {
+                JsonObject metadata = (JsonObject) imageData.get("metadata");
+                htmlContent.append("metadata:{");
+
+                if (metadata.has("coordinates")) {
+                    htmlContent.append("coordinates:\"").append(metadata.get("coordinates").getAsString().replace("\"", "\\\"")).append("\",");
+                }
+
+                if (metadata.has("dimension")) {
+                    htmlContent.append("dimension:\"").append(metadata.get("dimension").getAsString().replace("\"", "\\\"")).append("\",");
+                }
+
+                if (metadata.has("biome")) {
+                    htmlContent.append("biome:\"").append(metadata.get("biome").getAsString().replace("\"", "\\\"")).append("\",");
+                }
+
+                if (metadata.has("system_info")) {
+                    htmlContent.append("system_info:\"").append(metadata.get("system_info").getAsString().replace("\"", "\\\"")).append("\",");
+                }
+
+                if (metadata.has("world_info")) {
+                    htmlContent.append("world_info:\"").append(metadata.get("world_info").getAsString().replace("\"", "\\\"")).append("\",");
+                }
+
+                if (metadata.has("current_time")) {
+                    htmlContent.append("current_time:\"").append(metadata.get("current_time").getAsString().replace("\"", "\\\"")).append("\",");
+                }
+
+                if (metadata.has("client_settings")) {
+                    htmlContent.append("client_settings:\"").append(metadata.get("client_settings").getAsString().replace("\"", "\\\"")).append("\",");
+                }
+
+                if (metadata.has("comments")) {
+                    htmlContent.append("comments:").append(metadata.get("comments")).append(",");
+                }
+
+                if (metadata.has("tags")) {
+                    htmlContent.append("tags:").append(metadata.get("tags")).append(",");
+                }
+
+                if (htmlContent.charAt(htmlContent.length() - 1) == ',') {
+                    htmlContent.deleteCharAt(htmlContent.length() - 1);
+                }
+
+                htmlContent.append("}");
+            }
+
+            htmlContent.append("};");
         }
 
         htmlContent.append("</script>")

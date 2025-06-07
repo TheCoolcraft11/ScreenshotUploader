@@ -660,6 +660,29 @@ input[type="text"] {
   content: "♥";
 }
 
+.tag-badge {
+  position: absolute;
+  bottom: 10px;
+  right: 10px;
+  background-color: rgba(243, 156, 18, 0.85);
+  color: white;
+  font-size: 13px;
+  font-weight: bold;
+  padding: 6px 12px;
+  border-radius: 20px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+  backdrop-filter: blur(3px);
+  transition: all 0.3s ease;
+  z-index: 10;
+  text-shadow: 0 1px 1px rgba(0,0,0,0.3);
+}
+
+
+.image-container:hover .tag-badge {
+  transform: translateY(-3px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
 .liked-badge {
   position: absolute;
   top: 10px;
