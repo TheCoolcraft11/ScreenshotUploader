@@ -46,7 +46,9 @@ public class GalleryBuilder {
                     .append("alt='").append(imageData.get("username")).append("' ")
                     .append("class='player-head'>")
                     .append("<div class='image-username'>").append(imageData.get("username")).append("</div>")
-                    .append("</div></div></div>");
+                    .append("</div>")
+                    .append("<button class='like-button' onclick='toggleLike(\"/screenshots/").append(imageData.get("filename")).append("\", event)'></button>")
+                    .append("</div></div>");
         }
 
         htmlContent.append("</div>")
@@ -64,6 +66,7 @@ public class GalleryBuilder {
                 .append("<button id='fullscreenBtn' onclick='toggleFullScreen()'>Fullscreen</button>")
                 .append("<button id='downloadBtn' onclick='downloadImage()'>Download</button>")
                 .append("<button id='randomBtn' onclick='randomImage()'>Random Image</button>")
+                .append("<button id='likeButton' onclick='toggleLike(currentSrc)'>Like</button>")
                 .append("<button id='slideshowToggle' onclick='toggleSlideshow()'>Start Slideshow</button>")
                 .append("<input type='number' id='intervalInput' placeholder='Interval (s)' min='1' value='5'>");
 

@@ -2,6 +2,7 @@ function showModal(src) {
             const modal = document.getElementById('modal');
             const modalImg = document.getElementById('modalImage');
             const loading = document.getElementById('loading');
+            const likeButton = document.getElementById('likeButton');
 
             modal.style.display = 'flex';
             currentSrc = src;
@@ -9,6 +10,10 @@ function showModal(src) {
             currentIndex = images.indexOf(src) + 1;
             updateImageCount(images.length);
             loadImage(src);
+
+            if (likeButton) {
+                likeButton.classList.toggle('liked', likedImages.includes(src));
+            }
 
             loading.style.display = 'block';
             modalImg.onload = () => {
@@ -331,21 +336,100 @@ function deleteImage() {
                 .catch(error => console.error('Error submitting comment:', error));
         }
 
+let likedImages = [];
+
+function loadLikedImages() {
+    const storedLikes = localStorage.getItem('likedScreenshots');
+    if (storedLikes) {
+        likedImages = JSON.parse(storedLikes);
+        updateLikeButtons();
+        sortGalleryItems();
+    }
+}
+
+function saveLikedImages() {
+    localStorage.setItem('likedScreenshots', JSON.stringify(likedImages));
+}
+
+function toggleLike(imageSrc, event) {
+    if (event) event.stopPropagation();
+
+    const index = likedImages.indexOf(imageSrc);
+    if (index !== -1) {
+        likedImages.splice(index, 1);
+    } else {
+        likedImages.push(imageSrc);
+    }
+
+    saveLikedImages();
+    updateLikeButtons();
+
+    if (currentSrc === imageSrc) {
+        const likeButton = document.getElementById('likeButton');
+        if (likeButton) {
+            likeButton.classList.toggle('liked', likedImages.includes(imageSrc));
+        }
+    }
+
+    sortGalleryItems();
+}
+
+function updateLikeButtons() {
+    document.querySelectorAll('.gallery-item').forEach(item => {
+        const imgSrc = item.querySelector('img').src;
+        const likeButton = item.querySelector('.like-button');
+
+        if (likeButton) {
+            const normalizedSrc = imgSrc.replace(window.location.origin, '');
+            const isLiked = likedImages.includes(imgSrc) || likedImages.includes(normalizedSrc);
+            likeButton.classList.toggle('liked', isLiked);
+        }
+    });
+
+    if (currentSrc) {
+        const modalLikeButton = document.getElementById('likeButton');
+        if (modalLikeButton) {
+            modalLikeButton.classList.toggle('liked', likedImages.includes(currentSrc));
+        }
+    }
+}
+
+function sortGalleryItems() {
+    const gallery = document.querySelector('.gallery');
+    if (!gallery) return;
+
+    const items = Array.from(gallery.children);
+
+    items.sort((a, b) => {
+        const imgA = a.querySelector('img').src.replace(window.location.origin, '');
+        const imgB = b.querySelector('img').src.replace(window.location.origin, '');
+
+        const isLikedA = likedImages.includes(imgA) ? 1 : 0;
+        const isLikedB = likedImages.includes(imgB) ? 1 : 0;
+
+        return isLikedB - isLikedA;
+    });
+
+    gallery.innerHTML = '';
+    items.forEach(item => gallery.appendChild(item));
+}
+
 document.addEventListener('DOMContentLoaded', function() {
-  const thumbnailsContainer = document.getElementById('thumbnails');
-  const modelContainer = document.getElementById('model-left');
+    loadLikedImages();
 
-  if (thumbnailsContainer) {
-    thumbnailsContainer.addEventListener('wheel', function(event) {
-      event.preventDefault();
-      thumbnailsContainer.scrollLeft += event.deltaY;
+    const thumbnailsContainer = document.getElementById('thumbnails');
+    const modelContainer = document.getElementById('model-left');
 
-    }, { passive: false });
-  }
+    if (thumbnailsContainer) {
+        thumbnailsContainer.addEventListener('wheel', function(event) {
+            event.preventDefault();
+            thumbnailsContainer.scrollLeft += event.deltaY;
+        }, { passive: false });
+    }
+
     if (modelContainer) {
         modelContainer.addEventListener('wheel', function(event) {
-        event.preventDefault();
-
+            event.preventDefault();
         }, { passive: false });
     }
 });

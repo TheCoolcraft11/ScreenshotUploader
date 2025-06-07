@@ -624,6 +624,88 @@ input[type="text"] {
   box-shadow: 0 0 0 2px rgba(243, 156, 18, 0.5);
 }
 
+.like-button {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background-color: rgba(0, 0, 0, 0.6);
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  z-index: 10;
+  border: none;
+  color: white;
+  font-size: 24px;
+}
+
+.like-button:hover {
+  transform: scale(1.1);
+  background-color: rgba(0, 0, 0, 0.8);
+}
+
+.like-button.liked {
+  color: #ff6b6b;
+}
+
+.like-button::before {
+  content: "♡";
+}
+
+.like-button.liked::before {
+  content: "♥";
+}
+
+.liked-badge {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  background-color: #ff6b6b;
+  color: white;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: bold;
+  z-index: 10;
+  opacity: 0.9;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+#likeButton {
+  background-color: rgba(80, 80, 80, 0.7);
+  padding: 12px 22px;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+  font-weight: 500;
+  margin: 10px 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#likeButton.liked {
+  background-color: rgba(255, 107, 107, 0.7);
+}
+
+#likeButton:hover {
+  background-color: rgba(255, 107, 107, 0.9);
+  transform: translateY(-2px);
+}
+
+#likeButton::before {
+  content: "♡";
+  margin-right: 5px;
+  font-size: 18px;
+}
+
+#likeButton.liked::before {
+  content: "♥";
+}
+
 @media (max-width: 1024px) {
   #modal-content-wrapper {
     flex-direction: column;
