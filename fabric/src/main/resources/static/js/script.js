@@ -32,6 +32,12 @@ function showModal(src) {
             const modalImg = document.getElementById('modalImage');
             modalImg.src = src;
             modalImg.classList.remove('visible');
+            const likeButton = document.getElementById('likeButton');
+            if (likeButton) {
+                const normalizedSrc = modalImg.src.replace(window.location.origin, '');
+                const isLiked = likedImages.includes(modalImg.src) || likedImages.includes(normalizedSrc);
+                likeButton.classList.toggle('liked', isLiked);
+            }
         }
 
         function hideModal(event) {
