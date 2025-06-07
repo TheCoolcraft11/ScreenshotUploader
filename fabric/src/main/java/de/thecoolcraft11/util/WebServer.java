@@ -184,7 +184,7 @@ public class WebServer {
 
             String mimeType = Files.probeContentType(Paths.get(staticFile.getAbsolutePath()));
             if (mimeType == null) {
-                mimeType = "application/octet-stream";
+                mimeType = getMimeType(path);
             }
 
             byte[] fileContent = Files.readAllBytes(staticFile.toPath());
@@ -196,6 +196,16 @@ public class WebServer {
             }
 
         }
+
+        private static String getMimeType(String filename) {
+            if (filename.endsWith(".css")) return "text/css";
+            if (filename.endsWith(".js")) return "application/javascript";
+            if (filename.endsWith(".html")) return "text/html";
+            if (filename.endsWith(".png")) return "image/png";
+            if (filename.endsWith(".jpg") || filename.endsWith(".jpeg")) return "image/jpeg";
+            return "application/octet-stream";
+        }
+
     }
 
     private static class ScreenshotListHandler implements HttpHandler {

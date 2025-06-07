@@ -174,8 +174,6 @@ public class ReceivePackets {
 
             BufferedImage image = ImageIO.read(new File(outputFile.getAbsolutePath()));
 
-            logger.error(outputFile.getAbsolutePath());
-
             JsonObject jsonObject = getJsonObject(urlString, outputFilePath);
             try {
                 JsonObject webhookJson = JsonParser.parseString(jsonData).getAsJsonObject();
