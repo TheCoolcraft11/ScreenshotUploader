@@ -185,11 +185,11 @@ public class ScreenshotUploaderClient implements ClientModInitializer {
 
             if (hasServerSaved) {
                 String finalServerName = serverName;
-                Text newMessage = Text.translatable("message.screenshot_uploader.shared_saved").styled(style -> style.withClickEvent(new ClickEvent.RunCommand("/open-gallery \"" + finalServerName + "\" \"" + extractUrl(message.getString()) + "\"")).withUnderline(true).withColor(Formatting.AQUA));
+                Text newMessage = Text.translatable("message.screenshot_uploader.shared_saved").styled(style -> style.withClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/open-gallery \"" + finalServerName + "\" \"" + extractUrl(message.getString()) + "\"")).withUnderline(true).withColor(Formatting.AQUA));
 
                 client.inGameHud.getChatHud().addMessage(newMessage);
             } else {
-                Text newMessage = Text.translatable("message.screenshot_uploader.shared").styled(style -> style.withClickEvent(new ClickEvent.RunCommand("/open-screenshot \"" + extractUrl(message.getString()) + "\"")).withUnderline(true).withColor(Formatting.AQUA));
+                Text newMessage = Text.translatable("message.screenshot_uploader.shared").styled(style -> style.withClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/open-screenshot \"" + extractUrl(message.getString()) + "\"")).withUnderline(true).withColor(Formatting.AQUA));
 
                 client.inGameHud.getChatHud().addMessage(newMessage);
             }
@@ -216,9 +216,9 @@ public class ScreenshotUploaderClient implements ClientModInitializer {
         int index = 0;
         int totalKeys = uploadUrls.size();
         for (String key : uploadUrls.keySet()) {
-            uploadMessageString = uploadMessageString.copy().append(Text.literal(key).styled(style -> style.withClickEvent(new ClickEvent.OpenUrl(URI.create(uploadUrls.get(key).get("home"))))
+            uploadMessageString = uploadMessageString.copy().append(Text.literal(key).styled(style -> style.withClickEvent(new ClickEvent(ClickEvent.Action.OPEN_URL, uploadUrls.get(key).get("home")))
                     .withColor(Formatting.AQUA)
-                    .withHoverEvent(new HoverEvent.ShowText(Text.translatable("message.screenshot_uploader.next_upload_server_description", Text.literal(key).styled(style2 -> style2.withColor(Formatting.AQUA)), uploadUrls.get(key).get("upload"), uploadUrls.get(key).get("home"), Text.keybind("key.screenshot_uploader.gallery"))))));
+                    .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, Text.translatable("message.screenshot_uploader.next_upload_server_description", Text.literal(key).styled(style2 -> style2.withColor(Formatting.AQUA)), uploadUrls.get(key).get("upload"), uploadUrls.get(key).get("home"), Text.keybind("key.screenshot_uploader.gallery"))))));
             if (++index < totalKeys) {
                 uploadMessageString = uploadMessageString.copy().append(Text.literal(", ").styled(style -> style.withColor(Formatting.AQUA)));
             }
