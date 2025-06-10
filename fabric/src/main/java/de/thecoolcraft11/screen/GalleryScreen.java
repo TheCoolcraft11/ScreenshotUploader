@@ -11,6 +11,7 @@ import net.minecraft.client.gui.Element;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.client.gui.widget.TextFieldWidget;
+import net.minecraft.client.render.RenderLayer;
 import net.minecraft.client.texture.NativeImage;
 import net.minecraft.client.texture.NativeImageBackedTexture;
 import net.minecraft.text.Text;
@@ -561,7 +562,7 @@ public class GalleryScreen extends Screen {
                 logger.error("Image ID is null for index {}", i);
                 continue;
             }
-            context.drawTexture(imageId, x, y, 0, 0, IMAGE_WIDTH, IMAGE_HEIGHT, IMAGE_WIDTH, IMAGE_HEIGHT);
+            context.drawTexture(RenderLayer::getGuiTextured, imageId, x, y, 0, 0, IMAGE_WIDTH, IMAGE_HEIGHT, IMAGE_WIDTH, IMAGE_HEIGHT);
 
             if (mouseX > x && mouseX < x + IMAGE_WIDTH && mouseY > y && mouseY < y + IMAGE_HEIGHT) {
                 context.fill(x, y, x + IMAGE_WIDTH, y + IMAGE_HEIGHT, 0x80FFFFFF);
@@ -635,7 +636,7 @@ public class GalleryScreen extends Screen {
         int borderWidth = 5;
         context.fill(x - borderWidth, y - borderWidth, x + imageWidth + borderWidth, y + imageHeight + borderWidth, 0xFFFFFFFF);
 
-        context.drawTexture(clickedImageId, x, y, 0, 0, imageWidth, imageHeight, imageWidth, imageHeight);
+        context.drawTexture(RenderLayer::getGuiTextured, clickedImageId, x, y, 0, 0, imageWidth, imageHeight, imageWidth, imageHeight);
 
 
         int sidebarWidth = 300;
@@ -1077,7 +1078,7 @@ public class GalleryScreen extends Screen {
                 try {
                     NativeImage image = NativeImage.read(Files.newInputStream(path));
                     Identifier textureId = Identifier.of("gallery", "textures/" + path.getFileName().toString());
-                    MinecraftClient.getInstance().getTextureManager().registerTexture(textureId, new NativeImageBackedTexture(image));
+                    MinecraftClient.getInstance().getTextureManager().registerTexture(textureId, new NativeImageBackedTexture(String::new, image));
                     imageIds.add(textureId);
 
                     String imagePathString = path.toString();
@@ -1413,7 +1414,7 @@ public class GalleryScreen extends Screen {
                     try {
                         NativeImage image = NativeImage.read(Files.newInputStream(path));
                         textureId = Identifier.of("gallery", "textures/" + path.getFileName().toString());
-                        MinecraftClient.getInstance().getTextureManager().registerTexture(textureId, new NativeImageBackedTexture(image));
+                        MinecraftClient.getInstance().getTextureManager().registerTexture(textureId, new NativeImageBackedTexture(String::new, image));
                     } catch (IOException e) {
                         logger.error("Failed to load image during sort '{}': {}", path, e.getMessage());
                     }

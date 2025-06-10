@@ -6,6 +6,7 @@ import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.widget.ButtonWidget;
+import net.minecraft.client.render.RenderLayer;
 import net.minecraft.client.texture.NativeImage;
 import net.minecraft.client.texture.NativeImageBackedTexture;
 import net.minecraft.text.Text;
@@ -133,12 +134,12 @@ public class AlbumScreen extends Screen {
         int iconX = x + (ALBUM_WIDTH - iconSize) / 2;
         int iconY = y + (ALBUM_HEIGHT - iconSize) / 2;
 
-        int r = (color >> 16) & 0xFF;
-        int g = (color >> 8) & 0xFF;
-        int b = color & 0xFF;
-        context.setShaderColor(r / 255.0f, g / 255.0f, b / 255.0f, 1.0f);
-        context.drawTexture(FOLDER_ICON, iconX, iconY, 0, 0, iconSize, iconSize, iconSize, iconSize);
-        context.setShaderColor(255 / 255.0f, 255 / 255.0f, 255 / 255.0f, 1.0f);
+        //int r = (color >> 16) & 0xFF;
+        //int g = (color >> 8) & 0xFF;
+        //int b = color & 0xFF;
+        //context.setShaderColor(r / 255.0f, g / 255.0f, b / 255.0f, 1.0f);
+        context.drawTexture(RenderLayer::getGuiTextured, FOLDER_ICON, iconX, iconY, 0, 0, iconSize, iconSize, iconSize, iconSize, color);
+        //context.setShaderColor(255 / 255.0f, 255 / 255.0f, 255 / 255.0f, 1.0f);
         Identifier coverId = coverImageIds.get(album.getCoverScreenshotName());
         if (coverId != null) {
             int coverWidth = (int) (ALBUM_WIDTH * 0.65);
@@ -148,13 +149,13 @@ public class AlbumScreen extends Screen {
             int coverX = (x + (ALBUM_WIDTH - coverWidth) / 2) + coverOffsetX;
             int coverY = (y + (ALBUM_HEIGHT - coverHeight) / 2) - coverOffsetY;
 
-            context.drawTexture(coverId, coverX, coverY, 0, 0, coverWidth, coverHeight, coverWidth, coverHeight);
+            context.drawTexture(RenderLayer::getGuiTextured, coverId, coverX, coverY, 0, 0, coverWidth, coverHeight, coverWidth, coverHeight);
         }
         boolean isHovering = mouseX >= x && mouseX <= x + ALBUM_WIDTH && mouseY >= y && mouseY <= y + ALBUM_HEIGHT;
         if (!isHovering) {
-            context.setShaderColor(r / 255.0f, g / 255.0f, b / 255.0f, 1.0f);
-            context.drawTexture(FOLDER_ICON_COVER, iconX, iconY, 0, 0, iconSize, iconSize, iconSize, iconSize);
-            context.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
+            //context.setShaderColor(r / 255.0f, g / 255.0f, b / 255.0f, 1.0f);
+            context.drawTexture(RenderLayer::getGuiTextured, FOLDER_ICON_COVER, iconX, iconY, 0, 0, iconSize, iconSize, iconSize, iconSize, color);
+            //context.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
         }
 
         int titleX = x + 5;
@@ -240,9 +241,10 @@ public class AlbumScreen extends Screen {
                 try {
                     NativeImage image = NativeImage.read(Files.newInputStream(file.toPath()));
                     MinecraftClient.getInstance().execute(() -> {
-                        NativeImageBackedTexture texture = new NativeImageBackedTexture(image);
-                        Identifier id = MinecraftClient.getInstance().getTextureManager().registerDynamicTexture(
-                                "album_cover/" + album.getUuid().toString(), texture);
+                        NativeImageBackedTexture texture = new NativeImageBackedTexture(String::new, image);
+                        MinecraftClient.getInstance().getTextureManager().registerTexture(
+                                Identifier.of("album_cover/" + album.getUuid().toString()), texture);
+                        Identifier id = Identifier.of("album_cover/" + album.getUuid().toString());
                         coverImageIds.put(coverName, id);
                     });
                 } catch (IOException e) {

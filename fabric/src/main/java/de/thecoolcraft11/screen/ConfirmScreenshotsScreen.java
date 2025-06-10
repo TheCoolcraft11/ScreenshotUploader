@@ -1,10 +1,9 @@
 package de.thecoolcraft11.screen;
 
-
-import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.widget.ButtonWidget;
+import net.minecraft.client.render.RenderLayer;
 import net.minecraft.client.texture.NativeImage;
 import net.minecraft.client.texture.NativeImageBackedTexture;
 import net.minecraft.text.Text;
@@ -100,11 +99,12 @@ public class ConfirmScreenshotsScreen extends Screen {
         if (textureId != null) {
             context.fill(imageX - 2, imageY - 2, imageX + imageWidth + 2, imageY + imageHeight + 2, 0xFF555555);
 
-            RenderSystem.setShaderTexture(0, textureId);
-            context.drawTexture(textureId, imageX, imageY, 0, 0, imageWidth, imageHeight, imageWidth, imageHeight);
+            //RenderSystem.setShaderTexture(0, textureId);
+            context.drawTexture(RenderLayer::getGuiTextured, textureId, imageX, imageY, 0, 0, imageWidth, imageHeight, imageWidth, imageHeight);
         } else {
             if (image != null && client != null) {
-                textureId = client.getTextureManager().registerDynamicTexture("edit_image", new NativeImageBackedTexture(image));
+                client.getTextureManager().registerTexture(Identifier.of("edit_image"), new NativeImageBackedTexture(String::new, image));
+                textureId = Identifier.of("edit_image");
             }
         }
     }
@@ -114,7 +114,7 @@ public class ConfirmScreenshotsScreen extends Screen {
             NativeImage imageCopy = new NativeImage(newImage.getWidth(), newImage.getHeight(), false);
             for (int y = 0; y < newImage.getHeight(); y++) {
                 for (int x = 0; x < newImage.getWidth(); x++) {
-                    imageCopy.setColor(x, y, newImage.getColor(x, y));
+                    imageCopy.setColorArgb(x, y, newImage.getColorArgb(x, y));
                 }
             }
             image = imageCopy;

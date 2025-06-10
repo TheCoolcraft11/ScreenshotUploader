@@ -1,13 +1,12 @@
 package de.thecoolcraft11.screen;
 
-
-import com.mojang.blaze3d.systems.RenderSystem;
 import de.thecoolcraft11.config.ConfigManager;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.Element;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.client.gui.widget.TextFieldWidget;
+import net.minecraft.client.render.RenderLayer;
 import net.minecraft.client.texture.NativeImage;
 import net.minecraft.client.texture.NativeImageBackedTexture;
 import net.minecraft.text.Text;
@@ -169,7 +168,7 @@ public class EditScreen extends Screen {
                 .build());
 
         startY += buttonHeight + padding;
-        addDrawableChild(ButtonWidget.builder(Text.translatable("gui.screenshot_uploader.editor.blur"), button -> applyBlur())
+        addDrawableChild(ButtonWidget.builder(Text.translatable("gui.screenshot_uploader.editor.blur"), button -> applyBlurFilter())
                 .dimensions(startX, startY, buttonWidth, buttonHeight)
                 .build());
 
@@ -222,7 +221,7 @@ public class EditScreen extends Screen {
                     int color = textImage.getRGB(x, y);
 
                     if ((color >> 24) != 0x00) {
-                        image.setColor(x, y, color);
+                        image.setColorArgb(x, y, color);
                     }
                 }
             }
@@ -276,7 +275,7 @@ public class EditScreen extends Screen {
         NativeImage croppedImage = new NativeImage(width, height, false);
         for (int y = 0; y < height; y++) {
             for (int x = 0; x < width; x++) {
-                croppedImage.setColor(x, y, image.getColor(x1 + x, y1 + y));
+                croppedImage.setColorArgb(x, y, image.getColorArgb(x1 + x, y1 + y));
             }
         }
 
@@ -317,7 +316,7 @@ public class EditScreen extends Screen {
 
         for (int y = 0; y < height; y++) {
             for (int x = 0; x < width; x++) {
-                image.setColor(x1 + x, y1 + y, fillColor);
+                image.setColorArgb(x1 + x, y1 + y, fillColor);
             }
         }
 
@@ -335,7 +334,7 @@ public class EditScreen extends Screen {
         NativeImage rotatedImage = new NativeImage(image.getHeight(), image.getWidth(), false);
         for (int y = 0; y < image.getHeight(); y++) {
             for (int x = 0; x < image.getWidth(); x++) {
-                rotatedImage.setColor(image.getHeight() - y - 1, x, image.getColor(x, y));
+                rotatedImage.setColorArgb(image.getHeight() - y - 1, x, image.getColorArgb(x, y));
             }
         }
 
@@ -351,10 +350,10 @@ public class EditScreen extends Screen {
 
         for (int y = 0; y < image.getHeight(); y++) {
             for (int x = 0; x < image.getWidth(); x++) {
-                int color = image.getColor(x, y);
+                int color = image.getColorArgb(x, y);
 
                 int newColor = getNewColor(color);
-                image.setColor(x, y, newColor);
+                image.setColorArgb(x, y, newColor);
             }
         }
 
@@ -402,7 +401,7 @@ public class EditScreen extends Screen {
             NativeImage imageCopy = new NativeImage(image.getWidth(), image.getHeight(), false);
             for (int y = 0; y < image.getHeight(); y++) {
                 for (int x = 0; x < image.getWidth(); x++) {
-                    imageCopy.setColor(x, y, image.getColor(x, y));
+                    imageCopy.setColorArgb(x, y, image.getColorArgb(x, y));
                 }
             }
             editHistory.push(imageCopy);
@@ -414,7 +413,7 @@ public class EditScreen extends Screen {
             NativeImage imageCopy = new NativeImage(newImage.getWidth(), newImage.getHeight(), false);
             for (int y = 0; y < newImage.getHeight(); y++) {
                 for (int x = 0; x < newImage.getWidth(); x++) {
-                    imageCopy.setColor(x, y, newImage.getColor(x, y));
+                    imageCopy.setColorArgb(x, y, newImage.getColorArgb(x, y));
                 }
             }
             image = imageCopy;
@@ -440,7 +439,7 @@ public class EditScreen extends Screen {
 
         for (int y = 0; y < image.getHeight(); y++) {
             for (int x = 0; x < image.getWidth(); x++) {
-                int color = image.getColor(x, y);
+                int color = image.getColorArgb(x, y);
 
                 int r = (color >> 16) & 0xFF;
                 int g = (color >> 8) & 0xFF;
@@ -459,7 +458,7 @@ public class EditScreen extends Screen {
                 b = Math.min(Math.max(b, 0), 255);
 
                 int newColor = (color & 0xFF000000) | (r << 16) | (g << 8) | b;
-                image.setColor(x, y, newColor);
+                image.setColorArgb(x, y, newColor);
             }
         }
 
@@ -473,7 +472,7 @@ public class EditScreen extends Screen {
 
         for (int y = 0; y < image.getHeight(); y++) {
             for (int x = 0; x < image.getWidth(); x++) {
-                int color = image.getColor(x, y);
+                int color = image.getColorArgb(x, y);
 
                 int r = (color >> 16) & 0xFF;
                 int g = (color >> 8) & 0xFF;
@@ -482,7 +481,7 @@ public class EditScreen extends Screen {
                 int gray = (r + g + b) / 3;
 
                 int newColor = (color & 0xFF000000) | (gray << 16) | (gray << 8) | gray;
-                image.setColor(x, y, newColor);
+                image.setColorArgb(x, y, newColor);
             }
         }
 
@@ -498,7 +497,7 @@ public class EditScreen extends Screen {
 
         for (int y = 0; y < image.getHeight(); y++) {
             for (int x = 0; x < image.getWidth(); x++) {
-                int color = image.getColor(x, y);
+                int color = image.getColorArgb(x, y);
 
                 int a = (color >> 24) & 0xFF;
                 if (a == 0) a = 255;
@@ -509,7 +508,7 @@ public class EditScreen extends Screen {
 
                 int newColor = getNewHueColor(r, g, b, a, hueShiftAmount);
 
-                image.setColor(x, y, newColor);
+                image.setColorArgb(x, y, newColor);
             }
         }
 
@@ -528,7 +527,7 @@ public class EditScreen extends Screen {
     }
 
 
-    private void applyBlur() {
+    private void applyBlurFilter() {
         if (image == null || cropStartX < 0 || cropStartY < 0 || cropEndX < 0 || cropEndY < 0) return;
 
         saveStateForUndo();
@@ -551,7 +550,7 @@ public class EditScreen extends Screen {
 
             for (int y = 0; y < image.getHeight(); y++) {
                 for (int x = 0; x < image.getWidth(); x++) {
-                    blurredImage.setColor(x, y, image.getColor(x, y));
+                    blurredImage.setColorArgb(x, y, image.getColorArgb(x, y));
                 }
             }
 
@@ -566,7 +565,7 @@ public class EditScreen extends Screen {
                             int ny = y + dy;
 
                             if (nx >= 0 && nx < image.getWidth() && ny >= 0 && ny < image.getHeight()) {
-                                int color = image.getColor(nx, ny);
+                                int color = image.getColorArgb(nx, ny);
                                 colorSumR += (color >> 16) & 0xFF;
                                 colorSumG += (color >> 8) & 0xFF;
                                 colorSumB += color & 0xFF;
@@ -580,7 +579,7 @@ public class EditScreen extends Screen {
                     int avgB = colorSumB / count;
 
                     int avgColor = (0xFF << 24) | (avgR << 16) | (avgG << 8) | avgB;
-                    blurredImage.setColor(x, y, avgColor);
+                    blurredImage.setColorArgb(x, y, avgColor);
                 }
             }
 
@@ -613,13 +612,13 @@ public class EditScreen extends Screen {
 
                 for (int dy = -1; dy <= 1; dy++) {
                     for (int dx = -1; dx <= 1; dx++) {
-                        colorSum += image.getColor(x + dx, y + dy);
+                        colorSum += image.getColorArgb(x + dx, y + dy);
                         count++;
                     }
                 }
 
                 int avgColor = colorSum / count;
-                blurredImage.setColor(x, y, avgColor);
+                blurredImage.setColorArgb(x, y, avgColor);
             }
         }
 
@@ -636,14 +635,14 @@ public class EditScreen extends Screen {
 
         for (int y = 0; y < image.getHeight(); y++) {
             for (int x = 0; x < image.getWidth(); x++) {
-                int color = image.getColor(x, y);
+                int color = image.getColorArgb(x, y);
 
                 int r = 255 - ((color >> 16) & 0xFF);
                 int g = 255 - ((color >> 8) & 0xFF);
                 int b = 255 - (color & 0xFF);
 
                 int newColor = (color & 0xFF000000) | (r << 16) | (g << 8) | b;
-                image.setColor(x, y, newColor);
+                image.setColorArgb(x, y, newColor);
             }
         }
 
@@ -659,7 +658,7 @@ public class EditScreen extends Screen {
 
         for (int y = 0; y < image.getHeight(); y++) {
             for (int x = 0; x < image.getWidth(); x++) {
-                int color = image.getColor(x, y);
+                int color = image.getColorArgb(x, y);
 
                 int r = (color >> 16) & 0xFF;
                 int g = (color >> 8) & 0xFF;
@@ -670,7 +669,7 @@ public class EditScreen extends Screen {
                 b = (b / step) * step;
 
                 int newColor = (color & 0xFF000000) | (r << 16) | (g << 8) | b;
-                image.setColor(x, y, newColor);
+                image.setColorArgb(x, y, newColor);
             }
         }
 
@@ -688,13 +687,13 @@ public class EditScreen extends Screen {
 
         for (int y = 0; y < image.getHeight(); y++) {
             for (int x = 0; x < image.getWidth(); x++) {
-                int color = image.getColor(x, y);
+                int color = image.getColorArgb(x, y);
 
                 int dx = x - centerX;
                 int dy = y - centerY;
                 int distance = (int) Math.sqrt(dx * dx + dy * dy);
                 int newColor = getNewVignetteColor(distance, (float) maxDistance, color);
-                image.setColor(x, y, newColor);
+                image.setColorArgb(x, y, newColor);
             }
         }
 
@@ -724,11 +723,11 @@ public class EditScreen extends Screen {
 
         for (int y = 1; y < image.getHeight() - 1; y++) {
             for (int x = 1; x < image.getWidth() - 1; x++) {
-                int color1 = image.getColor(x, y);
-                int color2 = image.getColor(x + 1, y + 1);
+                int color1 = image.getColorArgb(x, y);
+                int color2 = image.getColorArgb(x + 1, y + 1);
 
                 int newColor = getNewColor(color1, color2);
-                embossedImage.setColor(x, y, newColor);
+                embossedImage.setColorArgb(x, y, newColor);
             }
         }
 
@@ -761,7 +760,7 @@ public class EditScreen extends Screen {
 
         for (int y = 0; y < image.getHeight(); y++) {
             for (int x = 0; x < image.getWidth(); x++) {
-                int color = image.getColor(x, y);
+                int color = image.getColorArgb(x, y);
 
                 int r = (color >> 16) & 0xFF;
                 int g = (color >> 8) & 0xFF;
@@ -772,7 +771,7 @@ public class EditScreen extends Screen {
                 if (b > ConfigManager.getClientConfig().solarizeThreshold) b = 255 - b;
 
                 int newColor = (color & 0xFF000000) | (r << 16) | (g << 8) | b;
-                image.setColor(x, y, newColor);
+                image.setColorArgb(x, y, newColor);
             }
         }
 
@@ -786,7 +785,7 @@ public class EditScreen extends Screen {
 
         for (int y = 0; y < image.getHeight(); y++) {
             for (int x = 0; x < image.getWidth(); x++) {
-                int color = image.getColor(x, y);
+                int color = image.getColorArgb(x, y);
 
                 int r = (color >> 16) & 0xFF;
                 int g = (color >> 8) & 0xFF;
@@ -801,7 +800,7 @@ public class EditScreen extends Screen {
                 b = Math.min(Math.max(b, 0), 255);
 
                 int newColor = (color & 0xFF000000) | (r << 16) | (g << 8) | b;
-                image.setColor(x, y, newColor);
+                image.setColorArgb(x, y, newColor);
             }
         }
 
@@ -843,7 +842,7 @@ public class EditScreen extends Screen {
                 for (int x = 0; x < watermarkImage.getWidth(); x++) {
                     int color = watermarkImage.getRGB(x, y);
                     if ((color >> 24) != 0x00) {
-                        image.setColor(x, y, color);
+                        image.setColorArgb(x, y, color);
                     }
                 }
             }
@@ -852,7 +851,7 @@ public class EditScreen extends Screen {
             if (playerSkin != null) {
                 for (int y = 0; y < 8; y++) {
                     for (int x = 0; x < 8; x++) {
-                        int skinColor = playerSkin.getColor(8 + x, 8 + y);
+                        int skinColor = playerSkin.getColorArgb(8 + x, 8 + y);
 
                         int scale = headSize / 8;
                         for (int sy = 0; sy < scale; sy++) {
@@ -861,7 +860,7 @@ public class EditScreen extends Screen {
                                 int drawY = headY + y * scale + sy;
 
                                 if (drawY >= 0 && drawY < image.getHeight()) {
-                                    image.setColor(drawX, drawY, skinColor);
+                                    image.setColorArgb(drawX, drawY, skinColor);
                                 }
                             }
                         }
@@ -870,7 +869,7 @@ public class EditScreen extends Screen {
 
                 for (int y = 0; y < 8; y++) {
                     for (int x = 0; x < 8; x++) {
-                        int overlayColor = playerSkin.getColor(40 + x, 8 + y);
+                        int overlayColor = playerSkin.getColorArgb(40 + x, 8 + y);
 
                         if ((overlayColor >> 24) != 0x00) {
                             int scale = headSize / 8;
@@ -880,7 +879,7 @@ public class EditScreen extends Screen {
                                     int drawY = headY + y * scale + sy;
 
                                     if (drawY >= 0 && drawY < image.getHeight()) {
-                                        image.setColor(drawX, drawY, overlayColor);
+                                        image.setColorArgb(drawX, drawY, overlayColor);
                                     }
                                 }
                             }
@@ -922,12 +921,13 @@ public class EditScreen extends Screen {
         textInputField.render(context, mouseX, mouseY, delta);
 
         if (textureId != null) {
-            RenderSystem.setShaderTexture(0, textureId);
-            context.drawTexture(textureId, width / 4, height / 4, 0, 0, width / 2, height / 2, width / 2, height / 2);
+            //RenderSystem.setShaderTexture(0, image);
+            context.drawTexture(RenderLayer::getGuiTextured, textureId, width / 4, height / 4, 0, 0, width / 2, height / 2, width / 2, height / 2);
         } else {
             if (image != null) {
                 if (client != null) {
-                    textureId = client.getTextureManager().registerDynamicTexture("edit_image", new NativeImageBackedTexture(image));
+                    client.getTextureManager().registerTexture(Identifier.of("edit_image"), new NativeImageBackedTexture(String::new, image));
+                    textureId = Identifier.of("edit_image");
                 }
             }
         }

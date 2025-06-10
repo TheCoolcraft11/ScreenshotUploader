@@ -3,7 +3,6 @@ package de.thecoolcraft11.screen;
 import com.google.gson.*;
 import com.mojang.authlib.properties.Property;
 import com.mojang.authlib.yggdrasil.ProfileResult;
-import com.mojang.blaze3d.systems.RenderSystem;
 import de.thecoolcraft11.config.ConfigManager;
 import de.thecoolcraft11.packet.CommentPayload;
 import de.thecoolcraft11.packet.DeletionPacket;
@@ -15,6 +14,7 @@ import net.minecraft.client.gui.Element;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.client.gui.widget.TextFieldWidget;
+import net.minecraft.client.render.RenderLayer;
 import net.minecraft.client.texture.NativeImage;
 import net.minecraft.client.texture.NativeImageBackedTexture;
 import net.minecraft.text.Text;
@@ -705,8 +705,8 @@ public class WebGalleryScreen extends Screen {
             context.fill(x - 2, y - 2, x + IMAGE_WIDTH + 2, y + IMAGE_HEIGHT + 2, 0xFF888888);
 
             Identifier imageId = imageIds.get(i);
-            RenderSystem.setShaderTexture(0, imageId);
-            context.drawTexture(imageId, x, y, 0, 0, IMAGE_WIDTH, IMAGE_HEIGHT, IMAGE_WIDTH, IMAGE_HEIGHT);
+            //RenderSystem.setShaderTexture(0, imageId);
+            context.drawTexture(RenderLayer::getGuiTextured, imageId, x, y, 0, 0, IMAGE_WIDTH, IMAGE_HEIGHT, IMAGE_WIDTH, IMAGE_HEIGHT);
 
             if (mouseX > x && mouseX < x + IMAGE_WIDTH && mouseY > y && mouseY < y + IMAGE_HEIGHT) {
                 context.fill(x, y, x + IMAGE_WIDTH, y + IMAGE_HEIGHT, 0x80FFFFFF);
@@ -800,8 +800,8 @@ public class WebGalleryScreen extends Screen {
                     int headX = x + 5;
                     int headY = y + 5;
 
-                    RenderSystem.setShaderTexture(0, playerHeadId);
-                    context.drawTexture(playerHeadId, headX, headY, 0, 0, headSize, headSize, headSize, headSize);
+                    //RenderSystem.setShaderTexture(0, playerHeadId);
+                    context.drawTexture(RenderLayer::getGuiTextured, playerHeadId, headX, headY, 0, 0, headSize, headSize, headSize, headSize);
                 }
             }
         }
@@ -846,10 +846,10 @@ public class WebGalleryScreen extends Screen {
 
         int borderWidth = 5;
         context.fill(x - borderWidth, y - borderWidth, x + imageWidth + borderWidth, y + imageHeight + borderWidth, 0xFFFFFFFF);
-        RenderSystem.setShaderTexture(0, clickedImageId);
-        RenderSystem.enableBlend();
-        context.drawTexture(clickedImageId, x, y, 0, 0, imageWidth, imageHeight, imageWidth, imageHeight);
-        RenderSystem.disableBlend();
+        //RenderSystem.setShaderTexture(0, clickedImageId);
+        //RenderSystem.enableBlend();
+        context.drawTexture(RenderLayer::getGuiTextured, clickedImageId, x, y, 0, 0, imageWidth, imageHeight, imageWidth, imageHeight);
+        //RenderSystem.disableBlend();
 
         int sidebarWidth = 300;
         int sidebarHeight = imageHeight;
@@ -894,8 +894,8 @@ public class WebGalleryScreen extends Screen {
 
                 if (playerHeadId != null) {
 
-                    RenderSystem.setShaderTexture(0, playerHeadId);
-                    context.drawTexture(playerHeadId, (int) (headX + ((headSize - headSize * 0.25) / 2)), (int) (headY + ((headSize - headSize * 0.25) / 2)), 0, 0, (int) (headSize - headSize * 0.25), (int) (headSize - headSize * 0.25), (int) (headSize - headSize * 0.25), (int) (headSize - headSize * 0.25));
+                    //RenderSystem.setShaderTexture(0, playerHeadId);
+                    context.drawTexture(RenderLayer::getGuiTextured, playerHeadId, (int) (headX + ((headSize - headSize * 0.25) / 2)), (int) (headY + ((headSize - headSize * 0.25) / 2)), 0, 0, (int) (headSize - headSize * 0.25), (int) (headSize - headSize * 0.25), (int) (headSize - headSize * 0.25), (int) (headSize - headSize * 0.25));
                 }
                 context.drawText(client.textRenderer, Text.literal(playerName + ": " + playerComment), headX + headSize + 5, commentListY, 0xFFFFFF, false);
             }
@@ -1003,7 +1003,7 @@ public class WebGalleryScreen extends Screen {
                         Identifier textureId = Identifier.of("webimage", "temp/" + imageUrl.hashCode());
                         if (MinecraftClient.getInstance() != null) {
                             MinecraftClient.getInstance().getTextureManager().registerTexture(textureId,
-                                    new NativeImageBackedTexture(finalLoadedImage));
+                                    new NativeImageBackedTexture(String::new, finalLoadedImage));
                             imageIds.add(textureId);
                         } else {
                             logger.error("Failed to get client while loading web image!");
@@ -1050,7 +1050,7 @@ public class WebGalleryScreen extends Screen {
                                         if (MinecraftClient.getInstance() != null) {
                                             newImagePaths.add(imageUrl);
                                             MinecraftClient.getInstance().getTextureManager().registerTexture(textureId,
-                                                    new NativeImageBackedTexture(finalLoadedImage));
+                                                    new NativeImageBackedTexture(String::new, finalLoadedImage));
                                             imageIds.add(textureId);
                                         } else {
                                             logger.error("Failed to get client while saving the web image!");
@@ -1086,7 +1086,7 @@ public class WebGalleryScreen extends Screen {
                      NativeImage loadedImage = NativeImage.read(fileInputStream)) {
                     Identifier textureId = Identifier.of("webimage", "head/" + imageUrl.hashCode());
                     if (MinecraftClient.getInstance() != null) {
-                        MinecraftClient.getInstance().getTextureManager().registerTexture(textureId, new NativeImageBackedTexture(loadedImage));
+                        MinecraftClient.getInstance().getTextureManager().registerTexture(textureId, new NativeImageBackedTexture(String::new, loadedImage));
                     } else {
                         System.err.println("Failed to get client while loading web image!");
                     }
@@ -1132,7 +1132,7 @@ public class WebGalleryScreen extends Screen {
                                         int blue = rgb & 0xFF;
 
                                         int argb = (alpha << 24) | (red << 16) | (green << 8) | blue;
-                                        nativeImage.setColor(x, y, argb);
+                                        nativeImage.setColorArgb(x, y, argb);
                                     }
                                 }
 
@@ -1140,7 +1140,7 @@ public class WebGalleryScreen extends Screen {
                                      NativeImage loadedImage = NativeImage.read(fileInputStream)) {
                                     Identifier textureId = Identifier.of("webimage", "head/" + imageUrl.hashCode());
                                     if (MinecraftClient.getInstance() != null) {
-                                        MinecraftClient.getInstance().getTextureManager().registerTexture(textureId, new NativeImageBackedTexture(loadedImage));
+                                        MinecraftClient.getInstance().getTextureManager().registerTexture(textureId, new NativeImageBackedTexture(String::new, loadedImage));
                                     } else {
                                         System.err.println("Failed to get client while saving the web image!");
                                     }

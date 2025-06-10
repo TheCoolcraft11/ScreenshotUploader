@@ -1,9 +1,9 @@
 package de.thecoolcraft11.screen;
 
-import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
+import net.minecraft.client.render.RenderLayer;
 import net.minecraft.client.texture.NativeImage;
 import net.minecraft.client.texture.NativeImageBackedTexture;
 import net.minecraft.text.Text;
@@ -66,7 +66,7 @@ public class ScreenshotScreen extends Screen {
                      NativeImage loadedImage = NativeImage.read(fileInputStream)) {
                     Identifier textureId = Identifier.of("webimage", "temp/" + imageUrl.hashCode());
                     if (MinecraftClient.getInstance() != null) {
-                        MinecraftClient.getInstance().getTextureManager().registerTexture(textureId, new NativeImageBackedTexture(loadedImage));
+                        MinecraftClient.getInstance().getTextureManager().registerTexture(textureId, new NativeImageBackedTexture(String::new, loadedImage));
                         screenshotIdentifier = textureId;
                     }
                 }
@@ -106,7 +106,7 @@ public class ScreenshotScreen extends Screen {
                                         int blue = rgb & 0xFF;
 
                                         int argb = (alpha << 24) | (red << 16) | (green << 8) | blue;
-                                        nativeImage.setColor(x, y, argb);
+                                        nativeImage.setColorArgb(x, y, argb);
                                     }
                                 }
 
@@ -114,7 +114,7 @@ public class ScreenshotScreen extends Screen {
                                      NativeImage loadedImage = NativeImage.read(fileInputStream)) {
                                     Identifier textureId = Identifier.of("webimage", "temp/" + imageUrl.hashCode());
                                     if (MinecraftClient.getInstance() != null) {
-                                        MinecraftClient.getInstance().getTextureManager().registerTexture(textureId, new NativeImageBackedTexture(loadedImage));
+                                        MinecraftClient.getInstance().getTextureManager().registerTexture(textureId, new NativeImageBackedTexture(String::new, loadedImage));
                                     }
                                 }
                             }
@@ -144,10 +144,10 @@ public class ScreenshotScreen extends Screen {
 
         int borderWidth = 5;
         context.fill(x - borderWidth, y - borderWidth, x + imageWidth + borderWidth, y + imageHeight + borderWidth, 0xFFFFFFFF);
-        RenderSystem.setShaderTexture(0, clickedImageId);
-        RenderSystem.enableBlend();
-        context.drawTexture(clickedImageId, x, y, 0, 0, imageWidth, imageHeight, imageWidth, imageHeight);
-        RenderSystem.disableBlend();
+        //RenderSystem.setShaderTexture(0, clickedImageId);
+        //RenderSystem.enableBlend();
+        context.drawTexture(RenderLayer::getGuiTextured ,clickedImageId, x, y, 0, 0, imageWidth, imageHeight, imageWidth, imageHeight);
+        //RenderSystem.disableBlend();
 
 
     }

@@ -158,6 +158,7 @@ public class ScreenshotUploaderClient implements ClientModInitializer {
                     URI savedEntry = new URI(ReceivePackets.homeSiteAddress);
                     URI messageEntry = new URI(Objects.requireNonNull(extractUrl(message.getString())));
 
+                    if(savedEntry.getHost() == null || messageEntry.getHost() == null) return;
                     if (savedEntry.getHost().equals(messageEntry.getHost())) {
                         serverName = ReceivePackets.gallerySiteAddress;
                         hasServerSaved = true;
