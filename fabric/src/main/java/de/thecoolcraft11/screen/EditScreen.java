@@ -377,10 +377,22 @@ public class EditScreen extends Screen {
     }
 
     private void saveImage() {
+        if(image != null) {
+            NativeImage newImage = new NativeImage(image.getWidth(), image.getHeight(), false);
+            for (int y = 0; y < image.getHeight(); y++) {
+                for (int x = 0; x < image.getWidth(); x++) {
+                    newImage.setColorArgb(x, y, image.getColorArgb(x, y));
+                }
+            }
+            image.close();
+            image = newImage;
+        }
         if (imagePath != null) {
             try {
-                image.writeTo(imagePath);
-                logger.info("Image saved: {}", imagePath);
+                if (image != null) {
+                    image.writeTo(imagePath);
+                    logger.info("Image saved: {}", imagePath);
+                }
                 textureId = null;
                 if (client != null) {
                     client.getTextureManager().destroyTexture(textureId);
@@ -393,6 +405,12 @@ public class EditScreen extends Screen {
             if (client != null) {
                 client.getTextureManager().destroyTexture(textureId);
             }
+        }
+        if(image != null) {
+            if (client != null) {
+                client.getTextureManager().registerTexture(textureId, new NativeImageBackedTexture(String::new, image));
+            }
+            logger.info("Image texture registered: {}", textureId);
         }
     }
 
