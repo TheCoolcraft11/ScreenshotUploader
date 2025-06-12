@@ -1078,7 +1078,9 @@ public class GalleryScreen extends Screen {
                 try {
                     NativeImage image = NativeImage.read(Files.newInputStream(path));
                     Identifier textureId = Identifier.of("gallery", "textures/" + path.getFileName().toString());
-                    MinecraftClient.getInstance().getTextureManager().registerTexture(textureId, new NativeImageBackedTexture(String::new, image));
+                    if (client != null) {
+                        client.execute(() -> client.getTextureManager().registerTexture(textureId, new NativeImageBackedTexture(String::new, image)));
+                    }
                     imageIds.add(textureId);
 
                     String imagePathString = path.toString();
