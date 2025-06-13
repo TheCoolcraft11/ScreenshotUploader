@@ -6,6 +6,7 @@ import de.thecoolcraft11.config.ConfigManager;
 import de.thecoolcraft11.event.KeyInputHandler;
 import de.thecoolcraft11.screen.ConfirmScreenshotsScreen;
 import de.thecoolcraft11.screen.EditScreen;
+import de.thecoolcraft11.screen.GalleryScreen;
 import de.thecoolcraft11.util.ErrorMessages;
 import de.thecoolcraft11.util.ReceivePackets;
 import de.thecoolcraft11.util.ScreenshotDataHelper;
@@ -31,6 +32,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import java.io.File;
 import java.net.URI;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
@@ -77,6 +79,7 @@ public abstract class ScreenshotMixin {
                 initializeUpload(nativeImage_1);
             }
 
+            GalleryScreen.addNewScreenshot(file_1.getAbsoluteFile().toPath());
         }
     }
 
@@ -133,6 +136,12 @@ public abstract class ScreenshotMixin {
                             client.inGameHud.getChatHud().addMessage(Text.translatable("message.screenshot_uploader.screenshot_deleted", filename).styled(style -> style.withColor(Formatting.RED)));
                         } else {
                             logger.error("Failed to delete the screenshot file: {}", screenshotFile.getAbsolutePath());
+                        }
+
+                        Path screenshotPath = Path.of(screenshotFile.getAbsolutePath());
+                        if(GalleryScreen.getNewScreenshots().contains(screenshotPath))
+                        {
+                            GalleryScreen.removeNewScreenshot(screenshotPath);
                         }
 
                     } catch (Exception e) {

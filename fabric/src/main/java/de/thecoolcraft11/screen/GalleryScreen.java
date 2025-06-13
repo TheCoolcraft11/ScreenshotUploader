@@ -90,6 +90,12 @@ public class GalleryScreen extends Screen {
 
     private static UUID albumUUID;
 
+    private static final List<Path> newScreenshots = new ArrayList<>();
+
+    private int starY = 0;
+    private boolean goingUp = true;
+
+
     public GalleryScreen() {
         super(Text.translatable("gui.screenshot_uploader.screenshot_gallery.title"));
         albumUUID = null;
@@ -101,6 +107,19 @@ public class GalleryScreen extends Screen {
         albumUUID = passedAlbumUUID;
         initializeScreen();
     }
+
+    public static void addNewScreenshot(Path newScreenshot) {
+        newScreenshots.add(newScreenshot);
+    }
+
+    public static void removeNewScreenshot(Path path) {
+        newScreenshots.remove(path);
+    }
+
+    public static List<Path> getNewScreenshots() {
+        return newScreenshots;
+    }
+
 
     private void initializeScreen() {
         imageIds.clear();
@@ -395,7 +414,7 @@ public class GalleryScreen extends Screen {
                     return false;
                 }
 
-                for (Element buttonWidget : this.children()) {
+                for (Element buttonWidget : children()) {
                     if (buttonWidget != null && buttonWidget.isMouseOver(mouseX, mouseY)) {
                         return super.mouseClicked(mouseX, mouseY, button);
                     }
@@ -506,7 +525,7 @@ public class GalleryScreen extends Screen {
         }
         boolean isImageOverlappingButtons = clickedImageIndex >= 0 && isImageOverlappingButtons();
 
-        for (Element button : this.children()) {
+        for (Element button : children()) {
             if (button instanceof ButtonWidget) {
                 if (buttonsToHideOnOverlap.contains(button)) {
                     if (isImageClicked) {
@@ -574,6 +593,14 @@ public class GalleryScreen extends Screen {
                 }
             }
 
+            if (imagePaths.size() > i) {
+                if (newScreenshots.contains(imagePaths.get(i))) {
+                    if (client != null) {
+                        context.drawText(client.textRenderer, "★", x + 20, y + IMAGE_HEIGHT - 10 - starY, 0xFFFF00, false);
+                    }
+                }
+            }
+
             if (i < metaDatas.size() && metaDatas.get(i) != null) {
                 JsonObject metadata = metaDatas.get(i);
                 if (metadata.has("tags") && metadata.get("tags").isJsonArray()) {
@@ -585,7 +612,7 @@ public class GalleryScreen extends Screen {
                             int tagX = x + IMAGE_WIDTH - tagWidth - 5;
                             int tagY = y + IMAGE_HEIGHT - 12;
 
-                            int padding = 2;
+                            final int padding = 2;
                             context.fill(tagX - padding, tagY - padding,
                                     tagX + tagWidth + padding, tagY + client.textRenderer.fontHeight + padding,
                                     0xA0502000);
@@ -633,13 +660,13 @@ public class GalleryScreen extends Screen {
 
         context.fill(0, 0, width, height, 0x80000000);
 
-        int borderWidth = 5;
+        final int borderWidth = 5;
         context.fill(x - borderWidth, y - borderWidth, x + imageWidth + borderWidth, y + imageHeight + borderWidth, 0xFFFFFFFF);
 
         context.drawTexture(RenderLayer::getGuiTextured, clickedImageId, x, y, 0, 0, imageWidth, imageHeight, imageWidth, imageHeight);
 
 
-        int sidebarWidth = 300;
+        final int sidebarWidth = 300;
         int sidebarXLeft = x - sidebarWidth;
 
 
@@ -1207,7 +1234,7 @@ public class GalleryScreen extends Screen {
         int y = (height - imageHeight) / 2 + (int) imageOffsetY;
 
 
-        for (var var : this.children()) {
+        for (var var : children()) {
             if ((var instanceof ButtonWidget button)) {
                 if (isButtonCoveredByImage(button, x, y, imageWidth, imageHeight)) {
                     return true;
@@ -1571,6 +1598,22 @@ public class GalleryScreen extends Screen {
             return true;
         }
         return super.keyPressed(keyCode, scanCode, modifiers);
+    }
+
+    @Override
+    public void tick() {
+        super.tick();
+        if (goingUp) {
+            starY += 4;
+            if (starY >= 12) {
+                goingUp = false;
+            }
+        } else {
+            starY -= 4;
+            if (starY <= 0) {
+                goingUp = true;
+            }
+        }
     }
 
     private enum SortOrder {
