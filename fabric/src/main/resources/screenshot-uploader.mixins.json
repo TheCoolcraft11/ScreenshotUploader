@@ -5,9 +5,11 @@
   "mixins": [
   ],
   "client": [
+    "GameMenuScreenMixin",
     "ScreenshotMixin",
     "SignBlockEntityRendererMixin",
-    "SignEditorOpenMixin"
+    "SignEditorOpenMixin",
+    "TitleScreenMixin"
   ],
   "injectors": {
     "defaultRequire": 1
