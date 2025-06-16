@@ -4,9 +4,6 @@ import com.google.gson.annotations.SerializedName;
 
 import java.util.UUID;
 
-/**
- * Represents an album of screenshots
- */
 public class Album {
     @SerializedName("title")
     private String title;

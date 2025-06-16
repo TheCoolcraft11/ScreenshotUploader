@@ -1,5 +1,6 @@
 package de.thecoolcraft11.mixin;
 
+import de.thecoolcraft11.config.ConfigManager;
 import de.thecoolcraft11.screen.GalleryScreen;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
@@ -25,8 +26,11 @@ public abstract class GameMenuScreenMixin extends Screen {
     protected GameMenuScreenMixin(Text title) {
         super(title);
     }
+
     @Inject(method = "init", at = @At("TAIL"))
     private void onInit(CallbackInfo ci) {
+
+        if (!ConfigManager.getClientConfig().addGalleryButtonToPauseMenu) return;
 
         ButtonWidget galleryButton = this.addDrawableChild(
                 TextIconButtonWidget.builder(

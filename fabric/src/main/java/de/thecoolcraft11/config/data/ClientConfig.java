@@ -126,6 +126,12 @@ public class ClientConfig {
     @Comment("config.screenshot_uploader.noise_intensity")
     public int noiseIntensity = 10;
 
+    @Comment("config.screenshot_uploader.gallery_button_main_menu")
+    public boolean addGalleryButtonToMainMenu = true;
+
+    @Comment("config.screenshot_uploader.gallery_button_pause_menu")
+    public boolean addGalleryButtonToPauseMenu = true;
+
 
     public ClientConfig() {
         Map<String, String> map = new HashMap<>();

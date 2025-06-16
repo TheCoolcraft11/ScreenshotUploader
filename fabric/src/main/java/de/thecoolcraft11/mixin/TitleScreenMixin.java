@@ -1,5 +1,6 @@
 package de.thecoolcraft11.mixin;
 
+import de.thecoolcraft11.config.ConfigManager;
 import de.thecoolcraft11.screen.GalleryScreen;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
@@ -27,12 +28,12 @@ public abstract class TitleScreenMixin extends Screen {
 
     @Inject(method = "init", at = @At("TAIL"))
     private void onInit(CallbackInfo ci) {
-
+        if (!ConfigManager.getClientConfig().addGalleryButtonToMainMenu) return;
         ButtonWidget galleryButton = this.addDrawableChild(
                 TextIconButtonWidget.builder(
-                Text.translatable("gui.screenshot_uploader.album_manager.album_cover"),
-                btn -> MinecraftClient.getInstance().setScreen(new GalleryScreen()),
-                true)
+                                Text.translatable("gui.screenshot_uploader.album_manager.album_cover"),
+                                btn -> MinecraftClient.getInstance().setScreen(new GalleryScreen()),
+                                true)
                         .texture(Identifier.of("screenshot-uploader", "icon/gallery"), 20, 20)
                         .width(20)
                         .build()
