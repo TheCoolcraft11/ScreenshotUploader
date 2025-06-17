@@ -275,6 +275,8 @@ function deleteImage() {
              document.body.classList.add('dark-mode');
              document.querySelector('h1').classList.add('dark-mode');
             }
+
+            loadLikedImages();
         };
 
         function fetchComments(imageSrc) {
@@ -404,22 +406,460 @@ function sortGalleryItems() {
     items.forEach(item => gallery.appendChild(item));
 }
 
-document.addEventListener('DOMContentLoaded', function() {
-    loadLikedImages();
+function toggleAdvancedSearch() {
+    const advancedOptions = document.getElementById('advancedSearchOptions');
+    const toggleButton = document.getElementById('advancedSearchToggle');
 
-    const thumbnailsContainer = document.getElementById('thumbnails');
-    const modelContainer = document.getElementById('model-left');
+    if (advancedOptions.style.display === 'none' || !advancedOptions.style.display) {
+        advancedOptions.style.display = 'block';
+        toggleButton.textContent = 'Hide Advanced Search';
+    } else {
+        advancedOptions.style.display = 'none';
+        toggleButton.textContent = 'Advanced Search';
+    }
+}
 
-    if (thumbnailsContainer) {
-        thumbnailsContainer.addEventListener('wheel', function(event) {
-            event.preventDefault();
-            thumbnailsContainer.scrollLeft += event.deltaY;
-        }, { passive: false });
+function toggleSearchInfo() {
+    const infoBox = document.getElementById('searchInfoBox');
+    if (infoBox.style.display === 'none' || !infoBox.style.display) {
+        infoBox.style.display = 'block';
+    } else {
+        infoBox.style.display = 'none';
+    }
+}
+
+function searchGallery() {
+    const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+    const filterUsername = document.getElementById('filterUsername').checked;
+    const filterFilename = document.getElementById('filterFilename').checked;
+    const filterTags = document.getElementById('filterTags').checked;
+    const filterMetadata = document.getElementById('filterMetadata').checked;
+
+    const filterCoordinates = document.getElementById('filterCoordinates')?.checked || false;
+    const filterDimension = document.getElementById('filterDimension')?.checked || false;
+    const filterBiome = document.getElementById('filterBiome')?.checked || false;
+    const filterSystemInfo = document.getElementById('filterSystemInfo')?.checked || false;
+    const filterWorldInfo = document.getElementById('filterWorldInfo')?.checked || false;
+    const filterClientSettings = document.getElementById('filterClientSettings')?.checked || false;
+
+    const searchTerms = searchTerm.split(/,(?=(?:[^"]*"[^"]*")*[^"]*$)/).map(term => term.trim()).filter(term => term);
+
+    const galleryItems = document.querySelectorAll('.gallery-item');
+    let foundResults = false;
+
+    galleryItems.forEach(item => {
+        const imgElement = item.querySelector('img.gallery-image');
+        const imgSrc = imgElement.getAttribute('src');
+        const normalizedSrc = imgSrc.startsWith('/') ? imgSrc : '/' + imgSrc;
+        const meta = imageMetadata[normalizedSrc] || {};
+
+        const username = (meta.username || '').toLowerCase();
+        const filename = (meta.filename || '').toLowerCase();
+
+        let tags = [];
+        if (meta.hasMetadata && meta.metadata && meta.metadata.tags) {
+            try {
+                if (typeof meta.metadata.tags === 'string') {
+                    tags = JSON.parse(meta.metadata.tags);
+                } else if (Array.isArray(meta.metadata.tags)) {
+                    tags = meta.metadata.tags;
+                }
+            } catch (e) {
+                console.error('Error parsing tags:', e);
+            }
+        }
+        const tagsString = (Array.isArray(tags) ? tags.join(' ') : '').toLowerCase();
+
+        if (searchTerms.length === 0) {
+            item.style.display = '';
+            foundResults = true;
+            return;
+        }
+
+        const matchesAllTerms = searchTerms.every(term => {
+            const parsedSearch = parseSearchQuery(term);
+
+            if (parsedSearch.field) {
+                return matchesFieldSearch(meta, parsedSearch);
+            } else {
+                const matchesUsername = filterUsername && username.includes(parsedSearch.term);
+                const matchesFilename = filterFilename && filename.includes(parsedSearch.term);
+                const matchesTags = filterTags && tagsString.includes(parsedSearch.term);
+
+                let matchesMetadata = false;
+
+                if (meta.hasMetadata && meta.metadata && filterMetadata) {
+                    if (filterCoordinates && meta.metadata.coordinates &&
+                        meta.metadata.coordinates.toLowerCase().includes(parsedSearch.term)) {
+                        matchesMetadata = true;
+                    }
+
+                    if (filterDimension && meta.metadata.dimension &&
+                        meta.metadata.dimension.toLowerCase().includes(parsedSearch.term)) {
+                        matchesMetadata = true;
+                    }
+
+                    if (filterBiome && meta.metadata.biome &&
+                        meta.metadata.biome.toLowerCase().includes(parsedSearch.term)) {
+                        matchesMetadata = true;
+                    }
+
+                    if (filterSystemInfo && meta.metadata.system_info &&
+                        meta.metadata.system_info.toLowerCase().includes(parsedSearch.term)) {
+                        matchesMetadata = true;
+                    }
+
+                    if (filterWorldInfo && meta.metadata.world_info &&
+                        meta.metadata.world_info.toLowerCase().includes(parsedSearch.term)) {
+                        matchesMetadata = true;
+                    }
+
+                    if (filterClientSettings && meta.metadata.client_settings &&
+                        meta.metadata.client_settings.toLowerCase().includes(parsedSearch.term)) {
+                        matchesMetadata = true;
+                    }
+                }
+
+                return parsedSearch.term === '' || matchesUsername || matchesFilename || matchesTags || matchesMetadata;
+            }
+        });
+
+        if (matchesAllTerms) {
+            item.style.display = '';
+            foundResults = true;
+        } else {
+            item.style.display = 'none';
+        }
+    });
+
+    document.getElementById('noResults').style.display = foundResults ? 'none' : 'block';
+}
+
+function parseSearchQuery(query) {
+    const result = {
+        field: null,
+        operator: '',
+        term: query.trim()
+    };
+
+    const fieldMappings = {
+        'x:': 'x',
+        'y:': 'y',
+        'z:': 'z',
+
+        'seed:': 'world_seed',
+        'biome:': 'biome',
+        'world:': 'world_name',
+        'server:': 'server_address',
+        'dimension:': 'dimension',
+        'dim:': 'dimension',
+        'username:': 'username',
+        'coordinates:': 'coordinates',
+        'location:': 'coordinates',
+        'facing:': 'facing_direction',
+        'player:': 'player_state',
+
+        'date:': 'date',
+        'day:': 'date',
+        'time:': 'date',
+
+        'health:': 'health',
+        'food:': 'food',
+        'air:': 'air',
+        'speed:': 'speed',
+
+        'worldtime:': 'time',
+        'weather:': 'weather',
+        'difficulty:': 'difficulty',
+
+        'file:': 'filename',
+        'tags:': 'tags'
+    };
+
+    for (const [prefix, fieldName] of Object.entries(fieldMappings)) {
+        if (query.toLowerCase().startsWith(prefix)) {
+            const valueWithOperator = query.substring(prefix.length).trim();
+
+            const operators = ['>=', '<=', '>', '<', '='];
+            let operator = '';
+            let value = valueWithOperator;
+
+            for (const op of operators) {
+                if (valueWithOperator.startsWith(op)) {
+                    operator = op;
+                    value = valueWithOperator.substring(op.length).trim();
+                    break;
+                }
+            }
+
+            return {
+                field: fieldName,
+                operator: operator,
+                term: value
+            };
+        }
     }
 
-    if (modelContainer) {
-        modelContainer.addEventListener('wheel', function(event) {
-            event.preventDefault();
-        }, { passive: false });
+    return result;
+}
+
+function matchesFieldSearch(meta, search) {
+    if (!meta.hasMetadata || !meta.metadata || !search.field) {
+        return false;
+    }
+
+    if (search.field === 'tags') {
+        if (!meta.metadata.tags) return false;
+
+        let tags = [];
+        try {
+            if (typeof meta.metadata.tags === 'string') {
+                tags = JSON.parse(meta.metadata.tags);
+            } else if (Array.isArray(meta.metadata.tags)) {
+                tags = meta.metadata.tags;
+            }
+        } catch (e) {
+            console.error('Error parsing tags:', e);
+            return false;
+        }
+
+        const tagsString = (Array.isArray(tags) ? tags.join(' ') : '').toLowerCase();
+        return tagsString.includes(search.term);
+    }
+
+    if (search.field === 'username') {
+        const username = (meta.username || '').toLowerCase();
+        if (search.operator === '') {
+            return username.includes(search.term);
+        }
+        return compareValues(username, search.operator, search.term);
+    }
+
+    if (search.field === 'filename') {
+        const filename = (meta.filename || '').toLowerCase();
+        if (search.operator === '') {
+            return filename.includes(search.term);
+        }
+        return compareValues(filename, search.operator, search.term);
+    }
+
+    if (search.field === 'x' || search.field === 'y' || search.field === 'z') {
+        if (!meta.metadata.coordinates) return false;
+
+        const coordinates = meta.metadata.coordinates.toLowerCase();
+        const coordPattern = new RegExp(`${search.field}: (-?\\d+)`, 'i');
+        const match = coordinates.match(coordPattern);
+
+        if (match && match[1]) {
+            const coordValue = parseInt(match[1], 10);
+            const searchValue = parseInt(search.term, 10);
+
+            if (isNaN(searchValue)) return false;
+
+            switch (search.operator) {
+                case '>': return coordValue > searchValue;
+                case '<': return coordValue < searchValue;
+                case '=': return coordValue === searchValue;
+                case '>=': return coordValue >= searchValue;
+                case '<=': return coordValue <= searchValue;
+                default: return String(coordValue).includes(search.term);
+            }
+        }
+        return false;
+    }
+
+    if (search.field === 'date') {
+        const timestamp = meta.metadata.current_time || meta.timestamp || 0;
+        return compareDateValues(timestamp, search.operator, search.term);
+    }
+
+    const nestedFieldMappings = {
+        'health': 'player_state',
+        'food': 'player_state',
+        'air': 'player_state',
+        'speed': 'player_state',
+        'time': 'world_info',
+        'weather': 'world_info',
+        'difficulty': 'world_info'
+    };
+
+    if (nestedFieldMappings[search.field]) {
+        const parentField = nestedFieldMappings[search.field];
+        if (!meta.metadata[parentField]) return false;
+
+        const parentValue = meta.metadata[parentField].toLowerCase();
+        const nestedPattern = new RegExp(`${search.field}: ([^,]+)`, 'i');
+        const match = parentValue.match(nestedPattern);
+
+        if (match && match[1]) {
+            const fieldValue = match[1].trim();
+
+            if (search.operator === '') {
+                return fieldValue.includes(search.term);
+            }
+
+            const numericMatch = fieldValue.match(/-?\d+(\.\d+)?/);
+            if (numericMatch && !isNaN(parseFloat(search.term))) {
+                const fieldNum = parseFloat(numericMatch[0]);
+                const searchNum = parseFloat(search.term);
+
+                switch (search.operator) {
+                    case '>': return fieldNum > searchNum;
+                    case '<': return fieldNum < searchNum;
+                    case '=': return fieldNum === searchNum;
+                    case '>=': return fieldNum >= searchNum;
+                    case '<=': return fieldNum <= searchNum;
+                }
+            }
+
+            return fieldValue.includes(search.term);
+        }
+        return false;
+    }
+
+    if (!meta.metadata[search.field]) {
+        return false;
+    }
+
+    const fieldValue = String(meta.metadata[search.field]).toLowerCase();
+
+    if (search.operator === '') {
+        return fieldValue.includes(search.term);
+    }
+
+    return compareValues(fieldValue, search.operator, search.term);
+}
+
+function compareDateValues(timestamp, operator, searchTerm) {
+    const itemDate = new Date(Number(timestamp));
+
+    if (searchTerm === 'today') {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const tomorrow = new Date(today);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+
+        if (!operator || operator === '=') {
+            return itemDate >= today && itemDate < tomorrow;
+        }
+    } else if (searchTerm === 'yesterday') {
+        const yesterday = new Date();
+        yesterday.setDate(yesterday.getDate() - 1);
+        yesterday.setHours(0, 0, 0, 0);
+
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        if (!operator || operator === '=') {
+            return itemDate >= yesterday && itemDate < today;
+        }
+    } else if (searchTerm.includes('week')) {
+        const weekAgo = new Date();
+        weekAgo.setDate(weekAgo.getDate() - 7);
+
+        if (!operator) {
+            return itemDate >= weekAgo;
+        } else {
+            switch(operator) {
+                case '>': return itemDate > weekAgo;
+                case '<': return itemDate < weekAgo;
+                case '>=': return itemDate >= weekAgo;
+                case '<=': return itemDate <= weekAgo;
+                case '=': return false;
+            }
+        }
+    } else if (searchTerm.includes('month')) {
+        const monthAgo = new Date();
+        monthAgo.setMonth(monthAgo.getMonth() - 1);
+
+        if (!operator) {
+            return itemDate >= monthAgo;
+        } else {
+            switch(operator) {
+                case '>': return itemDate > monthAgo;
+                case '<': return itemDate < monthAgo;
+                case '>=': return itemDate >= monthAgo;
+                case '<=': return itemDate <= monthAgo;
+                case '=': return false;
+            }
+        }
+    }
+
+    let searchDate;
+    if (searchTerm.match(/\d{1,2}\.\d{1,2}\.\d{4}/)) {
+        // Format: DD.MM.YYYY
+        const [day, month, year] = searchTerm.split('.').map(Number);
+        searchDate = new Date(year, month-1, day);
+    } else if (searchTerm.match(/\d{1,2}\.\d{4}/)) {
+        // Format: MM.YYYY
+        const [month, year] = searchTerm.split('.').map(Number);
+        searchDate = new Date(year, month-1, 1);
+    } else if (searchTerm.match(/\d{4}/)) {
+        // Format: YYYY
+        const year = parseInt(searchTerm);
+        searchDate = new Date(year, 0, 1);
+    }
+
+    if (searchDate && !isNaN(searchDate.getTime())) {
+        switch(operator) {
+            case '>': return itemDate > searchDate;
+            case '<': return itemDate < searchDate;
+            case '>=': return itemDate >= searchDate;
+            case '<=': return itemDate <= searchDate;
+            case '=': return itemDate.getFullYear() === searchDate.getFullYear() &&
+                        itemDate.getMonth() === searchDate.getMonth() &&
+                        itemDate.getDate() === searchDate.getDate();
+            default:
+                if (searchTerm.match(/\d{1,2}\.\d{1,2}\.\d{4}/)) {
+                    return itemDate.getFullYear() === searchDate.getFullYear() &&
+                           itemDate.getMonth() === searchDate.getMonth() &&
+                           itemDate.getDate() === searchDate.getDate();
+                } else if (searchTerm.match(/\d{1,2}\.\d{4}/)) {
+                    return itemDate.getFullYear() === searchDate.getFullYear() &&
+                           itemDate.getMonth() === searchDate.getMonth();
+                } else if (searchTerm.match(/\d{4}/)) {
+                    return itemDate.getFullYear() === searchDate.getFullYear();
+                }
+                return false;
+        }
+    }
+
+    return String(timestamp).includes(searchTerm);
+}
+
+function compareValues(fieldValue, operator, searchValue) {
+    try {
+        const fieldNum = parseFloat(fieldValue);
+        const searchNum = parseFloat(searchValue);
+
+        if (!isNaN(fieldNum) && !isNaN(searchNum)) {
+            switch(operator) {
+                case '>': return fieldNum > searchNum;
+                case '<': return fieldNum < searchNum;
+                case '=': return fieldNum === searchNum;
+                case '>=': return fieldNum >= searchNum;
+                case '<=': return fieldNum <= searchNum;
+                default: return fieldValue.includes(searchValue);
+            }
+        }
+    } catch (e) {
+    }
+
+    if (operator === '=') {
+        return fieldValue === searchValue;
+    }
+
+    return fieldValue.includes(searchValue);
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.getElementById('searchInput');
+    if (searchInput) {
+        searchInput.addEventListener('keypress', function(event) {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                searchGallery();
+            }
+        });
     }
 });
