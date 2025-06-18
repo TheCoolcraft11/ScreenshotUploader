@@ -49,7 +49,7 @@ public abstract class TitleScreenMixin extends Screen {
                 Text key = btn.getMessage();
                 if (key.copy().getContent().equals(Text.translatable("menu.singleplayer").copy().getContent())) {
                     multiplayerButtonX = btn.getX() + btn.getWidth();
-                    multiplayerButtonY = btn.getY();// - btn.getHeight();
+                    multiplayerButtonY = btn.getY();
                     break;
                 }
             }

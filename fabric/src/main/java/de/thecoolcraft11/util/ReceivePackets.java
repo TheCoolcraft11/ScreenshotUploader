@@ -87,13 +87,13 @@ public class ReceivePackets {
 
             if (screenshotUrl != null && galleryUrl != null) {
                 clickableLink = Text.translatable("message.screenshot_uploader.open_screenshot")
-                        .styled(style -> style.withClickEvent(new ClickEvent.RunCommand( "/open-screenshot \"" + screenshotUrl + "\""))
+                        .styled(style -> style.withClickEvent(new ClickEvent.RunCommand("/open-screenshot \"" + screenshotUrl + "\""))
                                 .withHoverEvent(new HoverEvent.ShowText(Text.translatable("message.screenshot_uploader.see_screenshot"))).withColor(Formatting.AQUA));
             }
             if (screenshotUrl != null) {
                 if (getGalleryByHome(homeSiteAddress) != null) {
                     clickableLink2 = Text.translatable("message.screenshot_uploader.open_gallery")
-                            .styled(style -> style.withClickEvent(new ClickEvent.RunCommand( "/open-gallery \"" + getGalleryByHome(homeSiteAddress) + "\" \"" + screenshotUrl + "\""))
+                            .styled(style -> style.withClickEvent(new ClickEvent.RunCommand("/open-gallery \"" + getGalleryByHome(homeSiteAddress) + "\" \"" + screenshotUrl + "\""))
                                     .withHoverEvent(new HoverEvent.ShowText(Text.translatable("message.screenshot_uploader.open_game_gallery"))).withColor(Formatting.RED));
                 }
             }
@@ -146,7 +146,6 @@ public class ReceivePackets {
 
     public static void handleReceivedScreenshot(byte[] screenshotData, String jsonData, ServerPlayerEntity player) {
         try {
-            logger.error("Received screenshot from player: {}", player.getName().getString());
             String playerName = player.getName().getString();
             String baseFileName = "screenshot-" + playerName + "_" + System.currentTimeMillis();
             String screenshotFileName = baseFileName + ".png";

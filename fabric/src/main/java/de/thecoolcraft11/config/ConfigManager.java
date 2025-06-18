@@ -72,24 +72,41 @@ public class ConfigManager {
     private static void addMissingFields(Object config, JsonElement jsonElement, File configFile) {
         Field[] fields = config.getClass().getDeclaredFields();
         JsonObject jsonObject = jsonElement.getAsJsonObject();
+        boolean hasNewFields = false;
 
         for (Field field : fields) {
             try {
                 field.setAccessible(true);
                 String fieldName = field.getName();
+                String commentFieldName = "_comment_" + fieldName;
+
                 if (!jsonObject.has(fieldName)) {
                     Object defaultValue = field.get(config);
-                    jsonObject.add(fieldName, GSON.toJsonTree(defaultValue));
 
+                    if (field.isAnnotationPresent(Comment.class)) {
+                        Comment comment = field.getAnnotation(Comment.class);
+                        jsonObject.addProperty(commentFieldName, comment.value());
+                    }
+
+                    jsonObject.add(fieldName, GSON.toJsonTree(defaultValue));
                     field.set(config, defaultValue);
                     logger.info("Added missing field: '{}' with default value.", fieldName);
+                    hasNewFields = true;
+                } else if (field.isAnnotationPresent(Comment.class) && !jsonObject.has(commentFieldName)) {
+                    Comment comment = field.getAnnotation(Comment.class);
+                    jsonObject.addProperty(commentFieldName, comment.value());
+                    logger.info("Added missing comment for field: '{}'", fieldName);
+                    hasNewFields = true;
                 }
+
             } catch (IllegalAccessException e) {
                 logger.error("Failed to add new config values: {}", e.getMessage());
             }
         }
 
-        saveConfig(configFile, jsonObject);
+        if (hasNewFields) {
+            saveConfig(configFile, jsonObject);
+        }
     }
 
     private static void saveConfig(File configFile, Object config) {
@@ -110,7 +127,7 @@ public class ConfigManager {
                     logger.error("Failed to access field '{}' while saving config: {}", field.getName(), e.getMessage());
                 }
             }
-            
+
             if (jsonObject.has("members")) {
                 jsonObject = jsonObject.getAsJsonObject("members");
             }
