@@ -664,6 +664,8 @@ public class GalleryScreen extends Screen {
 
         Identifier clickedImageId = imageIds.get(clickedImageIndex);
 
+        removeNewScreenshot(imagePaths.get(clickedImageIndex));
+
         int imageWidth = (int) (1920 * zoomLevel);
         int imageHeight = (int) (1080 * zoomLevel);
         if (client != null) {
