@@ -621,18 +621,6 @@ public class WebGalleryScreen extends Screen {
         for (Element button : this.children()) {
             if (button instanceof ButtonWidget) {
                 if (buttonsToHideOnOverlap.contains(button)) {
-                    if (button == deleteButton) {
-                        boolean isAllowDelete = false;
-                        if (metaDatas.size() > clickedImageIndex && clickedImageIndex >= 0) {
-                            if (client != null) {
-                                if (client.player != null) {
-                                    isAllowDelete = metaDatas.get(clickedImageIndex).has("uuid") && metaDatas.get(clickedImageIndex).get("uuid").getAsString().equals(client.player.getUuid().toString());
-                                }
-                            }
-                        }
-                        deleteButton.visible = ReceivePackets.allowDelete || (ReceivePackets.allowDeleteOwn && isAllowDelete);
-                        return;
-                    }
                     if (isImageClicked) {
                         ((ButtonWidget) button).visible = !isImageOverlappingButtons;
                     } else {
