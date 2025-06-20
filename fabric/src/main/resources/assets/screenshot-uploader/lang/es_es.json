@@ -72,6 +72,7 @@
   "gui.screenshot_uploader.screenshot_gallery.like_screenshot": "❤",
   "gui.screenshot_uploader.screenshot_gallery.search": "Buscar",
   "gui.screenshot_uploader.screenshot_gallery.album_config": "Colecciones",
+  "gui.screenshot_uploader.screenshot_gallery.upload_to_server": "Subir a servidor",
   "gui.screenshot_uploader.confirm_screenshot.save": "Guardar captura de pantalla",
   "gui.screenshot_uploader.confirm_screenshot.upload": "Subir captura de pantalla",
   "gui.screenshot_uploader.confirm_screenshot.cancel": "Eliminar captura de pantalla",
@@ -237,5 +238,7 @@
   "config.screenshot_uploader.hue_shift_amount": "Cantidad de cambio de tono de la imagen",
   "config.screenshot_uploader.vignette_intensity": "Intensidad del efecto viñeta (oscurecimiento de los bordes)",
   "config.screenshot_uploader.emboss_effect": "Cantidad de efecto relieve aplicado a la imagen",
-  "config.screenshot_uploader.noise_intensity": "Nivel de ruido añadido a la imagen"
+  "config.screenshot_uploader.noise_intensity": "Nivel de ruido añadido a la imagen",
+  "config.screenshot_uploader.gallery_button_main_menu": "Si se debe agregar un botón de galería al menú principal del juego",
+  "config.screenshot_uploader.gallery_button_pause_menu": "Si se debe agregar un botón de galería al menú de pausa (Esc) del juego"
 }

@@ -71,6 +71,7 @@
   "gui.screenshot_uploader.screenshot_gallery.search": "Suchen",
   "gui.screenshot_uploader.screenshot_gallery.album_config": "Sammlungen",
   "gui.screenshot_uploader.screenshot_gallery.search_placeholder": "Screenshots nach Metadaten oder Namen durchsuchen",
+  "gui.screenshot_uploader.screenshot_gallery.upload_to_server": "Auf Server hochladen",
   "gui.screenshot_uploader.config.title": "Konfiguration",
   "gui.screenshot_uploader.config.not_edit": "Gehe zu /config/screenshotUploader/config.json, um Server zu bearbeiten",
   "gui.screenshot_uploader.config.save": "Speichern",
@@ -273,6 +274,8 @@
   "config.screenshot_uploader.hue_shift_amount": "Anzahl um Bild Hue (Farbton) zu verschieben",
   "config.screenshot_uploader.vignette_intensity": "Stärke des Vignette (Verdunkeln an den Ecken) Effekts",
   "config.screenshot_uploader.emboss_effect": "Stärke des Emboss Effekts, welcher auf das Bild angewendet wird",
-  "config.screenshot_uploader.noise_intensity": "Stärke of Noise, welches auf das Bild angewendet wird"
+  "config.screenshot_uploader.noise_intensity": "Stärke of Noise, welches auf das Bild angewendet wird",
+  "config.screenshot_uploader.gallery_button_main_menu": "Ob ein Galerie-Button zum Hauptmenü hinzugefügt werden soll",
+  "config.screenshot_uploader.gallery_button_pause_menu": "Ob ein Galerie-Button zum Pausenmenü (Esc) hinzugefügt werden soll"
 }
 
