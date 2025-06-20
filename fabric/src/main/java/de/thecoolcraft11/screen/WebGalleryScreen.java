@@ -21,6 +21,7 @@ import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.BlockPos;
 import org.jetbrains.annotations.NotNull;
+import org.lwjgl.glfw.GLFW;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -846,10 +847,7 @@ public class WebGalleryScreen extends Screen {
 
         int borderWidth = 5;
         context.fill(x - borderWidth, y - borderWidth, x + imageWidth + borderWidth, y + imageHeight + borderWidth, 0xFFFFFFFF);
-        //RenderSystem.setShaderTexture(0, clickedImageId);
-        //RenderSystem.enableBlend();
         context.drawTexture(RenderLayer::getGuiTextured, clickedImageId, x, y, 0, 0, imageWidth, imageHeight, imageWidth, imageHeight);
-        //RenderSystem.disableBlend();
 
         int sidebarWidth = 300;
         int sidebarHeight = imageHeight;
@@ -894,7 +892,6 @@ public class WebGalleryScreen extends Screen {
 
                 if (playerHeadId != null) {
 
-                    //RenderSystem.setShaderTexture(0, playerHeadId);
                     context.drawTexture(RenderLayer::getGuiTextured, playerHeadId, (int) (headX + ((headSize - headSize * 0.25) / 2)), (int) (headY + ((headSize - headSize * 0.25) / 2)), 0, 0, (int) (headSize - headSize * 0.25), (int) (headSize - headSize * 0.25), (int) (headSize - headSize * 0.25), (int) (headSize - headSize * 0.25));
                 }
                 context.drawText(client.textRenderer, Text.literal(playerName + ": " + playerComment), headX + headSize + 5, commentListY, 0xFFFFFF, false);
@@ -1829,6 +1826,18 @@ public class WebGalleryScreen extends Screen {
         metaDatas.clear();
         lastSearchQuery = "";
         super.close();
+    }
+
+    @Override
+    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        if (searchField.isFocused() && searchField.keyPressed(keyCode, scanCode, modifiers)) {
+            return true;
+        }
+        if (keyCode == GLFW.GLFW_KEY_F && (modifiers & GLFW.GLFW_MOD_CONTROL) != 0) {
+            searchField.setFocused(true);
+            return true;
+        }
+        return super.keyPressed(keyCode, scanCode, modifiers);
     }
 
     @Override

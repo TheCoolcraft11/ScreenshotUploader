@@ -21,7 +21,7 @@ import java.nio.file.Paths;
 import static de.thecoolcraft11.screenshotUploader.ScreenshotUploader.getServerIp;
 
 public class DeletionPacketListener implements PluginMessageListener {
-    Logger logger = LoggerFactory.getLogger(DeletionPacketListener.class);
+    private final Logger logger = LoggerFactory.getLogger(DeletionPacketListener.class);
     private final static Config config = ScreenshotUploader.config;
 
     @Override

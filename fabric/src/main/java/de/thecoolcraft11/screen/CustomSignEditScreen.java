@@ -239,10 +239,7 @@ public class CustomSignEditScreen extends Screen {
 
         int borderWidth = 5;
         context.fill(x - borderWidth, y - borderWidth, x + imageWidth + borderWidth, y + imageHeight + borderWidth, 0xFFFFFFFF);
-        //RenderSystem.setShaderTexture(0, clickedImageId);
-        //RenderSystem.enableBlend();
         context.drawTexture(RenderLayer::getGuiTextured, clickedImageId, x, y, 0, 0, imageWidth, imageHeight, imageWidth, imageHeight);
-        //RenderSystem.disableBlend();
 
 
     }

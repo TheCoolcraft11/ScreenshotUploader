@@ -33,7 +33,7 @@ public class ScreenshotWebTaggingScreen extends Screen {
     private final List<String> currentTags = new ArrayList<>();
     private int scrollOffset = 0;
     private final int maxVisible = 10;
-    Logger logger = LoggerFactory.getLogger(ScreenshotWebTaggingScreen.class);
+    private static final Logger logger = LoggerFactory.getLogger(ScreenshotWebTaggingScreen.class);
 
     public ScreenshotWebTaggingScreen(Screen parent, String screenshotId, JsonArray existingJson) {
         super(Text.translatable("gui.screenshot_uploader.tagging_screen.title"));

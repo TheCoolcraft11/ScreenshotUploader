@@ -80,10 +80,6 @@ public class SignBlockEntityRendererMixin {
                         Identifier signTexture = Identifier.of("minecraft", "textures/entity/signs/" + woodType.name().toLowerCase() + ".png");
                         if (ConfigManager.getClientConfig().useCustomSign)
                             signTexture = Identifier.of("screenshot-uploader", "textures/entity/signs/screenshot.png");
-                        //dRenderSystem.setShaderTexture(0, signTexture);
-
-                        //RenderSystem.enableBlend();
-                        //RenderSystem.defaultBlendFunc();
 
                         float scale = 0.75f;
                         if (ConfigManager.getClientConfig().highlightOscillation) {

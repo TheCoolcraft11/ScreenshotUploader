@@ -139,8 +139,7 @@ public abstract class ScreenshotMixin {
                         }
 
                         Path screenshotPath = Path.of(screenshotFile.getAbsolutePath());
-                        if(GalleryScreen.getNewScreenshots().contains(screenshotPath))
-                        {
+                        if (GalleryScreen.getNewScreenshots().contains(screenshotPath)) {
                             GalleryScreen.removeNewScreenshot(screenshotPath);
                         }
 

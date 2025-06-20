@@ -19,7 +19,7 @@ import static de.thecoolcraft11.screenshotUploader.ScreenshotUploader.config;
 import static de.thecoolcraft11.screenshotUploader.ScreenshotUploader.getServerIp;
 
 public class PlayJoinListener implements Listener {
-    static Logger logger = LoggerFactory.getLogger(PlayJoinListener.class);
+    private static final Logger logger = LoggerFactory.getLogger(PlayJoinListener.class);
 
     @SuppressWarnings("BusyWait")
     @EventHandler(ignoreCancelled = true)

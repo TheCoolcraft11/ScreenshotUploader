@@ -21,7 +21,7 @@ import java.nio.file.Paths;
 import static de.thecoolcraft11.screenshotUploader.ScreenshotUploader.getServerIp;
 
 public class TagPacketListener implements PluginMessageListener {
-    Logger logger = LoggerFactory.getLogger(TagPacketListener.class);
+    private static final Logger logger = LoggerFactory.getLogger(TagPacketListener.class);
 
     @Override
     public void onPluginMessageReceived(@NotNull String channel, @NotNull Player player, byte @NotNull [] message) {

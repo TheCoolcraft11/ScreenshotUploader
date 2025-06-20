@@ -26,7 +26,7 @@ import java.util.regex.Pattern;
 import static de.thecoolcraft11.screenshotUploader.ScreenshotUploader.getServerIp;
 
 public class ReceiveScreenshotPacket {
-    static Logger logger = LoggerFactory.getLogger(ReceiveScreenshotPacket.class);
+    private static final Logger logger = LoggerFactory.getLogger(ReceiveScreenshotPacket.class);
 
     public static void handleReceivedScreenshot(byte[] screenshotData, String jsonData, Player player) {
         try {

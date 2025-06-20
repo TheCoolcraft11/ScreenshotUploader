@@ -27,7 +27,7 @@ public class ScreenshotTaggingScreen extends Screen {
     private final List<String> currentTags = new ArrayList<>();
     private int scrollOffset = 0;
     private final int maxVisible = 10;
-    Logger logger = LoggerFactory.getLogger(ScreenshotTaggingScreen.class);
+    private static final Logger logger = LoggerFactory.getLogger(ScreenshotTaggingScreen.class);
     private final Gson gson = new Gson();
 
     public ScreenshotTaggingScreen(Screen parent, String screenshotPath) {

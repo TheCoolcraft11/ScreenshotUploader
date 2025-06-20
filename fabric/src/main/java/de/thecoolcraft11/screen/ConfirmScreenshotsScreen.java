@@ -99,7 +99,6 @@ public class ConfirmScreenshotsScreen extends Screen {
         if (textureId != null) {
             context.fill(imageX - 2, imageY - 2, imageX + imageWidth + 2, imageY + imageHeight + 2, 0xFF555555);
 
-            //RenderSystem.setShaderTexture(0, textureId);
             context.drawTexture(RenderLayer::getGuiTextured, textureId, imageX, imageY, 0, 0, imageWidth, imageHeight, imageWidth, imageHeight);
         } else {
             if (image != null && client != null) {

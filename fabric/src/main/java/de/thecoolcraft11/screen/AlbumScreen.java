@@ -134,12 +134,7 @@ public class AlbumScreen extends Screen {
         int iconX = x + (ALBUM_WIDTH - iconSize) / 2;
         int iconY = y + (ALBUM_HEIGHT - iconSize) / 2;
 
-        //int r = (color >> 16) & 0xFF;
-        //int g = (color >> 8) & 0xFF;
-        //int b = color & 0xFF;
-        //context.setShaderColor(r / 255.0f, g / 255.0f, b / 255.0f, 1.0f);
         context.drawTexture(RenderLayer::getGuiTextured, FOLDER_ICON, iconX, iconY, 0, 0, iconSize, iconSize, iconSize, iconSize, color);
-        //context.setShaderColor(255 / 255.0f, 255 / 255.0f, 255 / 255.0f, 1.0f);
         Identifier coverId = coverImageIds.get(album.getCoverScreenshotName());
         if (coverId != null) {
             int coverWidth = (int) (ALBUM_WIDTH * 0.65);
@@ -153,9 +148,7 @@ public class AlbumScreen extends Screen {
         }
         boolean isHovering = mouseX >= x && mouseX <= x + ALBUM_WIDTH && mouseY >= y && mouseY <= y + ALBUM_HEIGHT;
         if (!isHovering) {
-            //context.setShaderColor(r / 255.0f, g / 255.0f, b / 255.0f, 1.0f);
             context.drawTexture(RenderLayer::getGuiTextured, FOLDER_ICON_COVER, iconX, iconY, 0, 0, iconSize, iconSize, iconSize, iconSize, color);
-            //context.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
         }
 
         int titleX = x + 5;
