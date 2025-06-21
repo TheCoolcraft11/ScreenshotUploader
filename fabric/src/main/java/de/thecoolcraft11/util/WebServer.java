@@ -163,6 +163,13 @@ public class WebServer {
             byte[] fileContent = Files.readAllBytes(staticFile.toPath());
 
             exchange.getResponseHeaders().add("Content-Type", mimeType);
+
+            if (mimeType.startsWith("image/")) {
+                exchange.getResponseHeaders().add("Cache-Control", "public, max-age=31536000, immutable");
+            } else {
+                exchange.getResponseHeaders().add("Cache-Control", "no-cache, must-revalidate");
+            }
+
             exchange.sendResponseHeaders(200, fileContent.length);
             try (OutputStream os = exchange.getResponseBody()) {
                 os.write(fileContent);
