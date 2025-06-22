@@ -74,6 +74,7 @@ public class GalleryScreen extends Screen {
     private ButtonWidget albumConfigButton;
     private ButtonWidget screenshotStatisticsButton;
     private ButtonWidget uploadToServerButton;
+    private ButtonWidget likedScreenshotsButton;
 
     private final List<Path> originalImagePaths = new ArrayList<>();
     private String lastSearchQuery = "";
@@ -149,11 +150,14 @@ public class GalleryScreen extends Screen {
     protected void init() {
         super.init();
 
+        GAP = ConfigManager.getClientConfig().imageGap;
+        TOP_PADDING = ConfigManager.getClientConfig().imageTopPadding;
+
         int scaledHeight = height / 6;
         int scaledWidth = (scaledHeight * 16) / 9;
         int scaledGap = scaledHeight / 10;
 
-        TOP_PADDING = height / 20;
+        TOP_PADDING = (height / 20) + TOP_PADDING;
         IMAGE_WIDTH = scaledWidth;
         IMAGE_HEIGHT = scaledHeight;
         GAP = scaledGap;
@@ -358,6 +362,15 @@ public class GalleryScreen extends Screen {
                 }
         ).dimensions((buttonWidth * 6) + 60, buttonY, buttonWidth, buttonHeight).build();
 
+        likedScreenshotsButton = ButtonWidget.builder(
+                Text.translatable("gui.screenshot_uploader.screenshot_gallery.liked_screenshots"),
+                button -> {
+                    if (client != null) {
+                        client.setScreen(new LikedScreenshotsScreen(this));
+                    }
+                }
+        ).dimensions(5, 5 + 5 + 5 + buttonHeight * 2, buttonWidth, buttonHeight).build();
+
         addDrawableChild(addToAlbumButton);
 
         addDrawableChild(saveButton);
@@ -386,6 +399,8 @@ public class GalleryScreen extends Screen {
 
         addDrawableChild(uploadToServerButton);
 
+        addDrawableChild(likedScreenshotsButton);
+
         saveButton.visible = false;
         deleteButton.visible = false;
         openInAppButton.visible = false;
@@ -401,6 +416,7 @@ public class GalleryScreen extends Screen {
         albumConfigButton.visible = true;
         screenshotStatisticsButton.visible = true;
         uploadToServerButton.visible = false;
+        likedScreenshotsButton.visible = true;
 
         buttonsToHideOnOverlap.add(saveButton);
         buttonsToHideOnOverlap.add(deleteButton);
@@ -409,6 +425,7 @@ public class GalleryScreen extends Screen {
         buttonsToHideOnOverlap.add(likeButton);
         buttonsToHideOnOverlap.add(addToAlbumButton);
         buttonsToHideOnOverlap.add(viewTagsButton);
+        buttonsToHideOnOverlap.add(uploadToServerButton);
     }
 
 
@@ -520,6 +537,7 @@ public class GalleryScreen extends Screen {
             albumConfigButton.visible = false;
             screenshotStatisticsButton.visible = false;
             uploadToServerButton.visible = true;
+            likedScreenshotsButton.visible = false;
             navigatorButtons.forEach(buttonWidget -> buttonWidget.visible = false);
         } else {
             renderGallery(context, mouseX, mouseY);
@@ -538,6 +556,7 @@ public class GalleryScreen extends Screen {
             albumConfigButton.visible = true;
             screenshotStatisticsButton.visible = true;
             uploadToServerButton.visible = false;
+            likedScreenshotsButton.visible = true;
 
             navigatorButtons.forEach(buttonWidget -> buttonWidget.visible = true);
         }
@@ -1499,23 +1518,23 @@ public class GalleryScreen extends Screen {
         LinkedHashMap<Text, Text> drawableInfo = new LinkedHashMap<>();
 
         if (metaData.has("username"))
-            drawableInfo.put(Text.literal("Username: "), metaData.has("username") && metaData.get("username").isJsonPrimitive() ? Text.literal(metaData.get("username").getAsString()) : metaData.has("fileUsername") && metaData.get("fileUsername").isJsonPrimitive() ? Text.literal(metaData.get("fileUsername").getAsString()) : Text.literal("N/A"));
+            drawableInfo.put(Text.translatable("gui.screenshot_uploader.metadata.username"), metaData.has("username") && metaData.get("username").isJsonPrimitive() ? Text.literal(metaData.get("username").getAsString()) : metaData.has("fileUsername") && metaData.get("fileUsername").isJsonPrimitive() ? Text.literal(metaData.get("fileUsername").getAsString()) : Text.literal("N/A"));
         if (metaData.has("server_address"))
-            drawableInfo.put(Text.literal("Server: "), metaData.has("server_address") && metaData.get("server_address").isJsonPrimitive() ? Text.literal(metaData.get("server_address").getAsString()) : Text.literal("N/A"));
+            drawableInfo.put(Text.translatable("gui.screenshot_uploader.metadata.serverAddress"), metaData.has("server_address") && metaData.get("server_address").isJsonPrimitive() ? Text.literal(metaData.get("server_address").getAsString()) : Text.literal("N/A"));
         if (metaData.has("world_name"))
-            drawableInfo.put(Text.literal("World: "), metaData.has("world_name") && metaData.get("world_name").isJsonPrimitive() ? Text.literal(metaData.get("world_name").getAsString()) : Text.literal("N/A"));
+            drawableInfo.put(Text.translatable("gui.screenshot_uploader.metadata.world"), metaData.has("world_name") && metaData.get("world_name").isJsonPrimitive() ? Text.literal(metaData.get("world_name").getAsString()) : Text.literal("N/A"));
         if (metaData.has("coordinates"))
-            drawableInfo.put(Text.literal("Location: "), metaData.has("coordinates") && metaData.get("coordinates").isJsonPrimitive() ? Text.literal(metaData.get("coordinates").getAsString()) : Text.literal("N/A"));
+            drawableInfo.put(Text.translatable("gui.screenshot_uploader.metadata.location"), metaData.has("coordinates") && metaData.get("coordinates").isJsonPrimitive() ? Text.literal(metaData.get("coordinates").getAsString()) : Text.literal("N/A"));
         if (metaData.has("facing_direction"))
-            drawableInfo.put(Text.literal("Facing: "), metaData.has("facing_direction") && metaData.get("facing_direction").isJsonPrimitive() ? Text.literal(metaData.get("facing_direction").getAsString()) : Text.literal("N/A"));
+            drawableInfo.put(Text.translatable("gui.screenshot_uploader.metadata.facing"), metaData.has("facing_direction") && metaData.get("facing_direction").isJsonPrimitive() ? Text.literal(metaData.get("facing_direction").getAsString()) : Text.literal("N/A"));
         if (metaData.has("player_state"))
-            drawableInfo.put(Text.literal("Player: "), metaData.has("player_state") && metaData.get("player_state").isJsonPrimitive() ? Text.literal(metaData.get("player_state").getAsString()) : Text.literal("N/A"));
+            drawableInfo.put(Text.translatable("gui.screenshot_uploader.metadata.playerState"), metaData.has("player_state") && metaData.get("player_state").isJsonPrimitive() ? Text.literal(metaData.get("player_state").getAsString()) : Text.literal("N/A"));
         if (metaData.has("biome"))
-            drawableInfo.put(Text.literal("Biome: "), metaData.has("biome") && metaData.get("biome").isJsonPrimitive() ? Text.literal(metaData.get("biome").getAsString()) : Text.literal("N/A"));
+            drawableInfo.put(Text.translatable("gui.screenshot_uploader.metadata.biome"), metaData.has("biome") && metaData.get("biome").isJsonPrimitive() ? Text.literal(metaData.get("biome").getAsString()) : Text.literal("N/A"));
         if (metaData.has("world_info"))
-            drawableInfo.put(Text.literal("World Info: "), metaData.has("world_info") && metaData.get("world_info").isJsonPrimitive() ? Text.literal(metaData.get("world_info").getAsString()) : Text.literal("N/A"));
+            drawableInfo.put(Text.translatable("gui.screenshot_uploader.metadata.worldInfo"), metaData.has("world_info") && metaData.get("world_info").isJsonPrimitive() ? Text.literal(metaData.get("world_info").getAsString()) : Text.literal("N/A"));
         if (metaData.has("world_seed"))
-            drawableInfo.put(Text.literal("Seed: "), metaData.has("world_seed") && metaData.get("world_seed").isJsonPrimitive() ? Text.literal(metaData.get("world_seed").getAsString()) : Text.literal("N/A"));
+            drawableInfo.put(Text.translatable("gui.screenshot_uploader.metadata.seed"), metaData.has("world_seed") && metaData.get("world_seed").isJsonPrimitive() ? Text.literal(metaData.get("world_seed").getAsString()) : Text.literal("N/A"));
         drawableInfo.put(Text.literal(" "), Text.literal(" "));
         if (metaData.has("current_time"))
             drawableInfo.put(metaData.has("current_time") ? getTimestamp(metaData.get("current_time").getAsLong()) : metaData.has("date") ? getTimestamp(metaData.get("date").getAsLong()) : Text.literal("N/A"), Text.literal(""));

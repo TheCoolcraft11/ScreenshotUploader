@@ -56,7 +56,7 @@ public class ServerStatisticsScreen extends Screen {
     private int dragStartOffsetY = 0;
 
     public ServerStatisticsScreen(Screen parent, String serverUrl) {
-        super(Text.translatable("screen.screenshot_uploader.statistics.title"));
+        super(Text.translatable("gui.screenshot_uploader.statistics.title"));
         this.serverUrl = serverUrl;
         this.parent = parent;
         fetchStatistics();
