@@ -234,7 +234,7 @@ public class AlbumScreen extends Screen {
                 try {
                     NativeImage image = NativeImage.read(Files.newInputStream(file.toPath()));
                     MinecraftClient.getInstance().execute(() -> {
-                        NativeImageBackedTexture texture = new NativeImageBackedTexture(String::new, image);
+                        NativeImageBackedTexture texture = new NativeImageBackedTexture(image);
                         MinecraftClient.getInstance().getTextureManager().registerTexture(
                                 Identifier.of("album_cover/" + album.getUuid().toString()), texture);
                         Identifier id = Identifier.of("album_cover/" + album.getUuid().toString());

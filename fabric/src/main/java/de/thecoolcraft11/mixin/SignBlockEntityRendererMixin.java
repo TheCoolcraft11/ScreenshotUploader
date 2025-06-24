@@ -12,7 +12,6 @@ import net.minecraft.client.render.block.entity.AbstractSignBlockEntityRenderer;
 import net.minecraft.client.render.block.entity.BlockEntityRendererFactory;
 import net.minecraft.client.render.item.ItemRenderer;
 import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.item.ItemDisplayContext;
 import net.minecraft.item.ItemStack;
 import net.minecraft.registry.Registries;
 import net.minecraft.util.Identifier;
@@ -28,6 +27,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
 
 @Mixin(value = AbstractSignBlockEntityRenderer.class, priority = 100000)
 public class SignBlockEntityRendererMixin {
@@ -80,6 +80,10 @@ public class SignBlockEntityRendererMixin {
                         Identifier signTexture = Identifier.of("minecraft", "textures/entity/signs/" + woodType.name().toLowerCase() + ".png");
                         if (ConfigManager.getClientConfig().useCustomSign)
                             signTexture = Identifier.of("screenshot-uploader", "textures/entity/signs/screenshot.png");
+                        RenderSystem.setShaderTexture(0, signTexture);
+
+                        RenderSystem.enableBlend();
+                        RenderSystem.defaultBlendFunc();
 
                         float scale = 0.75f;
                         if (ConfigManager.getClientConfig().highlightOscillation) {
@@ -110,7 +114,7 @@ public class SignBlockEntityRendererMixin {
                         model.render(matrices, outlineConsumer, light, overlay, color);
 
                         matrices.pop();
-                        //RenderSystem.disableBlend();
+                        RenderSystem.disableBlend();
                         RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
                     }
 
@@ -135,7 +139,7 @@ public class SignBlockEntityRendererMixin {
                         Identifier itemIdentifier = Identifier.tryParse(ConfigManager.getClientConfig().highlightItem);
                         ItemStack itemStack = Registries.ITEM.get(itemIdentifier).getDefaultStack();
 
-                        itemRenderer.renderItem(itemStack, ItemDisplayContext.FIXED, light, overlay, matrices, vertexConsumers, entity.getWorld(), 0);
+                        itemRenderer.renderItem(itemStack, net.minecraft.item.ModelTransformationMode.FIXED, light, overlay, matrices, vertexConsumers, entity.getWorld(), 0);
 
                         matrices.pop();
                     }

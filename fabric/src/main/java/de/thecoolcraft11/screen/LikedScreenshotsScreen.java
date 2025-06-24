@@ -469,7 +469,7 @@ public class LikedScreenshotsScreen extends Screen {
                             if (client != null) {
                                 client.execute(() -> {
                                     client.getTextureManager().registerTexture(textureId,
-                                            new NativeImageBackedTexture(String::new, image));
+                                            new NativeImageBackedTexture(image));
 
                                     imageIds.add(textureId);
                                     imagePaths.add(finalImagePath);
@@ -509,7 +509,7 @@ public class LikedScreenshotsScreen extends Screen {
                     int green = (rgb >> 8) & 0xFF;
                     int blue = rgb & 0xFF;
 
-                    nativeImage.setColor(x, y, alpha << 24 | red << 16 | green << 8 | blue);
+                    nativeImage.setColorArgb(x, y, alpha << 24 | red << 16 | green << 8 | blue);
                 }
             }
 

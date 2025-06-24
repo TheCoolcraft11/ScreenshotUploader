@@ -6,7 +6,6 @@ import de.thecoolcraft11.config.ConfigManager;
 import de.thecoolcraft11.event.KeyInputHandler;
 import de.thecoolcraft11.screen.ConfirmScreenshotsScreen;
 import de.thecoolcraft11.screen.EditScreen;
-import de.thecoolcraft11.screen.GalleryScreen;
 import de.thecoolcraft11.util.ErrorMessages;
 import de.thecoolcraft11.util.ReceivePackets;
 import de.thecoolcraft11.util.ScreenshotDataHelper;
@@ -30,9 +29,7 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import java.io.File;
-import java.net.URI;
 import java.nio.file.Files;
-import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
@@ -56,7 +53,7 @@ public abstract class ScreenshotMixin {
     private static final Logger logger = LoggerFactory.getLogger(ScreenshotMixin.class);
 
 
-    @Inject(at = @At(value = "HEAD"), method = "method_22691")
+    @Inject(at = @At(value = "HEAD"), method = "method_1661")
     private static void screenshotCaptured(NativeImage nativeImage_1, File file_1, Consumer<Text> consumer_1, CallbackInfo ci) {
         if (ConfigManager.getClientConfig().enableMod) {
             MinecraftClient client = MinecraftClient.getInstance();
@@ -79,7 +76,6 @@ public abstract class ScreenshotMixin {
                 initializeUpload(nativeImage_1);
             }
 
-            GalleryScreen.addNewScreenshot(file_1.getAbsoluteFile().toPath());
         }
     }
 
@@ -136,11 +132,6 @@ public abstract class ScreenshotMixin {
                             client.inGameHud.getChatHud().addMessage(Text.translatable("message.screenshot_uploader.screenshot_deleted", filename).styled(style -> style.withColor(Formatting.RED)));
                         } else {
                             logger.error("Failed to delete the screenshot file: {}", screenshotFile.getAbsolutePath());
-                        }
-
-                        Path screenshotPath = Path.of(screenshotFile.getAbsolutePath());
-                        if (GalleryScreen.getNewScreenshots().contains(screenshotPath)) {
-                            GalleryScreen.removeNewScreenshot(screenshotPath);
                         }
 
                     } catch (Exception e) {
@@ -217,29 +208,29 @@ public abstract class ScreenshotMixin {
 
                                 if (screenshotUrl != null && galleryUrl != null) {
                                     clickableLink = Text.translatable("message.screenshot_uploader.open_screenshot")
-                                            .styled(style -> style.withClickEvent(new ClickEvent.RunCommand("/open-screenshot \"" + screenshotUrl + "\""))
-                                                    .withHoverEvent(new HoverEvent.ShowText(Text.translatable("message.screenshot_uploader.see_screenshot"))).withColor(Formatting.AQUA));
+                                            .styled(style -> style.withClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/open-screenshot \"" + screenshotUrl + "\""))
+                                                    .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, Text.translatable("message.screenshot_uploader.see_screenshot"))).withColor(Formatting.AQUA));
                                 }
                                 if (screenshotUrl != null) {
                                     clickableLink2 = Text.translatable("message.screenshot_uploader.open_link")
-                                            .styled(style -> style.withClickEvent(new ClickEvent.OpenUrl(URI.create(screenshotUrl)))
-                                                    .withHoverEvent(new HoverEvent.ShowText(Text.translatable("message.screenshot_uploader.open_website"))).withColor(Formatting.BLUE));
+                                            .styled(style -> style.withClickEvent(new ClickEvent(ClickEvent.Action.OPEN_URL, screenshotUrl))
+                                                    .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, Text.translatable("message.screenshot_uploader.open_website"))).withColor(Formatting.BLUE));
                                 }
 
                                 if (galleryUrl != null) {
                                     clickableLink3 = Text.translatable("message.screenshot_uploader.open_all")
-                                            .styled(style -> style.withClickEvent(new ClickEvent.OpenUrl(URI.create(galleryUrl)))
-                                                    .withHoverEvent(new HoverEvent.ShowText(Text.translatable("message.screenshot_uploader.see_screenshots"))).withColor(Formatting.YELLOW));
+                                            .styled(style -> style.withClickEvent(new ClickEvent(ClickEvent.Action.OPEN_URL, galleryUrl))
+                                                    .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, Text.translatable("message.screenshot_uploader.see_screenshots"))).withColor(Formatting.YELLOW));
                                 }
                                 if (screenshotUrl != null) {
                                     clickableLink4 = Text.translatable("message.screenshot_uploader.copy")
-                                            .styled(style -> style.withClickEvent(new ClickEvent.CopyToClipboard(screenshotUrl))
-                                                    .withHoverEvent(new HoverEvent.ShowText(Text.translatable("message.screenshot_uploader.copy_url"))).withColor(Formatting.GRAY));
+                                            .styled(style -> style.withClickEvent(new ClickEvent(ClickEvent.Action.COPY_TO_CLIPBOARD, screenshotUrl))
+                                                    .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, Text.translatable("message.screenshot_uploader.copy_url"))).withColor(Formatting.GRAY));
                                 }
                                 if (screenshotUrl != null) {
                                     clickableLink5 = Text.translatable("message.screenshot_uploader.share")
-                                            .styled(style -> style.withClickEvent(new ClickEvent.SuggestCommand(screenshotUrl))
-                                                    .withHoverEvent(new HoverEvent.ShowText(Text.translatable("message.screenshot_uploader.share_screenshot"))).withColor(Formatting.DARK_GREEN));
+                                            .styled(style -> style.withClickEvent(new ClickEvent(ClickEvent.Action.SUGGEST_COMMAND, screenshotUrl))
+                                                    .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, Text.translatable("message.screenshot_uploader.share_screenshot"))).withColor(Formatting.DARK_GREEN));
                                 }
 
                                 if (screenshotUrl == null && galleryUrl == null) {
@@ -253,7 +244,7 @@ public abstract class ScreenshotMixin {
                         } else {
                             String errorMessage = uploadResult.has("message") ? uploadResult.get("message").getAsString() : "Unknown error";
                             Text errorText = Text.translatable("message.screenshot_uploader.upload_failed", errorMessage.split(":")[0])
-                                    .styled(style -> style.withHoverEvent(new HoverEvent.ShowText(Text.translatable(ErrorMessages.getErrorDescription(errorMessage.split(":")[0])))));
+                                    .styled(style -> style.withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, Text.translatable(ErrorMessages.getErrorDescription(errorMessage.split(":")[0])))));
 
                             client.inGameHud.getChatHud().addMessage(errorText);
                         }
@@ -278,5 +269,3 @@ public abstract class ScreenshotMixin {
         return messageBuilder;
     }
 }
-
-

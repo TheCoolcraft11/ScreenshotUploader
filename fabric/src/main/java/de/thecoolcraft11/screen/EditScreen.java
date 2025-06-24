@@ -377,7 +377,7 @@ public class EditScreen extends Screen {
     }
 
     private void saveImage() {
-        if(image != null) {
+        if (image != null) {
             NativeImage newImage = new NativeImage(image.getWidth(), image.getHeight(), false);
             for (int y = 0; y < image.getHeight(); y++) {
                 for (int x = 0; x < image.getWidth(); x++) {
@@ -406,9 +406,9 @@ public class EditScreen extends Screen {
                 client.getTextureManager().destroyTexture(textureId);
             }
         }
-        if(image != null) {
+        if (image != null) {
             if (client != null) {
-                client.getTextureManager().registerTexture(textureId, new NativeImageBackedTexture(String::new, image));
+                client.getTextureManager().registerTexture(textureId, new NativeImageBackedTexture(image));
             }
             logger.info("Image texture registered: {}", textureId);
         }
@@ -944,7 +944,7 @@ public class EditScreen extends Screen {
         } else {
             if (image != null) {
                 if (client != null) {
-                    client.getTextureManager().registerTexture(Identifier.of("edit_image"), new NativeImageBackedTexture(String::new, image));
+                    client.getTextureManager().registerTexture(Identifier.of("edit_image"), new NativeImageBackedTexture(image));
                     textureId = Identifier.of("edit_image");
                 }
             }

@@ -66,7 +66,7 @@ public class ScreenshotScreen extends Screen {
                      NativeImage loadedImage = NativeImage.read(fileInputStream)) {
                     Identifier textureId = Identifier.of("webimage", "temp/" + imageUrl.hashCode());
                     if (MinecraftClient.getInstance() != null) {
-                        MinecraftClient.getInstance().getTextureManager().registerTexture(textureId, new NativeImageBackedTexture(String::new, loadedImage));
+                        MinecraftClient.getInstance().getTextureManager().registerTexture(textureId, new NativeImageBackedTexture(loadedImage));
                         screenshotIdentifier = textureId;
                     }
                 }
@@ -114,7 +114,7 @@ public class ScreenshotScreen extends Screen {
                                      NativeImage loadedImage = NativeImage.read(fileInputStream)) {
                                     Identifier textureId = Identifier.of("webimage", "temp/" + imageUrl.hashCode());
                                     if (MinecraftClient.getInstance() != null) {
-                                        MinecraftClient.getInstance().getTextureManager().registerTexture(textureId, new NativeImageBackedTexture(String::new, loadedImage));
+                                        MinecraftClient.getInstance().getTextureManager().registerTexture(textureId, new NativeImageBackedTexture(loadedImage));
                                     }
                                 }
                             }

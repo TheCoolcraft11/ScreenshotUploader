@@ -48,8 +48,8 @@ public class ReceivePackets {
         String homeAddr = jsonObject.get("home").getAsString();
         String uploadDir = uploadAddr.equals("mcserver://this") || uploadAddr.equals("mcserver://chunked") ? "This Server" : uploadAddr;
         client.inGameHud.getChatHud().addMessage(Text.translatable("message.screenshot_uploader.next_upload", uploadDir).styled(style ->
-                style.withClickEvent(new ClickEvent.OpenUrl(URI.create(homeAddr)))
-                        .withHoverEvent(new HoverEvent.ShowText(Text.translatable("message.screenshot_uploader.next_upload_description", Text.literal(homeAddr).styled(style2 -> style2.withColor(Formatting.AQUA)), Text.keybind("key.screenshot_uploader.gallery"))))))
+                style.withClickEvent(new ClickEvent(ClickEvent.Action.OPEN_URL, homeAddr))
+                        .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, Text.translatable("message.screenshot_uploader.next_upload_description", Text.literal(homeAddr).styled(style2 -> style2.withColor(Formatting.AQUA)), Text.keybind("key.screenshot_uploader.gallery"))))))
         ;
         serverSiteAddress = uploadAddr;
 
@@ -87,35 +87,35 @@ public class ReceivePackets {
 
             if (screenshotUrl != null && galleryUrl != null) {
                 clickableLink = Text.translatable("message.screenshot_uploader.open_screenshot")
-                        .styled(style -> style.withClickEvent(new ClickEvent.RunCommand("/open-screenshot \"" + screenshotUrl + "\""))
-                                .withHoverEvent(new HoverEvent.ShowText(Text.translatable("message.screenshot_uploader.see_screenshot"))).withColor(Formatting.AQUA));
+                        .styled(style -> style.withClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/open-screenshot \"" + screenshotUrl + "\""))
+                                .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, Text.translatable("message.screenshot_uploader.see_screenshot"))).withColor(Formatting.AQUA));
             }
             if (screenshotUrl != null) {
                 if (getGalleryByHome(homeSiteAddress) != null) {
                     clickableLink2 = Text.translatable("message.screenshot_uploader.open_gallery")
-                            .styled(style -> style.withClickEvent(new ClickEvent.RunCommand("/open-gallery \"" + getGalleryByHome(homeSiteAddress) + "\" \"" + screenshotUrl + "\""))
-                                    .withHoverEvent(new HoverEvent.ShowText(Text.translatable("message.screenshot_uploader.open_game_gallery"))).withColor(Formatting.RED));
+                            .styled(style -> style.withClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/open-gallery \"" + getGalleryByHome(homeSiteAddress) + "\" \"" + screenshotUrl + "\""))
+                                    .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, Text.translatable("message.screenshot_uploader.open_game_gallery"))).withColor(Formatting.RED));
                 }
             }
             if (screenshotUrl != null) {
                 clickableLink3 = Text.translatable("message.screenshot_uploader.open_link")
-                        .styled(style -> style.withClickEvent(new ClickEvent.OpenUrl(URI.create(screenshotUrl)))
-                                .withHoverEvent(new HoverEvent.ShowText(Text.translatable("message.screenshot_uploader.open_website"))).withColor(Formatting.BLUE));
+                        .styled(style -> style.withClickEvent(new ClickEvent(ClickEvent.Action.OPEN_URL, screenshotUrl))
+                                .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, Text.translatable("message.screenshot_uploader.open_website"))).withColor(Formatting.BLUE));
             }
             if (galleryUrl != null) {
                 clickableLink4 = Text.translatable("message.screenshot_uploader.open_all")
-                        .styled(style -> style.withClickEvent(new ClickEvent.OpenUrl(URI.create(galleryUrl)))
-                                .withHoverEvent(new HoverEvent.ShowText(Text.translatable("message.screenshot_uploader.see_screenshots"))).withColor(Formatting.YELLOW));
+                        .styled(style -> style.withClickEvent(new ClickEvent(ClickEvent.Action.OPEN_URL, galleryUrl))
+                                .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, Text.translatable("message.screenshot_uploader.see_screenshots"))).withColor(Formatting.YELLOW));
             }
             if (screenshotUrl != null) {
                 clickableLink5 = Text.translatable("message.screenshot_uploader.copy")
-                        .styled(style -> style.withClickEvent(new ClickEvent.CopyToClipboard(screenshotUrl))
-                                .withHoverEvent(new HoverEvent.ShowText(Text.translatable("message.screenshot_uploader.copy_url"))).withColor(Formatting.GREEN));
+                        .styled(style -> style.withClickEvent(new ClickEvent(ClickEvent.Action.COPY_TO_CLIPBOARD, screenshotUrl))
+                                .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, Text.translatable("message.screenshot_uploader.copy_url"))).withColor(Formatting.GREEN));
             }
             if (screenshotUrl != null) {
                 clickableLink6 = Text.translatable("message.screenshot_uploader.share")
-                        .styled(style -> style.withClickEvent(new ClickEvent.SuggestCommand(screenshotUrl))
-                                .withHoverEvent(new HoverEvent.ShowText(Text.translatable("message.screenshot_uploader.share_screenshot"))).withColor(Formatting.DARK_GREEN));
+                        .styled(style -> style.withClickEvent(new ClickEvent(ClickEvent.Action.SUGGEST_COMMAND, screenshotUrl))
+                                .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, Text.translatable("message.screenshot_uploader.share_screenshot"))).withColor(Formatting.DARK_GREEN));
             }
 
             if (screenshotUrl == null && galleryUrl == null) {
@@ -146,6 +146,7 @@ public class ReceivePackets {
 
     public static void handleReceivedScreenshot(byte[] screenshotData, String jsonData, ServerPlayerEntity player) {
         try {
+            logger.error("Received screenshot from player: {}", player.getName().getString());
             String playerName = player.getName().getString();
             String baseFileName = "screenshot-" + playerName + "_" + System.currentTimeMillis();
             String screenshotFileName = baseFileName + ".png";

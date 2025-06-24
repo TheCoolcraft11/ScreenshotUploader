@@ -182,7 +182,7 @@ public class UploadToServerScreen extends Screen {
             textureId = Identifier.of("screenshot_uploader", "textures/screenshots/" + screenshotPath.getFileName().toString());
 
             if (client != null) {
-                client.getTextureManager().registerTexture(textureId, new NativeImageBackedTexture(String::new, screenshotImage));
+                client.getTextureManager().registerTexture(textureId, new NativeImageBackedTexture(screenshotImage));
 
                 float aspectRatio = (float) screenshotImage.getWidth() / screenshotImage.getHeight();
                 imageHeight = Math.min(height - 100, 400);

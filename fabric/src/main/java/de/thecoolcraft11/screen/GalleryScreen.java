@@ -1145,7 +1145,7 @@ public class GalleryScreen extends Screen {
                     NativeImage image = NativeImage.read(Files.newInputStream(path));
                     Identifier textureId = Identifier.of("gallery", "textures/" + path.getFileName().toString());
                     if (client != null) {
-                        client.execute(() -> client.getTextureManager().registerTexture(textureId, new NativeImageBackedTexture(String::new, image)));
+                        client.execute(() -> client.getTextureManager().registerTexture(textureId, new NativeImageBackedTexture(image)));
                     }
                     imageIds.add(textureId);
 
@@ -1482,7 +1482,7 @@ public class GalleryScreen extends Screen {
                     try {
                         NativeImage image = NativeImage.read(Files.newInputStream(path));
                         textureId = Identifier.of("gallery", "textures/" + path.getFileName().toString());
-                        MinecraftClient.getInstance().getTextureManager().registerTexture(textureId, new NativeImageBackedTexture(String::new, image));
+                        MinecraftClient.getInstance().getTextureManager().registerTexture(textureId, new NativeImageBackedTexture(image));
                     } catch (IOException e) {
                         logger.error("Failed to load image during sort '{}': {}", path, e.getMessage());
                     }

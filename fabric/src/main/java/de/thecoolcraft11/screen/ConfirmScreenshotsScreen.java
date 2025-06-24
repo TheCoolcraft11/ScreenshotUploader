@@ -102,7 +102,7 @@ public class ConfirmScreenshotsScreen extends Screen {
             context.drawTexture(RenderLayer::getGuiTextured, textureId, imageX, imageY, 0, 0, imageWidth, imageHeight, imageWidth, imageHeight);
         } else {
             if (image != null && client != null) {
-                client.getTextureManager().registerTexture(Identifier.of("edit_image"), new NativeImageBackedTexture(String::new, image));
+                client.getTextureManager().registerTexture(Identifier.of("edit_image"), new NativeImageBackedTexture(image));
                 textureId = Identifier.of("edit_image");
             }
         }

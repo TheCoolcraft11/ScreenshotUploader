@@ -991,7 +991,7 @@ public class WebGalleryScreen extends Screen {
                         Identifier textureId = Identifier.of("webimage", "temp/" + imageUrl.hashCode());
                         if (MinecraftClient.getInstance() != null) {
                             MinecraftClient.getInstance().getTextureManager().registerTexture(textureId,
-                                    new NativeImageBackedTexture(String::new, finalLoadedImage));
+                                    new NativeImageBackedTexture(finalLoadedImage));
                             imageIds.add(textureId);
                         } else {
                             logger.error("Failed to get client while loading web image!");
@@ -1038,7 +1038,7 @@ public class WebGalleryScreen extends Screen {
                                         if (MinecraftClient.getInstance() != null) {
                                             newImagePaths.add(imageUrl);
                                             MinecraftClient.getInstance().getTextureManager().registerTexture(textureId,
-                                                    new NativeImageBackedTexture(String::new, finalLoadedImage));
+                                                    new NativeImageBackedTexture(finalLoadedImage));
                                             imageIds.add(textureId);
                                         } else {
                                             logger.error("Failed to get client while saving the web image!");
@@ -1074,7 +1074,7 @@ public class WebGalleryScreen extends Screen {
                      NativeImage loadedImage = NativeImage.read(fileInputStream)) {
                     Identifier textureId = Identifier.of("webimage", "head/" + imageUrl.hashCode());
                     if (MinecraftClient.getInstance() != null) {
-                        MinecraftClient.getInstance().getTextureManager().registerTexture(textureId, new NativeImageBackedTexture(String::new, loadedImage));
+                        MinecraftClient.getInstance().getTextureManager().registerTexture(textureId, new NativeImageBackedTexture(loadedImage));
                     } else {
                         System.err.println("Failed to get client while loading web image!");
                     }
@@ -1128,7 +1128,7 @@ public class WebGalleryScreen extends Screen {
                                      NativeImage loadedImage = NativeImage.read(fileInputStream)) {
                                     Identifier textureId = Identifier.of("webimage", "head/" + imageUrl.hashCode());
                                     if (MinecraftClient.getInstance() != null) {
-                                        MinecraftClient.getInstance().getTextureManager().registerTexture(textureId, new NativeImageBackedTexture(String::new, loadedImage));
+                                        MinecraftClient.getInstance().getTextureManager().registerTexture(textureId, new NativeImageBackedTexture(loadedImage));
                                     } else {
                                         System.err.println("Failed to get client while saving the web image!");
                                     }
