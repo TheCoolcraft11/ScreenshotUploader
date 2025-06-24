@@ -1,7 +1,3 @@
-#### In Game Gallery is currently only supported up to 1.21.3
-
-##
-
 ### Download [Here](https://modrinth.com/mod/screenshot-uploader) at Modrinth
 
 ##
