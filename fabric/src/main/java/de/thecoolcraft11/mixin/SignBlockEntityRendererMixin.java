@@ -15,8 +15,10 @@ import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.item.ItemDisplayContext;
 import net.minecraft.item.ItemStack;
 import net.minecraft.registry.Registries;
+import net.minecraft.state.property.Properties;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.world.World;
 import org.joml.Quaternionf;
@@ -57,7 +59,7 @@ public class SignBlockEntityRendererMixin {
                 Model model,
                 CallbackInfo ci) {
         if (ConfigManager.getClientConfig().highlightScreenshotSigns) {
-            if (entity.getWorld() != null && !isHangingSign(entity.getWorld(), entity.getPos())) {
+            if (entity.getWorld() != null) {
 
                 matrices.push();
 
@@ -74,18 +76,31 @@ public class SignBlockEntityRendererMixin {
                 Pattern pattern = Pattern.compile(urlPattern);
                 Matcher matcher = pattern.matcher(text);
                 try {
-
-
                     if (matcher.matches() && entity.isWaxed()) {
-                        Identifier signTexture = Identifier.of("minecraft", "textures/entity/signs/" + woodType.name().toLowerCase() + ".png");
-                        if (ConfigManager.getClientConfig().useCustomSign)
-                            signTexture = Identifier.of("screenshot-uploader", "textures/entity/signs/screenshot.png");
+                        boolean isWall = isWallSign(entity.getWorld(), entity.getPos());
+                        boolean isHanging = isHangingSign(entity.getWorld(), entity.getPos());
+                        boolean isWallHanging = isWallHangingSign(entity.getWorld(), entity.getPos());
+                        Direction facing = Direction.SOUTH;
+
+                        if (isWall || isWallHanging) {
+                            facing = entity.getWorld().getBlockState(entity.getPos()).get(Properties.HORIZONTAL_FACING);
+                        }
+
+                        Identifier signTexture;
+                        if (isHanging || isWallHanging) {
+                            signTexture = Identifier.of("minecraft", "textures/entity/signs/hanging/" + woodType.name().toLowerCase() + ".png");
+                            if (ConfigManager.getClientConfig().useCustomSign)
+                                signTexture = Identifier.of("screenshot-uploader", "textures/entity/signs/hanging_screenshot.png");
+                        } else {
+                            signTexture = Identifier.of("minecraft", "textures/entity/signs/" + woodType.name().toLowerCase() + ".png");
+                            if (ConfigManager.getClientConfig().useCustomSign)
+                                signTexture = Identifier.of("screenshot-uploader", "textures/entity/signs/screenshot.png");
+                        }
 
                         float scale = 0.75f;
                         if (ConfigManager.getClientConfig().highlightOscillation) {
                             long elapsedTime = System.nanoTime();
                             float oscillation = (float) Math.sin(elapsedTime / 5000000000.0 * Math.PI * 2);
-
 
                             scale = 0.05f * oscillation + 0.80f;
                         }
@@ -94,7 +109,76 @@ public class SignBlockEntityRendererMixin {
                         RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, alpha);
 
                         matrices.push();
-                        matrices.translate(0.5f, isWallSign(entity.getWorld(), entity.getPos()) ? 0.123f : 0.45f, isWallSign(entity.getWorld(), entity.getPos()) ? 0.066f : 0.5f);
+
+                        if (isWallHanging) {
+                            matrices.translate(0.5f, 0.62223f, 0.92222f);
+
+                            float yRotation = 0;
+                            float offset = 0.42f;
+
+                            switch (facing) {
+                                case NORTH:
+                                    yRotation = 180f;
+                                    matrices.translate(0, 0, offset);
+                                    break;
+                                case SOUTH:
+                                    matrices.translate(0, 0, -offset);
+                                    break;
+                                case EAST:
+                                    yRotation = 270f;
+                                    matrices.translate(-offset, 0, 0);
+                                    break;
+                                case WEST:
+                                    yRotation = 90f;
+                                    matrices.translate(offset, 0, 0);
+                                    break;
+                            }
+
+                            if (yRotation != 0) {
+                                matrices.multiply(new Quaternionf().rotationY((float) Math.toRadians(yRotation)));
+                            }
+
+                        } else if (isWall) {
+                            matrices.translate(0.5f, 0.123f, 0.5f);
+
+                            float yRotation = 0;
+                            float zOffset = 0.434f;
+
+                            switch (facing) {
+                                case NORTH:
+                                    yRotation = 180f;
+                                    matrices.translate(0, 0, zOffset);
+                                    break;
+                                case SOUTH:
+                                    matrices.translate(0, 0, -zOffset);
+                                    break;
+                                case EAST:
+                                    yRotation = 270f;
+                                    matrices.translate(-zOffset, 0, 0);
+                                    break;
+                                case WEST:
+                                    yRotation = 90f;
+                                    matrices.translate(zOffset, 0, 0);
+                                    break;
+                            }
+
+                            if (yRotation != 0) {
+                                matrices.multiply(new Quaternionf().rotationY((float) Math.toRadians(yRotation)));
+                            }
+                        } else {
+                            matrices.translate(0.5f, 0.45f, 0.5f);
+
+                            try {
+                                float rotation = entity.getWorld().getBlockState(entity.getPos()).get(Properties.ROTATION) * 22.5f;
+                                matrices.multiply(new Quaternionf().rotationY((float) Math.toRadians(-rotation)));
+                            } catch (Exception ignored) {
+                            }
+                        }
+
+                        if (isHanging || isWallHanging) {
+                            scale *= 1.478865f;
+                        }
+
                         matrices.scale(scale, -scale, scale);
 
                         if (ConfigManager.getClientConfig().rotateHighlightSign) {
@@ -110,21 +194,69 @@ public class SignBlockEntityRendererMixin {
                         model.render(matrices, outlineConsumer, light, overlay, color);
 
                         matrices.pop();
-                        //RenderSystem.disableBlend();
                         RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
                     }
 
                     if (matcher.matches() && entity.isWaxed()) {
                         matrices.push();
 
-                        matrices.translate(0.5, entity.getWorld() != null ? isWallSign(entity.getWorld(), entity.getPos()) ? 1.25f : 1.66f : 1.5f, 0.5);
+                        boolean isWall = isWallSign(entity.getWorld(), entity.getPos());
+                        boolean isHanging = isHangingSign(entity.getWorld(), entity.getPos());
+                        boolean isWallHanging = isWallHangingSign(entity.getWorld(), entity.getPos());
+                        Direction facing = Direction.SOUTH;
+
+                        if (isWall || isWallHanging) {
+                            facing = entity.getWorld().getBlockState(entity.getPos()).get(Properties.HORIZONTAL_FACING);
+                        }
+
+                        if (isWallHanging) {
+                            matrices.translate(0.5, 1.5f, 0.5);
+
+                            float offset = 0.15f;
+                            switch (facing) {
+                                case NORTH:
+                                    matrices.translate(0, 0, offset);
+                                    break;
+                                case SOUTH:
+                                    matrices.translate(0, 0, -offset);
+                                    break;
+                                case EAST:
+                                    matrices.translate(-offset, 0, 0);
+                                    break;
+                                case WEST:
+                                    matrices.translate(offset, 0, 0);
+                                    break;
+                            }
+                        } else if (isHanging) {
+                            matrices.translate(0.5, 1.9f, 0.5);
+                        } else if (isWall) {
+                            matrices.translate(0.5, 1.25f, 0.5);
+
+                            float offset = 0.2f;
+                            switch (facing) {
+                                case NORTH:
+                                    matrices.translate(0, 0, offset);
+                                    break;
+                                case SOUTH:
+                                    matrices.translate(0, 0, -offset);
+                                    break;
+                                case EAST:
+                                    matrices.translate(-offset, 0, 0);
+                                    break;
+                                case WEST:
+                                    matrices.translate(offset, 0, 0);
+                                    break;
+                            }
+                        } else {
+                            matrices.translate(0.5, 1.66f, 0.5);
+                        }
+
                         matrices.scale(0.66f, 0.66f, 0.66f);
 
                         rotationAngle += ConfigManager.getClientConfig().highlightRotationSpeed;
                         if (rotationAngle >= 360.0f) {
                             rotationAngle = 0.0f;
                         }
-
 
                         if (ConfigManager.getClientConfig().rotateHighlightItem) {
                             float radians = rotationAngle * (float) Math.PI / 180.0f;
@@ -158,5 +290,11 @@ public class SignBlockEntityRendererMixin {
     public boolean isHangingSign(World world, BlockPos pos) {
         BlockState blockState = world.getBlockState(pos);
         return blockState.getBlock() instanceof HangingSignBlock || blockState.getBlock() instanceof WallHangingSignBlock;
+    }
+
+    @Unique
+    public boolean isWallHangingSign(World world, BlockPos pos) {
+        BlockState blockState = world.getBlockState(pos);
+        return blockState.getBlock() instanceof WallHangingSignBlock;
     }
 }
