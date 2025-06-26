@@ -99,6 +99,60 @@ public class ClientConfig {
     @Comment("config.screenshot_uploader.solarize_amount")
     public int solarizeThreshold = 128;
 
+    @Comment("config.screenshot_uploader.preserve_image_aspect_ratio")
+    public boolean preserveImageAspectRatio = true;
+
+    @Comment("config.screenshot_uploader.image_color_r")
+    public int imageColorR = 255;
+
+    @Comment("config.screenshot_uploader.image_color_g")
+    public int imageColorG = 255;
+
+    @Comment("config.screenshot_uploader.image_color_b")
+    public int imageColorB = 255;
+
+    @Comment("config.screenshot_uploader.image_color_a")
+    public int imageColorA = 255;
+
+    @Comment("config.screenshot_uploader.regular_sign_vertical_offset")
+    public float regularSignVerticalOffset = -1.2f;
+
+    @Comment("config.screenshot_uploader.hanging_sign_vertical_offset")
+    public float hangingSignVerticalOffset = 1.2f;
+
+    @Comment("config.screenshot_uploader.image_z_offset")
+    public float imageZOffset = -0.015f;
+
+    @Comment("config.screenshot_uploader.regular_sign_image_width")
+    public float regularSignImageWidth = 0.95f;
+
+    @Comment("config.screenshot_uploader.regular_sign_image_height")
+    public float regularSignImageHeight = 0.75f;
+
+    @Comment("config.screenshot_uploader.hanging_sign_image_width")
+    public float hangingSignImageWidth = 0.85f;
+
+    @Comment("config.screenshot_uploader.hanging_sign_image_height")
+    public float hangingSignImageHeight = 0.55f;
+
+    @Comment("config.screenshot_uploader.image_light_boost")
+    public int imageLightBoost = 50;
+
+    @Comment("config.screenshot_uploader.enable_screenshot_rendering")
+    public boolean enableScreenshotRendering = false;
+
+    @Comment("config.screenshot_uploader.item_vertical_offset")
+    public float itemVerticalOffset = 0.0f;
+
+    @Comment("config.screenshot_uploader.item_horizontal_offset")
+    public float itemHorizontalOffset = 0.0f;
+
+    @Comment("config.screenshot_uploader.item_depth_offset")
+    public float itemDepthOffset = 0.0f;
+
+    @Comment("config.screenshot_uploader.item_scale")
+    public float itemScale = 0.66f;
+
     @Comment("config.screenshot_uploader.contrast_multiplier")
     public float contrastMultiplier = 1.2f;
 
@@ -141,4 +195,3 @@ public class ClientConfig {
         upload_urls.put("Server Example", map);
     }
 }
-

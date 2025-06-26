@@ -4,13 +4,17 @@ import com.mojang.blaze3d.systems.RenderSystem;
 import de.thecoolcraft11.config.ConfigManager;
 import net.minecraft.block.*;
 import net.minecraft.block.entity.SignBlockEntity;
+import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.model.Model;
+import net.minecraft.client.render.OverlayTexture;
 import net.minecraft.client.render.RenderLayer;
 import net.minecraft.client.render.VertexConsumer;
 import net.minecraft.client.render.VertexConsumerProvider;
 import net.minecraft.client.render.block.entity.AbstractSignBlockEntityRenderer;
 import net.minecraft.client.render.block.entity.BlockEntityRendererFactory;
 import net.minecraft.client.render.item.ItemRenderer;
+import net.minecraft.client.texture.NativeImage;
+import net.minecraft.client.texture.NativeImageBackedTexture;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.item.ItemDisplayContext;
 import net.minecraft.item.ItemStack;
@@ -21,18 +25,33 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.world.World;
+import org.joml.Matrix4f;
 import org.joml.Quaternionf;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.Files;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 @Mixin(value = AbstractSignBlockEntityRenderer.class, priority = 100000)
 public class SignBlockEntityRendererMixin {
+
+    @Unique
+    private static final Logger LOGGER = LoggerFactory.getLogger("ScreenshotUploader");
+
+    @Unique
+    private static final Map<String, Identifier> SCREENSHOT_TEXTURES = new HashMap<>();
 
     @Unique
     ItemRenderer itemRenderer;
@@ -76,7 +95,8 @@ public class SignBlockEntityRendererMixin {
                 Pattern pattern = Pattern.compile(urlPattern);
                 Matcher matcher = pattern.matcher(text);
                 try {
-                    if (matcher.matches() && entity.isWaxed()) {
+                    if (matcher.find() && entity.isWaxed()) {
+                        String url = matcher.group();
                         boolean isWall = isWallSign(entity.getWorld(), entity.getPos());
                         boolean isHanging = isHangingSign(entity.getWorld(), entity.getPos());
                         boolean isWallHanging = isWallHangingSign(entity.getWorld(), entity.getPos());
@@ -193,6 +213,11 @@ public class SignBlockEntityRendererMixin {
 
                         model.render(matrices, outlineConsumer, light, overlay, color);
 
+                        Identifier screenshotTexture = getScreenshotTexture(url);
+                        if (screenshotTexture != null && ConfigManager.getClientConfig().enableScreenshotRendering) {
+                            renderScreenshotOnSign(matrices, vertexConsumers, light, screenshotTexture, isWallHanging || isHanging);
+                        }
+
                         matrices.pop();
                         RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
                     }
@@ -251,7 +276,31 @@ public class SignBlockEntityRendererMixin {
                             matrices.translate(0.5, 1.66f, 0.5);
                         }
 
-                        matrices.scale(0.66f, 0.66f, 0.66f);
+                        float horizontalOffset = ConfigManager.getClientConfig().itemHorizontalOffset;
+                        float verticalOffset = ConfigManager.getClientConfig().itemVerticalOffset;
+                        float depthOffset = ConfigManager.getClientConfig().itemDepthOffset;
+                        float itemScale = ConfigManager.getClientConfig().itemScale;
+
+                        if (isWall || isWallHanging) {
+                            switch (facing) {
+                                case NORTH:
+                                    matrices.translate(horizontalOffset, verticalOffset, -depthOffset);
+                                    break;
+                                case SOUTH:
+                                    matrices.translate(-horizontalOffset, verticalOffset, depthOffset);
+                                    break;
+                                case EAST:
+                                    matrices.translate(depthOffset, verticalOffset, horizontalOffset);
+                                    break;
+                                case WEST:
+                                    matrices.translate(-depthOffset, verticalOffset, -horizontalOffset);
+                                    break;
+                            }
+                        } else {
+                            matrices.translate(horizontalOffset, verticalOffset, depthOffset);
+                        }
+
+                        matrices.scale(itemScale, itemScale, itemScale);
 
                         rotationAngle += ConfigManager.getClientConfig().highlightRotationSpeed;
                         if (rotationAngle >= 360.0f) {
@@ -277,6 +326,112 @@ public class SignBlockEntityRendererMixin {
                 }
             }
         }
+    }
+
+    @Unique
+    private void renderScreenshotOnSign(MatrixStack matrices, VertexConsumerProvider vertexConsumers, int light,
+                                        Identifier textureId, boolean isHanging) {
+        matrices.push();
+
+        if (isHanging) {
+            matrices.translate(0, ConfigManager.getClientConfig().hangingSignVerticalOffset, 0);
+        } else {
+            matrices.translate(0, ConfigManager.getClientConfig().regularSignVerticalOffset, 0);
+        }
+
+        matrices.translate(0, 0, ConfigManager.getClientConfig().imageZOffset);
+
+        float width = isHanging ?
+                ConfigManager.getClientConfig().hangingSignImageWidth :
+                ConfigManager.getClientConfig().regularSignImageWidth;
+        float height = isHanging ?
+                ConfigManager.getClientConfig().hangingSignImageHeight :
+                ConfigManager.getClientConfig().regularSignImageHeight;
+
+        if (ConfigManager.getClientConfig().preserveImageAspectRatio) {
+            NativeImageBackedTexture texture = getTextureFromId(textureId);
+            if (texture != null && texture.getImage() != null) {
+                int imageWidth = texture.getImage().getWidth();
+                int imageHeight = texture.getImage().getHeight();
+
+                if (imageWidth > 0 && imageHeight > 0) {
+                    float imageRatio = (float) imageWidth / imageHeight;
+                    float targetRatio = width / height;
+
+                    if (imageRatio > targetRatio) {
+                        height = width / imageRatio;
+                    } else {
+                        width = height * imageRatio;
+                    }
+                }
+            }
+        }
+
+        matrices.translate(-width / 2, -height / 2, 0);
+
+        Matrix4f matrix = matrices.peek().getPositionMatrix();
+
+        RenderLayer renderLayer = RenderLayer.getEntityTranslucent(textureId);
+        VertexConsumer vertexConsumer = vertexConsumers.getBuffer(renderLayer);
+
+        int r = ConfigManager.getClientConfig().imageColorR;
+        int g = ConfigManager.getClientConfig().imageColorG;
+        int b = ConfigManager.getClientConfig().imageColorB;
+        int a = ConfigManager.getClientConfig().imageColorA;
+
+        if (r == 0 && g == 0 && b == 0) {
+            r = g = b = 255;
+        }
+
+        int enhancedLight = Math.min(light + ConfigManager.getClientConfig().imageLightBoost, 15728880);
+
+
+        vertexConsumer.vertex(matrix, 0, 0, 0).color(r, g, b, a).texture(0f, 0f).overlay(OverlayTexture.DEFAULT_UV).light(enhancedLight).normal(0, 0, 1);
+        vertexConsumer.vertex(matrix, 0, height, 0).color(r, g, b, a).texture(0f, 1f).overlay(OverlayTexture.DEFAULT_UV).light(enhancedLight).normal(0, 0, 1);
+        vertexConsumer.vertex(matrix, width, height, 0).color(r, g, b, a).texture(1f, 1f).overlay(OverlayTexture.DEFAULT_UV).light(enhancedLight).normal(0, 0, 1);
+        vertexConsumer.vertex(matrix, width, 0, 0).color(r, g, b, a).texture(1f, 0f).overlay(OverlayTexture.DEFAULT_UV).light(enhancedLight).normal(0, 0, 1);
+
+        matrices.pop();
+    }
+
+    @Unique
+    private NativeImageBackedTexture getTextureFromId(Identifier id) {
+        try {
+            return (NativeImageBackedTexture) MinecraftClient.getInstance().getTextureManager().getTexture(id);
+        } catch (Exception e) {
+            LOGGER.warn("Failed to get texture from id: " + id);
+            return null;
+        }
+    }
+
+    @Unique
+    private Identifier getScreenshotTexture(String url) {
+        if (SCREENSHOT_TEXTURES.containsKey(url)) {
+            return SCREENSHOT_TEXTURES.get(url);
+        }
+
+        try {
+            String cacheFileName = "screenshots_cache/" + url.hashCode() + ".png";
+            File cachedImage = new File(cacheFileName);
+
+            if (cachedImage.exists()) {
+                try (InputStream fileInputStream = Files.newInputStream(cachedImage.toPath());
+                     NativeImage loadedImage = NativeImage.read(fileInputStream)) {
+                    Identifier textureId = Identifier.of("screenshot-uploader", "signs/" + url.hashCode());
+                    MinecraftClient.getInstance().getTextureManager().registerTexture(textureId, new NativeImageBackedTexture(String::new, loadedImage));
+                    SCREENSHOT_TEXTURES.put(url, textureId);
+                    return textureId;
+                } catch (IOException e) {
+                    LOGGER.error("Failed to load cached screenshot image: " + e.getMessage());
+                }
+            }
+
+
+        } catch (Exception e) {
+            LOGGER.error("Error processing screenshot texture: " + e.getMessage());
+        }
+
+        return null;
     }
 
 
