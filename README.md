@@ -1,4 +1,4 @@
-### Download [Here](https://modrinth.com/mod/screenshot-uploader) at Modrinth
+### Download [Here](https://modrinth.com/mod/screenshot-uploader) on Modrinth
 
 ##
 
