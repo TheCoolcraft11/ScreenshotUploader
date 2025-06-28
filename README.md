@@ -1,4 +1,4 @@
-### Download [Here](https://modrinth.com/mod/screenshot-uploader) at Modrinth
+### Download [Here](https://modrinth.com/mod/screenshot-uploader) on Modrinth
 
 ##
 
@@ -64,7 +64,7 @@ applications or manual uploads.
 
 ### Client
 
-#### **Prerequisites**: Minecraft Fabric 1.21 - 1.21.3
+#### **Prerequisites**: Minecraft Fabric 1.21 - 1.21.5
 
 **Steps**:
 
@@ -85,5 +85,5 @@ applications or manual uploads.
 3. Open the config (config/screenshotUploader/serverConfig.json, for Fabric; plugins/ScreenshotUploader/config.yml, for
    Paper, etc.)
 4. Change the entry ```websiteURL``` to the public url of the webserver (the url to open the screenshots gallery in the
-   browser) e.g. ```"https://myserverip.com:4567"```
+   browser) e.g. ```"https://yourserverip.com:4567"```
 5. Take a look at the [Wiki](https://github.com/TheCoolcraft11/ScreenshotUploader/wiki) or change the config
