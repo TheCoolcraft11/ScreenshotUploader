@@ -91,16 +91,61 @@ public class SignBlockEntityRendererMixin {
                         entity.getBackText().getMessage(2, false).getString() +
                         entity.getBackText().getMessage(3, false).getString();
 
-                String urlPattern = "https?://[\\w.-]+(:\\d+)?(/[\\w.-]*)*";
+                String urlPattern = "(https?://[\\w.-]+(?::\\d+)?(?:/[\\w.-]*)*)(\\[-?\\d+(?:[.,]\\d+)?(?:[;,:]-?\\w+(?:[.:,]\\d+)?)*?])?";
                 Pattern pattern = Pattern.compile(urlPattern);
                 Matcher matcher = pattern.matcher(text);
                 try {
+                    String highlightItemName = ConfigManager.getClientConfig().highlightItem;
+                    float customX = 0;
+                    float customY = 0;
+                    float customZ = 0;
+                    float customYaw = 0;
+                    float customPitch = 0;
+                    float customSize = 0.75f;
+                    int customLight = Math.min(light + ConfigManager.getClientConfig().imageLightBoost, 15728880);
+                    boolean useCustomTransformations = false;
+
                     if (matcher.find() && entity.isWaxed()) {
-                        String url = matcher.group();
+                        String url = matcher.group(1);
+                        String transformations = matcher.group(2);
                         boolean isWall = isWallSign(entity.getWorld(), entity.getPos());
                         boolean isHanging = isHangingSign(entity.getWorld(), entity.getPos());
                         boolean isWallHanging = isWallHangingSign(entity.getWorld(), entity.getPos());
                         Direction facing = Direction.SOUTH;
+
+                        if (transformations != null && !transformations.isEmpty()) {
+                            try {
+                                String cleanTransformations = transformations.substring(1, transformations.length() - 1);
+                                String[] parts = cleanTransformations.split("[;,]");
+                                if (parts.length >= 1) {
+                                    customX = Float.parseFloat(parts[0]);
+                                    if (parts.length >= 2) {
+                                        customY = -Float.parseFloat(parts[1]);
+                                        if (parts.length >= 3) {
+                                            customZ = Float.parseFloat(parts[2]);
+                                            if (parts.length >= 4) {
+                                                customYaw = Float.parseFloat(parts[3]);
+                                                if (parts.length >= 5) {
+                                                    customPitch = Float.parseFloat(parts[4]);
+                                                    if (parts.length >= 6) {
+                                                        customSize = Float.parseFloat(parts[5]);
+                                                        if (parts.length >= 7) {
+                                                            customLight = Math.min(Integer.parseInt(parts[6]), 15728880);
+                                                            if (parts.length >= 8) {
+                                                                highlightItemName = parts[7];
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                    useCustomTransformations = true;
+                                }
+                            } catch (Exception e) {
+                                LOGGER.error("Failed to parse transformation string: {}", transformations, e);
+                            }
+                        }
 
                         if (isWall || isWallHanging) {
                             facing = entity.getWorld().getBlockState(entity.getPos()).get(Properties.HORIZONTAL_FACING);
@@ -109,16 +154,16 @@ public class SignBlockEntityRendererMixin {
                         Identifier signTexture;
                         if (isHanging || isWallHanging) {
                             signTexture = Identifier.of("minecraft", "textures/entity/signs/hanging/" + woodType.name().toLowerCase() + ".png");
-                            if (ConfigManager.getClientConfig().useCustomSign)
+                            if (ConfigManager.getClientConfig().useCustomSign && !useCustomTransformations)
                                 signTexture = Identifier.of("screenshot-uploader", "textures/entity/signs/hanging_screenshot.png");
                         } else {
                             signTexture = Identifier.of("minecraft", "textures/entity/signs/" + woodType.name().toLowerCase() + ".png");
-                            if (ConfigManager.getClientConfig().useCustomSign)
+                            if (ConfigManager.getClientConfig().useCustomSign && !useCustomTransformations)
                                 signTexture = Identifier.of("screenshot-uploader", "textures/entity/signs/screenshot.png");
                         }
 
                         float scale = 0.75f;
-                        if (ConfigManager.getClientConfig().highlightOscillation) {
+                        if (!useCustomTransformations && ConfigManager.getClientConfig().highlightOscillation) {
                             long elapsedTime = System.nanoTime();
                             float oscillation = (float) Math.sin(elapsedTime / 5000000000.0 * Math.PI * 2);
 
@@ -195,7 +240,7 @@ public class SignBlockEntityRendererMixin {
                             }
                         }
 
-                        if (isHanging || isWallHanging) {
+                        if ((isHanging || isWallHanging)) {
                             scale *= 1.478865f;
                         }
 
@@ -215,7 +260,7 @@ public class SignBlockEntityRendererMixin {
 
                         Identifier screenshotTexture = getScreenshotTexture(url);
                         if (screenshotTexture != null && ConfigManager.getClientConfig().enableScreenshotRendering) {
-                            renderScreenshotOnSign(matrices, vertexConsumers, light, screenshotTexture, isWallHanging || isHanging);
+                            renderScreenshotOnSign(matrices, vertexConsumers, screenshotTexture, isWallHanging || isHanging, useCustomTransformations, customX, customY, customZ, customYaw, customPitch, customSize, customLight);
                         }
 
                         matrices.pop();
@@ -313,10 +358,10 @@ public class SignBlockEntityRendererMixin {
                             matrices.multiply(rotation);
                         }
 
-                        Identifier itemIdentifier = Identifier.tryParse(ConfigManager.getClientConfig().highlightItem);
+                        Identifier itemIdentifier = Identifier.tryParse(highlightItemName);
                         ItemStack itemStack = Registries.ITEM.get(itemIdentifier).getDefaultStack();
 
-                        itemRenderer.renderItem(itemStack, ItemDisplayContext.FIXED, light, overlay, matrices, vertexConsumers, entity.getWorld(), 0);
+                        itemRenderer.renderItem(itemStack, ItemDisplayContext.FIXED, customLight, overlay, matrices, vertexConsumers, entity.getWorld(), 0);
 
                         matrices.pop();
                     }
@@ -329,8 +374,9 @@ public class SignBlockEntityRendererMixin {
     }
 
     @Unique
-    private void renderScreenshotOnSign(MatrixStack matrices, VertexConsumerProvider vertexConsumers, int light,
-                                        Identifier textureId, boolean isHanging) {
+    private void renderScreenshotOnSign(MatrixStack matrices, VertexConsumerProvider vertexConsumers,
+                                        Identifier textureId, boolean isHanging, boolean useCustomTransformations,
+                                        float customX, float customY, float customZ, float customYaw, float customPitch, float customSize, int customLight) {
         matrices.push();
 
         if (isHanging) {
@@ -341,12 +387,27 @@ public class SignBlockEntityRendererMixin {
 
         matrices.translate(0, 0, ConfigManager.getClientConfig().imageZOffset);
 
+        if (useCustomTransformations) {
+            matrices.translate(0, 0, 0);
+
+            matrices.translate(customX, customY, customZ);
+
+            matrices.multiply(new Quaternionf().rotationY((float) Math.toRadians(-customYaw)));
+            matrices.multiply(new Quaternionf().rotationX((float) Math.toRadians(customPitch)));
+        }
+
         float width = isHanging ?
                 ConfigManager.getClientConfig().hangingSignImageWidth :
                 ConfigManager.getClientConfig().regularSignImageWidth;
         float height = isHanging ?
                 ConfigManager.getClientConfig().hangingSignImageHeight :
                 ConfigManager.getClientConfig().regularSignImageHeight;
+
+        if (useCustomTransformations) {
+            float sizeFactor = customSize / 0.75f;
+            width *= sizeFactor;
+            height *= sizeFactor;
+        }
 
         if (ConfigManager.getClientConfig().preserveImageAspectRatio) {
             NativeImageBackedTexture texture = getTextureFromId(textureId);
@@ -383,13 +444,11 @@ public class SignBlockEntityRendererMixin {
             r = g = b = 255;
         }
 
-        int enhancedLight = Math.min(light + ConfigManager.getClientConfig().imageLightBoost, 15728880);
 
-
-        vertexConsumer.vertex(matrix, 0, 0, 0).color(r, g, b, a).texture(0f, 0f).overlay(OverlayTexture.DEFAULT_UV).light(enhancedLight).normal(0, 0, 1);
-        vertexConsumer.vertex(matrix, 0, height, 0).color(r, g, b, a).texture(0f, 1f).overlay(OverlayTexture.DEFAULT_UV).light(enhancedLight).normal(0, 0, 1);
-        vertexConsumer.vertex(matrix, width, height, 0).color(r, g, b, a).texture(1f, 1f).overlay(OverlayTexture.DEFAULT_UV).light(enhancedLight).normal(0, 0, 1);
-        vertexConsumer.vertex(matrix, width, 0, 0).color(r, g, b, a).texture(1f, 0f).overlay(OverlayTexture.DEFAULT_UV).light(enhancedLight).normal(0, 0, 1);
+        vertexConsumer.vertex(matrix, 0, 0, 0).color(r, g, b, a).texture(0f, 0f).overlay(OverlayTexture.DEFAULT_UV).light(customLight).normal(0, 0, 1);
+        vertexConsumer.vertex(matrix, 0, height, 0).color(r, g, b, a).texture(0f, 1f).overlay(OverlayTexture.DEFAULT_UV).light(customLight).normal(0, 0, 1);
+        vertexConsumer.vertex(matrix, width, height, 0).color(r, g, b, a).texture(1f, 1f).overlay(OverlayTexture.DEFAULT_UV).light(customLight).normal(0, 0, 1);
+        vertexConsumer.vertex(matrix, width, 0, 0).color(r, g, b, a).texture(1f, 0f).overlay(OverlayTexture.DEFAULT_UV).light(customLight).normal(0, 0, 1);
 
         matrices.pop();
     }
@@ -399,7 +458,7 @@ public class SignBlockEntityRendererMixin {
         try {
             return (NativeImageBackedTexture) MinecraftClient.getInstance().getTextureManager().getTexture(id);
         } catch (Exception e) {
-            LOGGER.warn("Failed to get texture from id: " + id);
+            LOGGER.warn("Failed to get texture from id: {}", id);
             return null;
         }
     }
@@ -422,13 +481,13 @@ public class SignBlockEntityRendererMixin {
                     SCREENSHOT_TEXTURES.put(url, textureId);
                     return textureId;
                 } catch (IOException e) {
-                    LOGGER.error("Failed to load cached screenshot image: " + e.getMessage());
+                    LOGGER.error("Failed to load cached screenshot image: {}", e.getMessage());
                 }
             }
 
 
         } catch (Exception e) {
-            LOGGER.error("Error processing screenshot texture: " + e.getMessage());
+            LOGGER.error("Error processing screenshot texture: {}", e.getMessage());
         }
 
         return null;
