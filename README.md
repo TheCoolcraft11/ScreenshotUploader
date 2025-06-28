@@ -56,7 +56,7 @@ applications or manual uploads.
 
 ## Requirements:
 
-- Requires Minecraft Fabric 1.21 - 1.21.3.
+- Requires Minecraft Fabric 1.21 - 1.21.5.
 - Requires a server that can handle HTTP POST requests and has public endpoints for uploads (if not using the integrated
   webserver).
 
