@@ -68,7 +68,7 @@ public class ConfigScreen extends Screen {
                 addSelectableChild(textField);
             } else if (value.isJsonPrimitive() && value.getAsJsonPrimitive().isNumber()) {
                 TextFieldWidget textField = new TextFieldWidget(textRenderer, inputXOffset, currentYOffset, 200, 20, Text.literal(key));
-                textField.setMaxLength(1024);
+                textField.setMaxLength(16);
                 textField.setText(value.getAsString());
                 textField.setTooltip(Tooltip.of(Text.of(key + ":\n").copy().styled(style -> style.withBold(true).withUnderline(true)).append(Text.translatable((config.has("_comment_" + key) ? config.get("_comment_" + key).getAsString().replaceAll("^\"|\"$", "'") : "")).styled(style -> style.withUnderline(false).withBold(false).withColor(Formatting.AQUA)))));
                 textField.setChangedListener(s -> isConfigSaved = false);
@@ -217,7 +217,11 @@ public class ConfigScreen extends Screen {
             if (value.equalsIgnoreCase("true") || value.equalsIgnoreCase("false")) {
                 config.addProperty(key, Boolean.parseBoolean(value));
             } else if (value.matches("-?\\d+(\\.\\d+)?")) {
-                config.addProperty(key, Double.parseDouble(value));
+                if (value.contains(".")) {
+                    config.addProperty(key, new java.math.BigDecimal(value));
+                } else {
+                    config.addProperty(key, Long.parseLong(value));
+                }
             } else {
                 config.addProperty(key, value);
             }

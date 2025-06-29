@@ -16,7 +16,7 @@ public class GalleryBuilder {
             String filename = file.getName();
             String base = filename.substring(filename.indexOf("-") + 1, filename.lastIndexOf("."));
             int lastUnderscore = base.lastIndexOf("_");
-            String username = base.substring(0, lastUnderscore);
+            String username = lastUnderscore > -1 ? base.substring(0, lastUnderscore) : "?";
             Map<String, Object> imageData = new HashMap<>();
             imageData.put("filename", filename);
             imageData.put("username", username);
