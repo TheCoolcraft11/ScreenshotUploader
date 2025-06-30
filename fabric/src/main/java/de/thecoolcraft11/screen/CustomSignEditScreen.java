@@ -32,6 +32,8 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.file.Files;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class CustomSignEditScreen extends Screen {
 
@@ -40,6 +42,10 @@ public class CustomSignEditScreen extends Screen {
     private static Identifier screenshotIdentifier;
     TextFieldWidget urlField;
     public static int customEditsLeft = 0;
+    private static int lastUrlHash = 0;
+    private long lastTypingTime = 0;
+    private static final int TYPING_TIMEOUT_MS = 800;
+    private String scheduledImageUrl = null;
 
     public CustomSignEditScreen(SignBlockEntity sign) {
         super(Text.of("Sign"));
@@ -140,8 +146,20 @@ public class CustomSignEditScreen extends Screen {
     }
 
     private static void loadWebImage(String imageUrl) {
+        String urlPattern = "(https?://[\\w.-]+(?::\\d+)?(?:/[\\w.-]*)*)(\\[-?\\d+(?:[.,]\\d+)?(?:[;,:]-?\\w+(?:[.:,]\\d+)?)*?])?";
+        Pattern pattern = Pattern.compile(urlPattern);
+        Matcher matcher = pattern.matcher(imageUrl);
+        if (!matcher.matches()) {
+            screenshotIdentifier = null;
+            return;
+        }
+
+        imageUrl = matcher.group(1);
+        lastUrlHash = imageUrl.hashCode();
         String cacheFileName = "screenshots_cache/" + imageUrl.hashCode() + ".png";
         File cachedImage = new File(cacheFileName);
+
+        boolean imageLoaded = false;
 
         if (cachedImage.exists()) {
             try {
@@ -151,11 +169,15 @@ public class CustomSignEditScreen extends Screen {
                     if (MinecraftClient.getInstance() != null) {
                         MinecraftClient.getInstance().getTextureManager().registerTexture(textureId, new NativeImageBackedTexture(String::new, loadedImage));
                         screenshotIdentifier = textureId;
+                        imageLoaded = true;
                     }
                 }
             } catch (IOException ignored) {
+                screenshotIdentifier = null;
             }
-        } else {
+        }
+
+        if (!imageLoaded) {
             try {
                 URI uri = new URI(imageUrl);
                 if (!uri.isAbsolute()) {
@@ -166,6 +188,8 @@ public class CustomSignEditScreen extends Screen {
 
                 HttpURLConnection connection = (HttpURLConnection) url.openConnection();
                 connection.setRequestMethod("GET");
+                connection.setConnectTimeout(5000);
+                connection.setReadTimeout(5000);
                 connection.connect();
 
                 if (connection.getResponseCode() == HttpURLConnection.HTTP_OK) {
@@ -201,21 +225,43 @@ public class CustomSignEditScreen extends Screen {
                                     Identifier textureId = Identifier.of("webimage", "temp/" + imageUrl.hashCode());
                                     if (MinecraftClient.getInstance() != null) {
                                         MinecraftClient.getInstance().getTextureManager().registerTexture(textureId, new NativeImageBackedTexture(String::new, loadedImage));
+                                        screenshotIdentifier = textureId;
+                                        imageLoaded = true;
                                     }
                                 }
                             }
+                        } else {
+                            screenshotIdentifier = null;
                         }
                     }
                 }
             } catch (URISyntaxException | IOException ignored) {
+                screenshotIdentifier = null;
             }
+        }
+
+        if (!imageLoaded) {
+            screenshotIdentifier = null;
         }
     }
 
     @Override
     public void render(DrawContext context, int mouseX, int mouseY, float delta) {
         super.render(context, mouseX, mouseY, delta);
-        loadWebImage(urlField.getText());
+
+        if (scheduledImageUrl != null) {
+            long currentTime = System.currentTimeMillis();
+            if (currentTime - lastTypingTime > TYPING_TIMEOUT_MS) {
+                if (scheduledImageUrl.trim().length() < 5) {
+                    screenshotIdentifier = null;
+                    lastUrlHash = 0;
+                } else if (lastUrlHash != scheduledImageUrl.hashCode()) {
+                    loadWebImage(scheduledImageUrl);
+                }
+                scheduledImageUrl = null;
+            }
+        }
+
         if (screenshotIdentifier != null) {
             renderEnlargedImage(context);
         }
@@ -247,6 +293,7 @@ public class CustomSignEditScreen extends Screen {
     @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
         if (this.urlField.keyPressed(keyCode, scanCode, modifiers)) {
+            scheduleImageLoad(urlField.getText());
             return true;
         }
 
@@ -256,11 +303,15 @@ public class CustomSignEditScreen extends Screen {
     @Override
     public boolean charTyped(char chr, int keyCode) {
         if (this.urlField.charTyped(chr, keyCode)) {
+            scheduleImageLoad(urlField.getText());
             return true;
         }
 
         return super.charTyped(chr, keyCode);
     }
 
-
+    private void scheduleImageLoad(String url) {
+        lastTypingTime = System.currentTimeMillis();
+        scheduledImageUrl = url;
+    }
 }
