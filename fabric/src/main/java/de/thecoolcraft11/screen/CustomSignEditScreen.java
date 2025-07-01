@@ -41,15 +41,92 @@ public class CustomSignEditScreen extends Screen {
     private final SignBlockEntity sign;
     private static Identifier screenshotIdentifier;
     TextFieldWidget urlField;
+    private TextFieldWidget xOffsetField;
+    private TextFieldWidget yOffsetField;
+    private TextFieldWidget zOffsetField;
+    private TextFieldWidget yawField;
+    private TextFieldWidget pitchField;
+    private TextFieldWidget sizeField;
+    private TextFieldWidget lightField;
+    private TextFieldWidget itemField;
+    private boolean showTransformSettings = false;
+    private ButtonWidget applyButton;
+
     public static int customEditsLeft = 0;
     private static int lastUrlHash = 0;
     private long lastTypingTime = 0;
     private static final int TYPING_TIMEOUT_MS = 800;
     private String scheduledImageUrl = null;
+    private float xOffset = 0f;
+    private float yOffset = 0f;
+    private float zOffset = 0f;
+    private float yaw = 0f;
+    private float pitch = 0f;
+    private float size = 1f;
+    private int light = 255;
+    private String item = "minecraft:painting";
 
     public CustomSignEditScreen(SignBlockEntity sign) {
         super(Text.of("Sign"));
         this.sign = sign;
+
+        String signText = extractSignText(sign);
+        if (!signText.isEmpty()) {
+            parseTransformationFromUrl(signText);
+        }
+    }
+
+    private String extractSignText(SignBlockEntity sign) {
+        StringBuilder text = new StringBuilder();
+        for (int i = 0; i < 4; i++) {
+            text.append(sign.getFrontText().getMessage(i, false).getString());
+        }
+        for (int i = 0; i < 4; i++) {
+            text.append(sign.getBackText().getMessage(i, false).getString());
+        }
+        return text.toString();
+    }
+
+    private void parseTransformationFromUrl(String url) {
+        String urlPattern = "(https?://[\\w.-]+(?::\\d+)?(?:/[\\w.-]*)*)(\\[-?\\d+(?:[.,]\\d+)?(?:[;,:_+-]-?[a-zA-Z0-9$]+(?:[.:,_+-]\\d+)?)*?])?";
+        Pattern pattern = Pattern.compile(urlPattern);
+        Matcher matcher = pattern.matcher(url);
+
+        if (matcher.find() && matcher.group(2) != null && !matcher.group(2).isEmpty()) {
+            String transformStr = matcher.group(2);
+            transformStr = transformStr.substring(1, transformStr.length() - 1);
+
+            String[] parts = transformStr.split("[;,]");
+
+            try {
+                if (parts.length >= 1) {
+                    xOffset = Float.parseFloat(parts[0]);
+                }
+                if (parts.length >= 2) {
+                    yOffset = Float.parseFloat(parts[1]);
+                }
+                if (parts.length >= 3) {
+                    zOffset = Float.parseFloat(parts[2]);
+                }
+                if (parts.length >= 4) {
+                    yaw = Float.parseFloat(parts[3]);
+                }
+                if (parts.length >= 5) {
+                    pitch = Float.parseFloat(parts[4]);
+                }
+                if (parts.length >= 6) {
+                    size = Float.parseFloat(parts[5]);
+                }
+                if (parts.length >= 7) {
+                    light = Integer.parseInt(parts[6]);
+                }
+                if (parts.length >= 8) {
+                    item = parts[7];
+                }
+            } catch (NumberFormatException e) {
+                logger.error("Error parsing transformation values", e);
+            }
+        }
     }
 
     @Override
@@ -63,18 +140,111 @@ public class CustomSignEditScreen extends Screen {
         int textFieldWidth = this.width / 3;
         int textFieldX = (this.width - textFieldWidth) / 2;
         int textFieldY = this.height / 2 + this.height / 8;
+
         urlField = new TextFieldWidget(textRenderer, textFieldX, textFieldY, textFieldWidth, 20, Text.literal(""));
         urlField.setMaxLength(15 * 8);
         addDrawableChild(urlField);
 
-        addDrawableChild(ButtonWidget.builder(Text.translatable("gui.screenshot_uploader.screenshot_sign.set_text"), buttonWidget -> pasteTextToSign()).dimensions(buttonX, buttonY, buttonWidth, buttonHeight).tooltip(Tooltip.of(Text.translatable("gui.screenshot_uploader.screenshot_sign.tooltip"))).build());
+        addDrawableChild(ButtonWidget.builder(Text.translatable("gui.screenshot_uploader.screenshot_sign.set_text"), buttonWidget -> pasteTextToSign())
+                .dimensions(buttonX, buttonY, buttonWidth, buttonHeight)
+                .tooltip(Tooltip.of(Text.translatable("gui.screenshot_uploader.screenshot_sign.tooltip")))
+                .build());
+
         addDrawableChild(ButtonWidget.builder(Text.translatable("gui.screenshot_uploader.screenshot_sign.close"), buttonWidget -> {
             if (client != null) {
                 client.setScreen(null);
             }
         }).dimensions(buttonX, buttonY + buttonHeight + 5, buttonWidth, buttonHeight).build());
 
+        ButtonWidget transformButton = ButtonWidget.builder(Text.translatable("gui.screenshot_uploader.sign_edit.trans_settings"), button -> toggleTransformSettings())
+                .dimensions(buttonX, buttonY - buttonHeight - 5, buttonWidth, buttonHeight)
+                .tooltip(Tooltip.of(Text.translatable("gui.screenshot_uploader.sign_edit.trans_settings.tooltip")))
+                .build();
+        addDrawableChild(transformButton);
+
+        initTransformFields();
+        updateTransformFieldsVisibility();
+
         super.init();
+    }
+
+    private void initTransformFields() {
+        int smallFieldWidth = 50;
+        int mediumFieldWidth = 120;
+        int fieldHeight = 20;
+        int spacing = 5;
+
+        int startX = (int) (width * 0.85);
+        int startY = height / 4;
+
+        int buttonY = this.height / 2 + this.height / 4;
+
+        xOffsetField = createNumberField(startX, startY, smallFieldWidth, String.valueOf(xOffset));
+        xOffsetField.setTooltip(Tooltip.of(Text.translatable("gui.screenshot_uploader.sign_edit.x_offset")));
+
+        yOffsetField = createNumberField(startX, startY + fieldHeight + spacing, smallFieldWidth, String.valueOf(yOffset));
+        yOffsetField.setTooltip(Tooltip.of(Text.translatable("gui.screenshot_uploader.sign_edit.y_offset")));
+
+        zOffsetField = createNumberField(startX, startY + 2 * (fieldHeight + spacing), smallFieldWidth, String.valueOf(zOffset));
+        zOffsetField.setTooltip(Tooltip.of(Text.translatable("gui.screenshot_uploader.sign_edit.z_offset")));
+
+        yawField = createNumberField(startX, startY + 3 * (fieldHeight + spacing), smallFieldWidth, String.valueOf(yaw));
+        yawField.setTooltip(Tooltip.of(Text.translatable("gui.screenshot_uploader.sign_edit.yaw_rotation")));
+
+        pitchField = createNumberField(startX, startY + 4 * (fieldHeight + spacing), smallFieldWidth, String.valueOf(pitch));
+        pitchField.setTooltip(Tooltip.of(Text.translatable("gui.screenshot_uploader.sign_edit.pitch_rotation")));
+
+        sizeField = createNumberField(startX, startY + 5 * (fieldHeight + spacing), smallFieldWidth, String.valueOf(size));
+        sizeField.setTooltip(Tooltip.of(Text.translatable("gui.screenshot_uploader.sign_edit.size")));
+
+        lightField = createNumberField(startX, startY + 6 * (fieldHeight + spacing), smallFieldWidth, String.valueOf(light));
+        lightField.setTooltip(Tooltip.of(Text.translatable("gui.screenshot_uploader.sign_edit.light")));
+
+        itemField = new TextFieldWidget(textRenderer, startX, startY + 7 * (fieldHeight + spacing),
+                mediumFieldWidth, fieldHeight, Text.literal(""));
+        itemField.setText(item);
+        itemField.setTooltip(Tooltip.of(Text.translatable("gui.screenshot_uploader.sign_edit.item")));
+
+        int buttonHeight = 20;
+        applyButton = ButtonWidget.builder(Text.translatable("gui.screenshot_uploader.sign_edit.apply_trans"), button -> applyTransformSettings())
+                .dimensions(startX - 25, buttonY + buttonHeight + 5, 100, buttonHeight)
+                .tooltip(Tooltip.of(Text.translatable("gui.screenshot_uploader.sign_edit.apply_trans.tooltip")))
+                .build();
+
+
+        addDrawableChild(xOffsetField);
+        addDrawableChild(yOffsetField);
+        addDrawableChild(zOffsetField);
+        addDrawableChild(yawField);
+        addDrawableChild(pitchField);
+        addDrawableChild(sizeField);
+        addDrawableChild(lightField);
+        addDrawableChild(itemField);
+        addDrawableChild(applyButton);
+    }
+
+    private TextFieldWidget createNumberField(int x, int y, int width, String initialValue) {
+        TextFieldWidget field = new TextFieldWidget(textRenderer, x, y, width, 20, Text.literal(""));
+        field.setText(initialValue);
+        field.setTextPredicate(text -> text.isEmpty() || text.matches("-?\\d*\\.?\\d*"));
+        return field;
+    }
+
+    private void updateTransformFieldsVisibility() {
+        xOffsetField.setVisible(showTransformSettings);
+        yOffsetField.setVisible(showTransformSettings);
+        zOffsetField.setVisible(showTransformSettings);
+        yawField.setVisible(showTransformSettings);
+        pitchField.setVisible(showTransformSettings);
+        sizeField.setVisible(showTransformSettings);
+        lightField.setVisible(showTransformSettings);
+        itemField.setVisible(showTransformSettings);
+        applyButton.visible = showTransformSettings;
+    }
+
+    private void toggleTransformSettings() {
+        showTransformSettings = !showTransformSettings;
+        updateTransformFieldsVisibility();
     }
 
     private void pasteTextToSign() {
@@ -146,7 +316,7 @@ public class CustomSignEditScreen extends Screen {
     }
 
     private static void loadWebImage(String imageUrl) {
-        String urlPattern = "(https?://[\\w.-]+(?::\\d+)?(?:/[\\w.-]*)*)(\\[-?\\d+(?:[.,]\\d+)?(?:[;,:]-?\\w+(?:[.:,]\\d+)?)*?])?";
+        String urlPattern = "(https?://[\\w.-]+(?::\\d+)?(?:/[\\w.-]*)*)(\\[-?\\d+(?:[.,]\\d+)?(?:[;,:_+-]-?[a-zA-Z0-9$]+(?:[.:,_+-]\\d+)?)*?])?";
         Pattern pattern = Pattern.compile(urlPattern);
         Matcher matcher = pattern.matcher(imageUrl);
         if (!matcher.matches()) {
@@ -249,6 +419,24 @@ public class CustomSignEditScreen extends Screen {
     public void render(DrawContext context, int mouseX, int mouseY, float delta) {
         super.render(context, mouseX, mouseY, delta);
 
+        if (showTransformSettings) {
+            int labelColor = 0xFFFFFFFF;
+            int startX = (int) (width * 0.85) - 20;
+            int startY = height / 4;
+            int fieldHeight = 20;
+            int spacing = 5;
+
+            context.drawText(textRenderer, Text.translatable("gui.screenshot_uploader.sign_edit.trans_x"), startX - 15, startY + 5, labelColor, false);
+            context.drawText(textRenderer, Text.translatable("gui.screenshot_uploader.sign_edit.trans_y"), startX - 15, startY + (fieldHeight + spacing) + 5, labelColor, false);
+            context.drawText(textRenderer, Text.translatable("gui.screenshot_uploader.sign_edit.trans_z"), startX - 15, startY + 2 * (fieldHeight + spacing) + 5, labelColor, false);
+            context.drawText(textRenderer, Text.translatable("gui.screenshot_uploader.sign_edit.trans_yaw"), startX - 15, startY + 3 * (fieldHeight + spacing) + 5, labelColor, false);
+            context.drawText(textRenderer, Text.translatable("gui.screenshot_uploader.sign_edit.trans_pitch"), startX - 15, startY + 4 * (fieldHeight + spacing) + 5, labelColor, false);
+            context.drawText(textRenderer, Text.translatable("gui.screenshot_uploader.sign_edit.trans_size"), startX - 15, startY + 5 * (fieldHeight + spacing) + 5, labelColor, false);
+            context.drawText(textRenderer, Text.translatable("gui.screenshot_uploader.sign_edit.trans_light"), startX - 15, startY + 6 * (fieldHeight + spacing) + 5, labelColor, false);
+            context.drawText(textRenderer, Text.translatable("gui.screenshot_uploader.sign_edit.trans_item"), startX - 15, startY + 7 * (fieldHeight + spacing) + 5, labelColor, false);
+            context.drawText(textRenderer, Text.translatable("gui.screenshot_uploader.sign_edit.trans_settings"), (int) (width * 0.85) - 60, startY - 20, 0xFFFFFF00, false);
+        }
+
         if (scheduledImageUrl != null) {
             long currentTime = System.currentTimeMillis();
             if (currentTime - lastTypingTime > TYPING_TIMEOUT_MS) {
@@ -265,7 +453,6 @@ public class CustomSignEditScreen extends Screen {
         if (screenshotIdentifier != null) {
             renderEnlargedImage(context);
         }
-
     }
 
     private void renderEnlargedImage(DrawContext context) {
@@ -290,8 +477,80 @@ public class CustomSignEditScreen extends Screen {
 
     }
 
+    private void applyTransformSettings() {
+        try {
+            xOffset = parseFloatOrDefault(xOffsetField.getText(), 0f);
+            yOffset = parseFloatOrDefault(yOffsetField.getText(), 0f);
+            zOffset = parseFloatOrDefault(zOffsetField.getText(), 0f);
+            yaw = parseFloatOrDefault(yawField.getText(), 0f);
+            pitch = parseFloatOrDefault(pitchField.getText(), 0f);
+            size = parseFloatOrDefault(sizeField.getText(), 0.75f);
+            light = (int) parseFloatOrDefault(lightField.getText(), 15728880);
+            item = itemField.getText().isEmpty() ? "minecraft:painting" : itemField.getText();
+
+            String transformString = "[" + formatNumber(xOffset) + ";" +
+                    formatNumber(yOffset) + ";" +
+                    formatNumber(zOffset) + ";" +
+                    formatNumber(yaw) + ";" +
+                    formatNumber(pitch) + ";" +
+                    formatNumber(size) + ";" +
+                    light + ";" +
+                    item + "]";
+
+            String baseUrl = extractBaseUrl(urlField.getText());
+
+            String newUrl = baseUrl + transformString;
+            urlField.setText(newUrl);
+
+            scheduleImageLoad(newUrl);
+
+            showTransformSettings = false;
+            updateTransformFieldsVisibility();
+        } catch (Exception e) {
+            logger.error("Failed to apply transformation settings", e);
+        }
+    }
+
+    private String formatNumber(float number) {
+        if (number == (int) number) {
+            return Integer.toString((int) number);
+        } else {
+            return Float.toString(number);
+        }
+    }
+
+    private String extractBaseUrl(String fullUrl) {
+        String urlPattern = "(https?://[\\w.-]+(?::\\d+)?(?:/[\\w.-]*)*)(?:\\[.*])?";
+        Pattern pattern = Pattern.compile(urlPattern);
+        Matcher matcher = pattern.matcher(fullUrl);
+        if (matcher.find()) {
+            return matcher.group(1);
+        }
+        return fullUrl;
+    }
+
     @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        if (showTransformSettings) {
+            if (this.xOffsetField.isFocused() && this.xOffsetField.keyPressed(keyCode, scanCode, modifiers)) {
+                return true;
+            } else if (this.yOffsetField.isFocused() && this.yOffsetField.keyPressed(keyCode, scanCode, modifiers)) {
+                return true;
+            } else if (this.zOffsetField.isFocused() && this.zOffsetField.keyPressed(keyCode, scanCode, modifiers)) {
+                return true;
+            } else if (this.yawField.isFocused() && this.yawField.keyPressed(keyCode, scanCode, modifiers)) {
+                return true;
+            } else if (this.pitchField.isFocused() && this.pitchField.keyPressed(keyCode, scanCode, modifiers)) {
+                return true;
+            } else if (this.sizeField.isFocused() && this.sizeField.keyPressed(keyCode, scanCode, modifiers)) {
+                return true;
+            } else if (this.lightField.isFocused() && this.lightField.keyPressed(keyCode, scanCode, modifiers)) {
+                return true;
+            } else if (this.itemField.isFocused() && this.itemField.keyPressed(keyCode, scanCode, modifiers)) {
+                return true;
+            }
+        }
+
         if (this.urlField.keyPressed(keyCode, scanCode, modifiers)) {
             scheduleImageLoad(urlField.getText());
             return true;
@@ -302,6 +561,26 @@ public class CustomSignEditScreen extends Screen {
 
     @Override
     public boolean charTyped(char chr, int keyCode) {
+        if (showTransformSettings) {
+            if (this.xOffsetField.isFocused() && this.xOffsetField.charTyped(chr, keyCode)) {
+                return true;
+            } else if (this.yOffsetField.isFocused() && this.yOffsetField.charTyped(chr, keyCode)) {
+                return true;
+            } else if (this.zOffsetField.isFocused() && this.zOffsetField.charTyped(chr, keyCode)) {
+                return true;
+            } else if (this.yawField.isFocused() && this.yawField.charTyped(chr, keyCode)) {
+                return true;
+            } else if (this.pitchField.isFocused() && this.pitchField.charTyped(chr, keyCode)) {
+                return true;
+            } else if (this.sizeField.isFocused() && this.sizeField.charTyped(chr, keyCode)) {
+                return true;
+            } else if (this.lightField.isFocused() && this.lightField.charTyped(chr, keyCode)) {
+                return true;
+            } else if (this.itemField.isFocused() && this.itemField.charTyped(chr, keyCode)) {
+                return true;
+            }
+        }
+
         if (this.urlField.charTyped(chr, keyCode)) {
             scheduleImageLoad(urlField.getText());
             return true;
@@ -314,4 +593,16 @@ public class CustomSignEditScreen extends Screen {
         lastTypingTime = System.currentTimeMillis();
         scheduledImageUrl = url;
     }
+
+    private float parseFloatOrDefault(String value, float defaultValue) {
+        if (value == null || value.trim().isEmpty()) {
+            return defaultValue;
+        }
+        try {
+            return Float.parseFloat(value);
+        } catch (NumberFormatException e) {
+            return defaultValue;
+        }
+    }
+
 }
