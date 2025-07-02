@@ -158,7 +158,7 @@ public class ScreenshotUploaderClient implements ClientModInitializer {
                     URI savedEntry = new URI(ReceivePackets.homeSiteAddress);
                     URI messageEntry = new URI(Objects.requireNonNull(extractUrl(message.getString())));
 
-                    if(savedEntry.getHost() == null || messageEntry.getHost() == null) return;
+                    if (savedEntry.getHost() == null || messageEntry.getHost() == null) return;
                     if (savedEntry.getHost().equals(messageEntry.getHost())) {
                         serverName = ReceivePackets.gallerySiteAddress;
                         hasServerSaved = true;
@@ -275,7 +275,15 @@ public class ScreenshotUploaderClient implements ClientModInitializer {
                                 sign.getBackText().getMessage(2, false).getString() +
                                 sign.getBackText().getMessage(3, false).getString();
 
-                        MinecraftClient.getInstance().send(() -> MinecraftClient.getInstance().setScreen(new ScreenshotScreen(frontText + backText)));
+                        String text = frontText + backText;
+
+                        String urlPattern = "(https?://[\\w.-]+(?::\\d+)?(?:/[\\w.-]*)*)(\\[-?\\d+(?:[.,]\\d+)?(?:[;,:_+-]-?[a-zA-Z0-9$]+(?:[.:,_+-]\\d+)?)*?])?";
+                        Pattern pattern = Pattern.compile(urlPattern);
+                        Matcher matcher = pattern.matcher(text);
+
+                        if (matcher.find()) {
+                            MinecraftClient.getInstance().send(() -> MinecraftClient.getInstance().setScreen(new ScreenshotScreen(matcher.group(1))));
+                        }
                     }
                 }
 

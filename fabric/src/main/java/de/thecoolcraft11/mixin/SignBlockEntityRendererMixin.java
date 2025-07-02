@@ -91,7 +91,7 @@ public class SignBlockEntityRendererMixin {
                         entity.getBackText().getMessage(2, false).getString() +
                         entity.getBackText().getMessage(3, false).getString();
 
-                String urlPattern = "(https?://[\\w.-]+(?::\\d+)?(?:/[\\w.-]*)*)(\\[-?\\d+(?:[.,]\\d+)?(?:[;,:]-?\\w+(?:[.:,]\\d+)?)*?])?";
+                String urlPattern = "(https?://[\\w.-]+(?::\\d+)?(?:/[\\w.-]*)*)(\\[-?\\d+(?:[.,]\\d+)?(?:[;,:_+-]-?[a-zA-Z0-9$]+(?:[.:,_+-]\\d+)?)*?])?";
                 Pattern pattern = Pattern.compile(urlPattern);
                 Matcher matcher = pattern.matcher(text);
                 try {
@@ -358,7 +358,7 @@ public class SignBlockEntityRendererMixin {
                             matrices.multiply(rotation);
                         }
 
-                        Identifier itemIdentifier = Identifier.tryParse(highlightItemName);
+                        Identifier itemIdentifier = Identifier.tryParse(highlightItemName.startsWith("$") ? highlightItemName.replace("$", "minecraft:") : highlightItemName);
                         ItemStack itemStack = Registries.ITEM.get(itemIdentifier).getDefaultStack();
 
                         itemRenderer.renderItem(itemStack, ItemDisplayContext.FIXED, customLight, overlay, matrices, vertexConsumers, entity.getWorld(), 0);
