@@ -64,7 +64,7 @@ public class CustomSignEditScreen extends Screen {
     private float pitch = 0f;
     private float size = 1f;
     private int light = 255;
-    private String item = "minecraft:painting";
+    private String item = "$painting";
 
     public CustomSignEditScreen(SignBlockEntity sign) {
         super(Text.of("Sign"));
@@ -486,7 +486,7 @@ public class CustomSignEditScreen extends Screen {
             pitch = parseFloatOrDefault(pitchField.getText(), 0f);
             size = parseFloatOrDefault(sizeField.getText(), 0.75f);
             light = (int) parseFloatOrDefault(lightField.getText(), 15728880);
-            item = itemField.getText().isEmpty() ? "minecraft:painting" : itemField.getText();
+            item = itemField.getText().isEmpty() ? "$painting" : itemField.getText();
 
             String transformString = "[" + formatNumber(xOffset) + ";" +
                     formatNumber(yOffset) + ";" +
