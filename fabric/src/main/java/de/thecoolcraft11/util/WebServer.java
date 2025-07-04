@@ -34,6 +34,7 @@ public class WebServer {
         server.createContext("/delete", new DeleteFileHandler());
         server.createContext("/static", new StaticFileHandler());
         server.createContext("/screenshots", new ScreenshotFileHandler());
+        server.createContext("/scr", new ScreenshotFileHandler());
         server.createContext("/screenshot-list", new ScreenshotListHandler(urlString));
         server.createContext("/comments", new GetCommentsHandler());
         server.createContext("/statistics", new StatisticsHandler());
@@ -147,7 +148,11 @@ public class WebServer {
     private static class ScreenshotFileHandler implements HttpHandler {
         @Override
         public void handle(HttpExchange exchange) throws IOException {
-            String path = exchange.getRequestURI().getPath().replace("/screenshots", "");
+            String rawPath = exchange.getRequestURI().getPath();
+            String path = rawPath.startsWith("/scr")
+                    ? rawPath.replaceFirst("/scr", "")
+                    : rawPath.replaceFirst("/screenshots", "");
+
             File staticFile = new File("screenshotUploader/screenshots", path);
 
             if (!staticFile.exists() || !staticFile.isFile()) {
