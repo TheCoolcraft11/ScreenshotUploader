@@ -24,6 +24,19 @@ import java.util.regex.Pattern;
 
 public class WebServer {
 
+    private static final Map<String, String> shortenedUrls = new HashMap<>();
+    private static final String CHARS = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+    private static final int CODE_LENGTH = 6;
+    private static final Random RANDOM = new Random();
+
+    private static String generateShortCode() {
+        StringBuilder sb = new StringBuilder(CODE_LENGTH);
+        for (int i = 0; i < CODE_LENGTH; i++) {
+            sb.append(CHARS.charAt(RANDOM.nextInt(CHARS.length())));
+        }
+        return sb.toString();
+    }
+
     public static void startWebServer(String ipAddress, int port, String urlString) throws Exception {
 
 
@@ -38,6 +51,8 @@ public class WebServer {
         server.createContext("/screenshot-list", new ScreenshotListHandler(urlString));
         server.createContext("/comments", new GetCommentsHandler());
         server.createContext("/statistics", new StatisticsHandler());
+        server.createContext("/shorten", new UrlShortenerHandler(urlString));
+        server.createContext("/s", new ShortUrlRedirectHandler());
 
         server.start();
     }
@@ -841,6 +856,66 @@ public class WebServer {
             }
 
             return mostFrequentHour;
+        }
+    }
+
+    private record UrlShortenerHandler(String baseUrl) implements HttpHandler {
+
+        @Override
+        public void handle(HttpExchange exchange) throws IOException {
+            if (!"POST".equals(exchange.getRequestMethod())) {
+                exchange.sendResponseHeaders(405, -1);
+                return;
+            }
+
+            try {
+                String requestBody = new String(exchange.getRequestBody().readAllBytes());
+                JsonObject requestJson = JsonParser.parseString(requestBody).getAsJsonObject();
+
+                String originalUrl = requestJson.get("url").getAsString();
+
+                if (originalUrl == null || originalUrl.isEmpty()) {
+                    exchange.sendResponseHeaders(400, -1);
+                    return;
+                }
+
+                String shortCode = generateShortCode();
+                shortenedUrls.put(shortCode, originalUrl);
+
+                JsonObject responseJson = new JsonObject();
+                responseJson.addProperty("shortUrl", baseUrl + "/s/" + shortCode);
+
+                exchange.getResponseHeaders().set("Content-Type", "application/json");
+                exchange.sendResponseHeaders(200, responseJson.toString().getBytes().length);
+                try (OutputStream os = exchange.getResponseBody()) {
+                    os.write(responseJson.toString().getBytes());
+                }
+            } catch (Exception e) {
+                exchange.sendResponseHeaders(500, -1);
+            } finally {
+                exchange.getResponseBody().close();
+            }
+        }
+    }
+
+    private static class ShortUrlRedirectHandler implements HttpHandler {
+        @Override
+        public void handle(HttpExchange exchange) throws IOException {
+            if (!"GET".equals(exchange.getRequestMethod()) && !"HEAD".equals(exchange.getRequestMethod())) {
+                exchange.sendResponseHeaders(405, -1);
+                return;
+            }
+
+            String requestURI = exchange.getRequestURI().toString();
+            String shortCode = requestURI.substring(requestURI.lastIndexOf('/') + 1);
+
+            String originalUrl = shortenedUrls.get(shortCode);
+            if (originalUrl != null) {
+                exchange.getResponseHeaders().set("Location", originalUrl);
+                exchange.sendResponseHeaders(302, -1);
+            } else {
+                exchange.sendResponseHeaders(404, -1);
+            }
         }
     }
 }
