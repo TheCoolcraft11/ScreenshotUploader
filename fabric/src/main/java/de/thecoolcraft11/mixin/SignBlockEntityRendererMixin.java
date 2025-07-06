@@ -38,6 +38,9 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.HttpURLConnection;
+import java.net.URI;
+import java.net.URL;
 import java.nio.file.Files;
 import java.util.HashMap;
 import java.util.Map;
@@ -469,25 +472,83 @@ public class SignBlockEntityRendererMixin {
             return SCREENSHOT_TEXTURES.get(url);
         }
 
-        try {
-            String cacheFileName = "screenshots_cache/" + url.hashCode() + ".png";
-            File cachedImage = new File(cacheFileName);
+        String cacheFileName = "screenshots_cache/" + url.hashCode() + ".png";
+        File cachedImage = new File(cacheFileName);
 
-            if (cachedImage.exists()) {
-                try (InputStream fileInputStream = Files.newInputStream(cachedImage.toPath());
-                     NativeImage loadedImage = NativeImage.read(fileInputStream)) {
-                    Identifier textureId = Identifier.of("screenshot-uploader", "signs/" + url.hashCode());
-                    MinecraftClient.getInstance().getTextureManager().registerTexture(textureId, new NativeImageBackedTexture(String::new, loadedImage));
-                    SCREENSHOT_TEXTURES.put(url, textureId);
-                    return textureId;
-                } catch (IOException e) {
-                    LOGGER.error("Failed to load cached screenshot image: {}", e.getMessage());
-                }
+        if (cachedImage.exists()) {
+            try (InputStream fileInputStream = Files.newInputStream(cachedImage.toPath());
+                 NativeImage loadedImage = NativeImage.read(fileInputStream)) {
+                Identifier textureId = Identifier.of("screenshot-uploader", "signs/" + url.hashCode());
+                MinecraftClient.getInstance().getTextureManager().registerTexture(textureId, new NativeImageBackedTexture(String::new, loadedImage));
+                SCREENSHOT_TEXTURES.put(url, textureId);
+                return textureId;
+            } catch (IOException e) {
+                LOGGER.error("Failed to load cached screenshot image: {}", e.getMessage());
             }
+        } else {
+            try {
+                String resolvedUrl = url;
+                try {
+                    URL urlObj = new URI(url).toURL();
+                    HttpURLConnection connection = (HttpURLConnection) urlObj.openConnection();
+                    connection.setRequestProperty("User-Agent", "ScreenshotUploader/2.0");
+                    connection.setInstanceFollowRedirects(false);
+                    connection.setRequestMethod("HEAD");
+                    connection.setConnectTimeout(3000);
+                    connection.setReadTimeout(3000);
+                    connection.connect();
 
+                    int responseCode = connection.getResponseCode();
+                    if (responseCode == HttpURLConnection.HTTP_MOVED_TEMP ||
+                            responseCode == HttpURLConnection.HTTP_MOVED_PERM ||
+                            responseCode == HttpURLConnection.HTTP_SEE_OTHER) {
+                        String redirectUrl = connection.getHeaderField("Location");
+                        if (redirectUrl != null && !redirectUrl.isEmpty()) {
+                            resolvedUrl = redirectUrl;
+                            LOGGER.info("Resolved redirect URL: {} -> {}", url, resolvedUrl);
+                        }
+                    }
+                } catch (Exception e) {
+                    LOGGER.error("Failed to resolve URL {}: {}", url, e.getMessage());
+                }
 
-        } catch (Exception e) {
-            LOGGER.error("Error processing screenshot texture: {}", e.getMessage());
+                URI uri = new URI(resolvedUrl);
+                URL imageUrl = uri.toURL();
+
+                HttpURLConnection connection = (HttpURLConnection) imageUrl.openConnection();
+                connection.setRequestProperty("User-Agent", "ScreenshotUploader/2.0");
+                connection.setConnectTimeout(5000);
+                connection.setReadTimeout(8000);
+                connection.connect();
+
+                if (connection.getResponseCode() == HttpURLConnection.HTTP_OK) {
+                    File cacheDir = new File("screenshots_cache");
+                    if (!cacheDir.exists()) {
+                        boolean wasCreated = cacheDir.mkdirs();
+                        if (wasCreated) {
+                            LOGGER.info("Created cache directory: {}", cacheDir.getAbsolutePath());
+                            return null;
+                        }
+                    }
+
+                    try (InputStream inputStream = connection.getInputStream()) {
+                        NativeImage nativeImage = NativeImage.read(inputStream);
+
+                        nativeImage.writeTo(cachedImage);
+
+                        Identifier textureId = Identifier.of("screenshot-uploader", "signs/" + url.hashCode());
+                        MinecraftClient.getInstance().getTextureManager().registerTexture(textureId,
+                                new NativeImageBackedTexture(String::new, nativeImage));
+
+                        SCREENSHOT_TEXTURES.put(url, textureId);
+                        return textureId;
+                    }
+                } else {
+                    LOGGER.error("Failed to download image, HTTP status: {}", connection.getResponseCode());
+                }
+            } catch (Exception e) {
+                LOGGER.error("Error processing screenshot texture: {}", e.getMessage());
+            }
         }
 
         return null;
