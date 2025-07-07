@@ -1,19 +1,17 @@
 package de.thecoolcraft11.util;
 
-import com.google.gson.JsonArray;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
+import com.google.gson.*;
+import com.google.gson.reflect.TypeToken;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpServer;
 import de.thecoolcraft11.config.ConfigManager;
 import net.fabricmc.loader.api.FabricLoader;
 import org.jetbrains.annotations.NotNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import java.io.File;
-import java.io.FileReader;
-import java.io.IOException;
-import java.io.OutputStream;
+import java.io.*;
 import java.net.InetSocketAddress;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -28,6 +26,9 @@ public class WebServer {
     private static final String CHARS = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
     private static final int CODE_LENGTH = 6;
     private static final Random RANDOM = new Random();
+    private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
+    private static final String SHORTENED_URLS_FILE = "screenshotUploader/shortened_urls.json";
+    private static final Logger logger = LoggerFactory.getLogger(WebServer.class);
 
     private static String generateShortCode() {
         StringBuilder sb = new StringBuilder(CODE_LENGTH);
@@ -36,9 +37,46 @@ public class WebServer {
         }
         return sb.toString();
     }
+    
+    private static void loadShortenedUrls() {
+        if (!ConfigManager.getServerConfig().saveShortenedUrlsToFile) {
+            return;
+        }
+
+        File file = new File(SHORTENED_URLS_FILE);
+        if (file.exists()) {
+            try (FileReader reader = new FileReader(file)) {
+                Map<String, String> loadedUrls = GSON.fromJson(reader, new TypeToken<Map<String, String>>() {
+                }.getType());
+                if (loadedUrls != null) {
+                    shortenedUrls.putAll(loadedUrls);
+                }
+            } catch (IOException e) {
+                logger.error("Failed to load shortened URLs: {}", e.getMessage());
+            }
+        }
+    }
+
+    private static void saveShortenedUrls() {
+        if (!ConfigManager.getServerConfig().saveShortenedUrlsToFile) {
+            return;
+        }
+
+        File file = new File(SHORTENED_URLS_FILE);
+        boolean wasCreated = file.getParentFile().mkdirs();
+        if (wasCreated) {
+            logger.info("Created directory for shortened URLs file: {}", file.getParent());
+        }
+
+        try (FileWriter writer = new FileWriter(file)) {
+            GSON.toJson(shortenedUrls, writer);
+        } catch (IOException e) {
+            logger.error("Failed to save shortened URLs: {}", e.getMessage());
+        }
+    }
 
     public static void startWebServer(String ipAddress, int port, String urlString) throws Exception {
-
+        loadShortenedUrls();
 
         HttpServer server = HttpServer.create(new InetSocketAddress(ipAddress, port), 0);
 
@@ -863,8 +901,22 @@ public class WebServer {
 
         @Override
         public void handle(HttpExchange exchange) throws IOException {
+
+            if (!ConfigManager.getServerConfig().allowShortenedUrls) {
+                exchange.sendResponseHeaders(423, -1);
+                return;
+            }
+
             if (!"POST".equals(exchange.getRequestMethod())) {
                 exchange.sendResponseHeaders(405, -1);
+                return;
+            }
+
+            String providedPassphrase = exchange.getRequestHeaders().getFirst("X-Shortener-Passphrase");
+            if (ConfigManager.getServerConfig().shortenerPassphrase != null &&
+                    !ConfigManager.getServerConfig().shortenerPassphrase.isEmpty() &&
+                    (providedPassphrase == null || !providedPassphrase.equals(ConfigManager.getServerConfig().shortenerPassphrase))) {
+                exchange.sendResponseHeaders(403, -1);
                 return;
             }
 
@@ -881,6 +933,10 @@ public class WebServer {
 
                 String shortCode = generateShortCode();
                 shortenedUrls.put(shortCode, originalUrl);
+
+                if (ConfigManager.getServerConfig().saveShortenedUrlsToFile) {
+                    saveShortenedUrls();
+                }
 
                 JsonObject responseJson = new JsonObject();
                 responseJson.addProperty("shortUrl", baseUrl + "/s/" + shortCode);

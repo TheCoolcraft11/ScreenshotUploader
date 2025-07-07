@@ -47,5 +47,11 @@ public class ServerConfig {
     public boolean replaceStaticFilesOnStart = true;
     @Comment("Use the old css instead of the new one. The old css may not support all new features")
     public boolean useOldCss = false;
+    @Comment("If shortened URLs should be allowed, this is only used for the webserver, not for the ingame gallery")
+    public boolean allowShortenedUrls = true;
+    @Comment("The passphrase for the shortener, ONLY SHARE WITH TRUSTED PEOPLE, Leave empty to allow everyone to delete screenshots")
+    public String shortenerPassphrase = "";
+    @Comment("If screenshots should be saved to a file on the server, this is only used for the webserver, not for the ingame gallery")
+    public boolean saveShortenedUrlsToFile = true;
 }
 
