@@ -1,5 +1,6 @@
 package de.thecoolcraft11.screen;
 
+import de.thecoolcraft11.ScreenshotUploader;
 import net.minecraft.block.entity.SignBlockEntity;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
@@ -132,6 +133,7 @@ public class CustomSignEditScreen extends Screen {
     @Override
     protected void init() {
         screenshotIdentifier = null;
+        lastUrlHash = 0;
 
         int buttonWidth = 200;
         int buttonHeight = 20;
@@ -325,6 +327,31 @@ public class CustomSignEditScreen extends Screen {
         }
 
         imageUrl = matcher.group(1);
+
+        try {
+            URL urlObj = new URI(imageUrl).toURL();
+            HttpURLConnection connection = (HttpURLConnection) urlObj.openConnection();
+            connection.setRequestProperty("User-Agent", ScreenshotUploader.MOD_USER_AGENT);
+            connection.setInstanceFollowRedirects(false);
+            connection.setRequestMethod("HEAD");
+            connection.setConnectTimeout(3000);
+            connection.setReadTimeout(3000);
+            connection.connect();
+
+            int responseCode = connection.getResponseCode();
+            if (responseCode == HttpURLConnection.HTTP_MOVED_TEMP ||
+                    responseCode == HttpURLConnection.HTTP_MOVED_PERM ||
+                    responseCode == HttpURLConnection.HTTP_SEE_OTHER) {
+                String redirectUrl = connection.getHeaderField("Location");
+                if (redirectUrl != null && !redirectUrl.isEmpty()) {
+                    logger.info("Following redirect: {} -> {}", imageUrl, redirectUrl);
+                    imageUrl = redirectUrl;
+                }
+            }
+        } catch (Exception e) {
+            logger.error("Failed to resolve URL: {}", e.getMessage());
+        }
+
         lastUrlHash = imageUrl.hashCode();
         String cacheFileName = "screenshots_cache/" + imageUrl.hashCode() + ".png";
         File cachedImage = new File(cacheFileName);
@@ -358,6 +385,7 @@ public class CustomSignEditScreen extends Screen {
 
                 HttpURLConnection connection = (HttpURLConnection) url.openConnection();
                 connection.setRequestMethod("GET");
+                connection.setRequestProperty("User-Agent", ScreenshotUploader.MOD_USER_AGENT);
                 connection.setConnectTimeout(5000);
                 connection.setReadTimeout(5000);
                 connection.connect();

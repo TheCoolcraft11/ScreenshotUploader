@@ -10,6 +10,7 @@ import org.slf4j.LoggerFactory;
 
 public class ScreenshotUploader implements ModInitializer {
     public static final String MOD_ID = "screenshot-uploader";
+    public static final String MOD_USER_AGENT = "ScreenshotUploader/2.0";
     private final Logger logger = LoggerFactory.getLogger(ScreenshotUploader.class);
 
 
