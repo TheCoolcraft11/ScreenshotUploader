@@ -1,5 +1,6 @@
 package de.thecoolcraft11.screen;
 
+import de.thecoolcraft11.ScreenshotUploader;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
@@ -79,7 +80,31 @@ public class ScreenshotScreen extends Screen {
                 URL url = uri.toURL();
 
                 HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+                connection.setRequestProperty("User-Agent", ScreenshotUploader.MOD_USER_AGENT);
+                connection.setInstanceFollowRedirects(false);
+                connection.setRequestMethod("HEAD");
+                connection.setConnectTimeout(3000);
+                connection.setReadTimeout(3000);
+                connection.connect();
+
+                int responseCode = connection.getResponseCode();
+                if (responseCode == HttpURLConnection.HTTP_MOVED_TEMP ||
+                        responseCode == HttpURLConnection.HTTP_MOVED_PERM ||
+                        responseCode == HttpURLConnection.HTTP_SEE_OTHER) {
+                    String redirectUrl = connection.getHeaderField("Location");
+                    if (redirectUrl != null && !redirectUrl.isEmpty()) {
+                        logger.info("Following redirect: {} -> {}", imageUrl, redirectUrl);
+                        imageUrl = redirectUrl;
+                        url = new URI(redirectUrl).toURL();
+                    }
+                }
+                connection.disconnect();
+
+                connection = (HttpURLConnection) url.openConnection();
                 connection.setRequestMethod("GET");
+                connection.setRequestProperty("User-Agent", ScreenshotUploader.MOD_USER_AGENT);
+                connection.setConnectTimeout(5000);
+                connection.setReadTimeout(5000);
                 connection.connect();
 
                 if (connection.getResponseCode() == HttpURLConnection.HTTP_OK) {
@@ -115,6 +140,7 @@ public class ScreenshotScreen extends Screen {
                                     Identifier textureId = Identifier.of("webimage", "temp/" + imageUrl.hashCode());
                                     if (MinecraftClient.getInstance() != null) {
                                         MinecraftClient.getInstance().getTextureManager().registerTexture(textureId, new NativeImageBackedTexture(String::new, loadedImage));
+                                        screenshotIdentifier = textureId;
                                     }
                                 }
                             }
