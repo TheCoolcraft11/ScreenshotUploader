@@ -1,6 +1,7 @@
 package de.thecoolcraft11.mixin;
 
 import com.mojang.blaze3d.systems.RenderSystem;
+import de.thecoolcraft11.ScreenshotUploader;
 import de.thecoolcraft11.config.ConfigManager;
 import net.minecraft.block.*;
 import net.minecraft.block.entity.SignBlockEntity;
@@ -35,6 +36,8 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -487,38 +490,36 @@ public class SignBlockEntityRendererMixin {
             }
         } else {
             try {
-                String resolvedUrl = url;
-                try {
-                    URL urlObj = new URI(url).toURL();
-                    HttpURLConnection connection = (HttpURLConnection) urlObj.openConnection();
-                    connection.setRequestProperty("User-Agent", "ScreenshotUploader/2.0");
-                    connection.setInstanceFollowRedirects(false);
-                    connection.setRequestMethod("HEAD");
-                    connection.setConnectTimeout(3000);
-                    connection.setReadTimeout(3000);
-                    connection.connect();
-
-                    int responseCode = connection.getResponseCode();
-                    if (responseCode == HttpURLConnection.HTTP_MOVED_TEMP ||
-                            responseCode == HttpURLConnection.HTTP_MOVED_PERM ||
-                            responseCode == HttpURLConnection.HTTP_SEE_OTHER) {
-                        String redirectUrl = connection.getHeaderField("Location");
-                        if (redirectUrl != null && !redirectUrl.isEmpty()) {
-                            resolvedUrl = redirectUrl;
-                            LOGGER.info("Resolved redirect URL: {} -> {}", url, resolvedUrl);
-                        }
-                    }
-                } catch (Exception e) {
-                    LOGGER.error("Failed to resolve URL {}: {}", url, e.getMessage());
-                }
-
-                URI uri = new URI(resolvedUrl);
+                URI uri = new URI(url);
+                if (!uri.isAbsolute()) return null;
                 URL imageUrl = uri.toURL();
 
                 HttpURLConnection connection = (HttpURLConnection) imageUrl.openConnection();
-                connection.setRequestProperty("User-Agent", "ScreenshotUploader/2.0");
+                connection.setRequestProperty("User-Agent", ScreenshotUploader.MOD_USER_AGENT);
+                connection.setInstanceFollowRedirects(false);
+                connection.setRequestMethod("HEAD");
+                connection.setConnectTimeout(3000);
+                connection.setReadTimeout(3000);
+                connection.connect();
+
+                int responseCode = connection.getResponseCode();
+                if (responseCode == HttpURLConnection.HTTP_MOVED_TEMP ||
+                        responseCode == HttpURLConnection.HTTP_MOVED_PERM ||
+                        responseCode == HttpURLConnection.HTTP_SEE_OTHER) {
+                    String redirectUrl = connection.getHeaderField("Location");
+                    if (redirectUrl != null && !redirectUrl.isEmpty()) {
+                        LOGGER.info("Following redirect: {} -> {}", url, redirectUrl);
+                        url = redirectUrl;
+                        imageUrl = new URI(redirectUrl).toURL();
+                    }
+                }
+                connection.disconnect();
+
+                connection = (HttpURLConnection) imageUrl.openConnection();
+                connection.setRequestMethod("GET");
+                connection.setRequestProperty("User-Agent", ScreenshotUploader.MOD_USER_AGENT);
                 connection.setConnectTimeout(5000);
-                connection.setReadTimeout(8000);
+                connection.setReadTimeout(5000);
                 connection.connect();
 
                 if (connection.getResponseCode() == HttpURLConnection.HTTP_OK) {
@@ -526,22 +527,46 @@ public class SignBlockEntityRendererMixin {
                     if (!cacheDir.exists()) {
                         boolean wasCreated = cacheDir.mkdirs();
                         if (wasCreated) {
-                            LOGGER.info("Created cache directory: {}", cacheDir.getAbsolutePath());
-                            return null;
+                            LOGGER.info("Created screenshots cache folder");
                         }
                     }
 
                     try (InputStream inputStream = connection.getInputStream()) {
-                        NativeImage nativeImage = NativeImage.read(inputStream);
 
-                        nativeImage.writeTo(cachedImage);
+                        BufferedImage bufferedImage = ImageIO.read(inputStream);
+                        if (bufferedImage != null) {
+                            ImageIO.write(bufferedImage, "PNG", cachedImage);
 
-                        Identifier textureId = Identifier.of("screenshot-uploader", "signs/" + url.hashCode());
-                        MinecraftClient.getInstance().getTextureManager().registerTexture(textureId,
-                                new NativeImageBackedTexture(String::new, nativeImage));
+                            try (NativeImage nativeImage = new NativeImage(bufferedImage.getWidth(), bufferedImage.getHeight(), false)) {
+                                for (int y = 0; y < bufferedImage.getHeight(); y++) {
+                                    for (int x = 0; x < bufferedImage.getWidth(); x++) {
+                                        int rgb = bufferedImage.getRGB(x, y);
+                                        int alpha = (rgb >> 24) & 0xFF;
+                                        int red = (rgb >> 16) & 0xFF;
+                                        int green = (rgb >> 8) & 0xFF;
+                                        int blue = rgb & 0xFF;
 
-                        SCREENSHOT_TEXTURES.put(url, textureId);
-                        return textureId;
+                                        int argb = (alpha << 24) | (red << 16) | (green << 8) | blue;
+                                        nativeImage.setColorArgb(x, y, argb);
+                                    }
+                                }
+
+                                Identifier textureId = Identifier.of("screenshot-uploader", "signs/" + url.hashCode());
+                                MinecraftClient.getInstance().getTextureManager().registerTexture(textureId,
+                                        new NativeImageBackedTexture(String::new, nativeImage));
+                                SCREENSHOT_TEXTURES.put(url, textureId);
+                                return textureId;
+                            }
+                        } else {
+                            try (InputStream fileInputStream = Files.newInputStream(cachedImage.toPath());
+                                 NativeImage loadedImage = NativeImage.read(fileInputStream)) {
+                                Identifier textureId = Identifier.of("screenshot-uploader", "signs/" + url.hashCode());
+                                MinecraftClient.getInstance().getTextureManager().registerTexture(textureId,
+                                        new NativeImageBackedTexture(String::new, loadedImage));
+                                SCREENSHOT_TEXTURES.put(url, textureId);
+                                return textureId;
+                            }
+                        }
                     }
                 } else {
                     LOGGER.error("Failed to download image, HTTP status: {}", connection.getResponseCode());
