@@ -37,7 +37,7 @@ public class WebServer {
         }
         return sb.toString();
     }
-    
+
     private static void loadShortenedUrls() {
         if (!ConfigManager.getServerConfig().saveShortenedUrlsToFile) {
             return;
@@ -91,6 +91,7 @@ public class WebServer {
         server.createContext("/statistics", new StatisticsHandler());
         server.createContext("/shorten", new UrlShortenerHandler(urlString));
         server.createContext("/s", new ShortUrlRedirectHandler());
+        server.createContext("/shortener", new ShortenerPageHandler());
 
         server.start();
     }
@@ -202,9 +203,9 @@ public class WebServer {
         @Override
         public void handle(HttpExchange exchange) throws IOException {
             String rawPath = exchange.getRequestURI().getPath();
-            String path = rawPath.startsWith("/scr")
-                    ? rawPath.replaceFirst("/scr", "")
-                    : rawPath.replaceFirst("/screenshots", "");
+            String path = rawPath.startsWith("/screenshots")
+                    ? rawPath.replaceFirst("/screenshots", "")
+                    : rawPath.replaceFirst("/scr", "");
 
             File staticFile = new File("screenshotUploader/screenshots", path);
 
@@ -971,6 +972,27 @@ public class WebServer {
                 exchange.sendResponseHeaders(302, -1);
             } else {
                 exchange.sendResponseHeaders(404, -1);
+            }
+        }
+    }
+
+    private static class ShortenerPageHandler implements HttpHandler {
+        @Override
+        public void handle(HttpExchange exchange) throws IOException {
+            if (!"GET".equals(exchange.getRequestMethod())) {
+                exchange.sendResponseHeaders(405, -1);
+                return;
+            }
+
+            File staticFile = new File("screenshotUploader/static/html", "/shortener.html");
+
+            if (staticFile.exists() && staticFile.isFile()) {
+                byte[] fileContent = Files.readAllBytes(staticFile.toPath());
+                exchange.getResponseHeaders().add("Content-Type", "text/html; charset=UTF-8");
+                exchange.sendResponseHeaders(200, fileContent.length);
+                try (OutputStream os = exchange.getResponseBody()) {
+                    os.write(fileContent);
+                }
             }
         }
     }
