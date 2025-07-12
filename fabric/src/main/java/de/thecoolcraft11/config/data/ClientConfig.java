@@ -70,7 +70,7 @@ public class ClientConfig {
     public String highlightItem = Items.PAINTING.toString();
 
     @Comment("config.screenshot_uploader.highlight_color_a")
-    public float highlightColorA = 0.75f;
+    public float highlightColorA = 1f;
 
     @Comment("config.screenshot_uploader.highlight_color_r")
     public int highlightColorR = 255;
