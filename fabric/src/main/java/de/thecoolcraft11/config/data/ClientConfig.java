@@ -115,19 +115,19 @@ public class ClientConfig {
     public int imageColorA = 255;
 
     @Comment("config.screenshot_uploader.regular_sign_vertical_offset")
-    public float regularSignVerticalOffset = -1.2f;
+    public float regularSignVerticalOffset = -2.0f;
 
     @Comment("config.screenshot_uploader.hanging_sign_vertical_offset")
     public float hangingSignVerticalOffset = 1.2f;
 
     @Comment("config.screenshot_uploader.image_z_offset")
-    public float imageZOffset = -0.015f;
+    public float imageZOffset = -0.01f;
 
     @Comment("config.screenshot_uploader.regular_sign_image_width")
-    public float regularSignImageWidth = 0.95f;
+    public float regularSignImageWidth = 3.8f;
 
     @Comment("config.screenshot_uploader.regular_sign_image_height")
-    public float regularSignImageHeight = 0.75f;
+    public float regularSignImageHeight = 3.0f;
 
     @Comment("config.screenshot_uploader.hanging_sign_image_width")
     public float hangingSignImageWidth = 0.85f;
@@ -142,7 +142,7 @@ public class ClientConfig {
     public boolean enableScreenshotRendering = false;
 
     @Comment("config.screenshot_uploader.item_vertical_offset")
-    public float itemVerticalOffset = 0.0f;
+    public float itemVerticalOffset = 2.0f;
 
     @Comment("config.screenshot_uploader.item_horizontal_offset")
     public float itemHorizontalOffset = 0.0f;
