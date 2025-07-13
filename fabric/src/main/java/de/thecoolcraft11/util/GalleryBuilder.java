@@ -69,6 +69,7 @@ public class GalleryBuilder {
                 .append("<button id='searchButton' onclick='searchGallery()'>Search</button>")
                 .append("<div class='search-info-container'>")
                 .append("<button id='searchInfoToggle' onclick='toggleSearchInfo()'>Search Help</button>")
+                .append("<button id='shortenerBtn' onclick='window.location.href=\"/shortener\"'>Go to Shortener</button>")
                 .append("<div id='searchInfoBox' class='search-info' style='display:none;'>")
                 .append("<h3>Search Tips</h3>")
                 .append("<p>You can search using the following formats:</p>")
@@ -120,16 +121,16 @@ public class GalleryBuilder {
                 }
             }
 
-            htmlContent.append("<img src='/screenshots/").append(imageData.get("filename")).append("' ")
+            htmlContent.append("<img src='/scr/").append(imageData.get("filename")).append("' ")
                     .append("alt='").append(imageData.get("filename")).append("' ")
-                    .append("class='gallery-image' onclick='showModal(\"/screenshots/").append(imageData.get("filename")).append("\")' loading='lazy'>")
+                    .append("class='gallery-image' onclick='showModal(\"/scr/").append(imageData.get("filename")).append("\")' loading='lazy'>")
                     .append("<div class='text-with-head'>")
                     .append("<img src='").append(imageData.get("playerHeadUrl")).append("' ")
                     .append("alt='").append(imageData.get("username")).append("' ")
                     .append("class='player-head'>")
                     .append("<div class='image-username'>").append(imageData.get("username")).append("</div>")
                     .append("</div>")
-                    .append("<button class='like-button' onclick='toggleLike(\"/screenshots/").append(imageData.get("filename")).append("\", event)'></button>")
+                    .append("<button class='like-button' onclick='toggleLike(\"/scr/").append(imageData.get("filename")).append("\", event)'></button>")
                     .append("</div></div>");
         }
 
@@ -181,7 +182,7 @@ public class GalleryBuilder {
                 .append("const images = [");
 
         for (Map<String, Object> imageData : imagesWithUsernames) {
-            htmlContent.append("'/screenshots/").append(imageData.get("filename")).append("',");
+            htmlContent.append("'/scr/").append(imageData.get("filename")).append("',");
         }
 
         if (!imagesWithUsernames.isEmpty()) {
@@ -192,7 +193,7 @@ public class GalleryBuilder {
                 .append("const imageMetadata = {};");
 
         for (Map<String, Object> imageData : imagesWithUsernames) {
-            htmlContent.append("imageMetadata['/screenshots/")
+            htmlContent.append("imageMetadata['/scr/")
                     .append(imageData.get("filename"))
                     .append("'] = {")
                     .append("username:'").append(imageData.get("username")).append("',")
