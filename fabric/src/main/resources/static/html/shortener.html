@@ -206,6 +206,16 @@
 
             loadUrlHistory();
 
+            document.getElementById('urlInput').addEventListener('input', function() {
+                const urlInput = this.value.trim();
+                const imagePreview = document.getElementById('imagePreview');
+                imagePreview.innerHTML = '';
+                const imageExtensions = ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.bmp', '.svg'];
+                if (imageExtensions.some(ext => urlInput.toLowerCase().endsWith(ext))) {
+                    imagePreview.innerHTML = `<img src="${urlInput}" alt="Image preview" style="max-width:100%;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.1);">`;
+                }
+            });
+
             document.getElementById('toggleDarkMode').addEventListener('click', function() {
                 document.documentElement.classList.toggle('dark-mode');
                 document.body.classList.toggle('dark-mode');
@@ -365,6 +375,8 @@
                 historyContainer.appendChild(historyItem);
             });
         }
+
+
     </script>
 </head>
 <body>
@@ -381,7 +393,7 @@
         <label for="urlInput"></label><input type="url" id="urlInput" class="url-input"
                                              placeholder="Enter URL to shorten (e.g., https://example.com/long/path)"
                                              required>
-
+        <div id="imagePreview" style="margin: 15px 0;"></div>
         <div class="passphrase-container">
             <label for="passphraseInput">Passphrase (if required):</label>
             <input type="password" id="passphraseInput" class="passphrase-input" placeholder="Optional passphrase">
@@ -391,7 +403,7 @@
     </form>
 
     <div id="resultContainer" class="result-container">
-        <h3>Your shortened URL:</h3>
+        <h3>Your shortened URL:</h3>a
         <a id="shortUrl" class="short-url" target="_blank"></a>
         <button id="copyButton" class="copy-button">Copy to Clipboard</button>
     </div>
