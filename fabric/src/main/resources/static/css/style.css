@@ -1144,3 +1144,19 @@ body.dark-mode .advanced-search-grid label:hover {
     transform: translate(-50%, -50%) rotate(360deg);
   }
 }
+
+#shortenerBtn {
+    background-color: #4caf50;
+    color: #fff;
+    border: none;
+    padding: 8px 16px;
+    margin-left: 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 1em;
+    transition: background 0.2s;
+}
+
+#shortenerBtn:hover {
+    background-color: #388e3c;
+}
