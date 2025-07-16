@@ -30,51 +30,6 @@ public class WebServer {
     private static final String SHORTENED_URLS_FILE = "screenshotUploader/shortened_urls.json";
     private static final Logger logger = LoggerFactory.getLogger(WebServer.class);
 
-    private static String generateShortCode() {
-        StringBuilder sb = new StringBuilder(CODE_LENGTH);
-        for (int i = 0; i < CODE_LENGTH; i++) {
-            sb.append(CHARS.charAt(RANDOM.nextInt(CHARS.length())));
-        }
-        return sb.toString();
-    }
-
-    private static void loadShortenedUrls() {
-        if (!ConfigManager.getServerConfig().saveShortenedUrlsToFile) {
-            return;
-        }
-
-        File file = new File(SHORTENED_URLS_FILE);
-        if (file.exists()) {
-            try (FileReader reader = new FileReader(file)) {
-                Map<String, String> loadedUrls = GSON.fromJson(reader, new TypeToken<Map<String, String>>() {
-                }.getType());
-                if (loadedUrls != null) {
-                    shortenedUrls.putAll(loadedUrls);
-                }
-            } catch (IOException e) {
-                logger.error("Failed to load shortened URLs: {}", e.getMessage());
-            }
-        }
-    }
-
-    private static void saveShortenedUrls() {
-        if (!ConfigManager.getServerConfig().saveShortenedUrlsToFile) {
-            return;
-        }
-
-        File file = new File(SHORTENED_URLS_FILE);
-        boolean wasCreated = file.getParentFile().mkdirs();
-        if (wasCreated) {
-            logger.info("Created directory for shortened URLs file: {}", file.getParent());
-        }
-
-        try (FileWriter writer = new FileWriter(file)) {
-            GSON.toJson(shortenedUrls, writer);
-        } catch (IOException e) {
-            logger.error("Failed to save shortened URLs: {}", e.getMessage());
-        }
-    }
-
     public static void startWebServer(String ipAddress, int port, String urlString) throws Exception {
         loadShortenedUrls();
 
@@ -84,8 +39,8 @@ public class WebServer {
         server.createContext("/random-screenshot", new RandomScreenshotHandler());
         server.createContext("/delete", new DeleteFileHandler());
         server.createContext("/static", new StaticFileHandler());
-        server.createContext("/screenshots", new ScreenshotFileHandler());
         server.createContext("/scr", new ScreenshotFileHandler());
+        server.createContext("/screenshots", new ScreenshotFileHandler());
         server.createContext("/screenshot-list", new ScreenshotListHandler(urlString));
         server.createContext("/comments", new GetCommentsHandler());
         server.createContext("/statistics", new StatisticsHandler());
@@ -994,6 +949,51 @@ public class WebServer {
                     os.write(fileContent);
                 }
             }
+        }
+    }
+
+    private static String generateShortCode() {
+        StringBuilder sb = new StringBuilder(CODE_LENGTH);
+        for (int i = 0; i < CODE_LENGTH; i++) {
+            sb.append(CHARS.charAt(RANDOM.nextInt(CHARS.length())));
+        }
+        return sb.toString();
+    }
+
+    private static void loadShortenedUrls() {
+        if (!ConfigManager.getServerConfig().saveShortenedUrlsToFile) {
+            return;
+        }
+
+        File file = new File(SHORTENED_URLS_FILE);
+        if (file.exists()) {
+            try (FileReader reader = new FileReader(file)) {
+                Map<String, String> loadedUrls = GSON.fromJson(reader, new TypeToken<Map<String, String>>() {
+                }.getType());
+                if (loadedUrls != null) {
+                    shortenedUrls.putAll(loadedUrls);
+                }
+            } catch (IOException e) {
+                logger.error("Failed to load shortened URLs: {}", e.getMessage());
+            }
+        }
+    }
+
+    private static void saveShortenedUrls() {
+        if (!ConfigManager.getServerConfig().saveShortenedUrlsToFile) {
+            return;
+        }
+
+        File file = new File(SHORTENED_URLS_FILE);
+        boolean wasCreated = file.getParentFile().mkdirs();
+        if (wasCreated) {
+            logger.info("Created directory for shortened URLs file: {}", file.getParent());
+        }
+
+        try (FileWriter writer = new FileWriter(file)) {
+            GSON.toJson(shortenedUrls, writer);
+        } catch (IOException e) {
+            logger.error("Failed to save shortened URLs: {}", e.getMessage());
         }
     }
 }
