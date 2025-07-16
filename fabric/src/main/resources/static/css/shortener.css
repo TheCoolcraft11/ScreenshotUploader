@@ -1,0 +1,189 @@
+        .shortener-container {
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 30px;
+            background-color: rgba(255, 255, 255, 0.9);
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+
+        body.dark-mode .shortener-container {
+            background-color: rgba(40, 40, 40, 0.9);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            color: #f4f4f4;
+        }
+
+        .shortener-form {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .url-input {
+            padding: 15px;
+            font-size: 16px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        body.dark-mode .url-input {
+            background-color: #222;
+            border-color: #444;
+            color: #f4f4f4;
+        }
+
+        .shorten-button {
+            padding: 15px;
+            font-size: 16px;
+            background-color: #f39c12;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+
+        .shorten-button:hover {
+            background-color: #e67e22;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .shorten-button:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .result-container {
+            margin-top: 20px;
+            padding: 20px;
+            border-radius: 8px;
+            background-color: rgba(240, 240, 240, 0.8);
+            display: none;
+        }
+
+        body.dark-mode .result-container {
+            background-color: rgba(60, 60, 60, 0.8);
+        }
+
+        .short-url {
+            font-size: 18px;
+            font-weight: bold;
+            color: #f39c12;
+            word-break: break-all;
+            margin: 10px 0;
+        }
+
+        .copy-button {
+            padding: 10px 15px;
+            font-size: 14px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 10px;
+            transition: all 0.3s ease;
+        }
+
+        .copy-button:hover {
+            background-color: #2980b9;
+        }
+
+        .error-message {
+            color: #e74c3c;
+            font-weight: bold;
+            margin-top: 10px;
+            display: none;
+        }
+
+        .passphrase-container {
+            margin-top: 15px;
+        }
+
+        .passphrase-input {
+            padding: 10px;
+            font-size: 14px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            width: 60%;
+            margin-top: 5px;
+        }
+
+        body.dark-mode .passphrase-input {
+            background-color: #222;
+            border-color: #444;
+            color: #f4f4f4;
+        }
+
+        .history-container {
+            margin-top: 30px;
+            border-top: 1px solid #ddd;
+            padding-top: 20px;
+        }
+
+        .history-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            margin: 10px 0;
+            background-color: rgba(255, 255, 255, 0.7);
+            border-radius: 5px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        body.dark-mode .history-item {
+            background-color: rgba(50, 50, 50, 0.7);
+        }
+
+        .history-original {
+            font-size: 14px;
+            color: #555;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            max-width: 70%;
+        }
+
+        body.dark-mode .history-original {
+            color: #ccc;
+        }
+
+        .history-short {
+            font-size: 14px;
+            font-weight: bold;
+            color: #f39c12;
+        }
+
+        .show-hide-history {
+            background-color: transparent;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 8px 15px;
+            cursor: pointer;
+            margin-top: 10px;
+            font-size: 14px;
+            color: #555;
+            transition: all 0.3s ease;
+        }
+
+        body.dark-mode .show-hide-history {
+            border-color: #555;
+            color: #ccc;
+        }
+
+        .show-hide-history:hover {
+            background-color: #f5f5f5;
+            color: #333;
+        }
+
+        body.dark-mode .show-hide-history:hover {
+            background-color: #444;
+            color: #fff;
+        }

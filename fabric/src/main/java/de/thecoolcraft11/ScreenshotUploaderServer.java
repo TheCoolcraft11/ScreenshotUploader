@@ -328,6 +328,8 @@ public class ScreenshotUploaderServer implements DedicatedServerModInitializer {
         copyResourceToServerDir("/static/css/style.css", "screenshotUploader/static/css/style.css");
         copyResourceToServerDir("/static/css/styleOld.css", "screenshotUploader/static/css/styleOld.css");
         copyResourceToServerDir("/static/html/shortener.html", "screenshotUploader/static/html/shortener.html");
+        copyResourceToServerDir("/static/js/shortener.js", "screenshotUploader/static/js/shortener.js");
+        copyResourceToServerDir("/static/css/shortener.css", "screenshotUploader/static/css/shortener.css");
     }
 
     private void copyResourceToServerDir(String resourcePath, String targetPath) {
