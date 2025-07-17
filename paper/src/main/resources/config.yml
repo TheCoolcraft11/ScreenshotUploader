@@ -42,3 +42,9 @@ deleteAfterDays: 30
 replaceStaticFilesOnStart: true
 #Use the old css instead of the new one. The old css may not support all new features
 useOldStyle: false
+#If shortened URLs should be allowed, this is only used for the webserver, not for the ingame gallery
+allowShortenedUrls: true
+#The passphrase for the shortener, ONLY SHARE WITH TRUSTED PEOPLE, Leave empty to allow everyone to delete screenshots
+shortenerPassphrase: ""
+#If screenshots should be saved to a file on the server, this is only used for the webserver, not for the ingame gallery
+saveShortenedUrlsToFile: true
