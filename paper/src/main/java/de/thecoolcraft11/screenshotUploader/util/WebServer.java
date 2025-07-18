@@ -1,18 +1,16 @@
 package de.thecoolcraft11.screenshotUploader.util;
 
-import com.google.gson.JsonArray;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
+import com.google.gson.*;
+import com.google.gson.reflect.TypeToken;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpServer;
 import de.thecoolcraft11.screenshotUploader.ScreenshotUploader;
 import org.jetbrains.annotations.NotNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import java.io.File;
-import java.io.FileReader;
-import java.io.IOException;
-import java.io.OutputStream;
+import java.io.*;
 import java.net.InetSocketAddress;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -25,8 +23,17 @@ import static de.thecoolcraft11.screenshotUploader.ScreenshotUploader.config;
 
 public class WebServer {
 
-    public static void startWebServer(String ipAddress, int port, String urlString) throws Exception {
+    private static final Map<String, String> shortenedUrls = new HashMap<>();
+    private static final String CHARS = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+    private static final int CODE_LENGTH = 6;
+    private static final Random RANDOM = new Random();
+    private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
+    private static final String SHORTENED_URLS_FILE = "screenshotUploader/shortened_urls.json";
+    private static final Logger logger = LoggerFactory.getLogger(WebServer.class);
 
+
+    public static void startWebServer(String ipAddress, int port, String urlString) throws Exception {
+        loadShortenedUrls();
 
         HttpServer server = HttpServer.create(new InetSocketAddress(ipAddress, port), 0);
 
@@ -34,10 +41,14 @@ public class WebServer {
         server.createContext("/random-screenshot", new RandomScreenshotHandler());
         server.createContext("/delete", new DeleteFileHandler());
         server.createContext("/static", new StaticFileHandler());
+        server.createContext("/scr", new ScreenshotFileHandler());
         server.createContext("/screenshots", new ScreenshotFileHandler());
         server.createContext("/screenshot-list", new ScreenshotListHandler(urlString));
         server.createContext("/comments", new GetCommentsHandler());
         server.createContext("/statistics", new StatisticsHandler());
+        server.createContext("/shorten", new UrlShortenerHandler(urlString));
+        server.createContext("/s", new ShortUrlRedirectHandler());
+        server.createContext("/shortener", new ShortenerPageHandler());
         server.start();
     }
 
@@ -821,5 +832,149 @@ public class WebServer {
             return mostFrequentHour;
         }
     }
+
+    private record UrlShortenerHandler(String baseUrl) implements HttpHandler {
+
+        @Override
+        public void handle(HttpExchange exchange) throws IOException {
+
+            if (!config.getFileConfiguration().getBoolean("allowShortenedUrls")) {
+                exchange.sendResponseHeaders(423, -1);
+                return;
+            }
+
+            if (!"POST".equals(exchange.getRequestMethod())) {
+                exchange.sendResponseHeaders(405, -1);
+                return;
+            }
+
+            String providedPassphrase = exchange.getRequestHeaders().getFirst("X-Shortener-Passphrase");
+            if (config.getFileConfiguration().getString("shortenerPassphrase") != null &&
+                    !Objects.requireNonNull(config.getFileConfiguration().getString("shortenerPassphrase")).isEmpty() &&
+                    (providedPassphrase == null || !providedPassphrase.equals(config.getFileConfiguration().getString("shortenerPassphrase")))) {
+                exchange.sendResponseHeaders(403, -1);
+                return;
+            }
+
+            try {
+                String requestBody = new String(exchange.getRequestBody().readAllBytes());
+                JsonObject requestJson = JsonParser.parseString(requestBody).getAsJsonObject();
+
+                String originalUrl = requestJson.get("url").getAsString();
+
+                if (originalUrl == null || originalUrl.isEmpty()) {
+                    exchange.sendResponseHeaders(400, -1);
+                    return;
+                }
+
+                String shortCode = generateShortCode();
+                shortenedUrls.put(shortCode, originalUrl);
+
+                if (config.getFileConfiguration().getBoolean("saveShortenedUrlsToFile")) {
+                    saveShortenedUrls();
+                }
+
+                JsonObject responseJson = new JsonObject();
+                responseJson.addProperty("shortUrl", baseUrl + "/s/" + shortCode);
+
+                exchange.getResponseHeaders().set("Content-Type", "application/json");
+                exchange.sendResponseHeaders(200, responseJson.toString().getBytes().length);
+                try (OutputStream os = exchange.getResponseBody()) {
+                    os.write(responseJson.toString().getBytes());
+                }
+            } catch (Exception e) {
+                exchange.sendResponseHeaders(500, -1);
+            } finally {
+                exchange.getResponseBody().close();
+            }
+        }
+    }
+
+    private static class ShortUrlRedirectHandler implements HttpHandler {
+        @Override
+        public void handle(HttpExchange exchange) throws IOException {
+            if (!"GET".equals(exchange.getRequestMethod()) && !"HEAD".equals(exchange.getRequestMethod())) {
+                exchange.sendResponseHeaders(405, -1);
+                return;
+            }
+
+            String requestURI = exchange.getRequestURI().toString();
+            String shortCode = requestURI.substring(requestURI.lastIndexOf('/') + 1);
+
+            String originalUrl = shortenedUrls.get(shortCode);
+            if (originalUrl != null) {
+                exchange.getResponseHeaders().set("Location", originalUrl);
+                exchange.sendResponseHeaders(302, -1);
+            } else {
+                exchange.sendResponseHeaders(404, -1);
+            }
+        }
+    }
+
+    private static class ShortenerPageHandler implements HttpHandler {
+        @Override
+        public void handle(HttpExchange exchange) throws IOException {
+            if (!"GET".equals(exchange.getRequestMethod())) {
+                exchange.sendResponseHeaders(405, -1);
+                return;
+            }
+
+            File staticFile = new File("screenshotUploader/static/html", "/shortener.html");
+
+            if (staticFile.exists() && staticFile.isFile()) {
+                byte[] fileContent = Files.readAllBytes(staticFile.toPath());
+                exchange.getResponseHeaders().add("Content-Type", "text/html; charset=UTF-8");
+                exchange.sendResponseHeaders(200, fileContent.length);
+                try (OutputStream os = exchange.getResponseBody()) {
+                    os.write(fileContent);
+                }
+            }
+        }
+    }
+    private static String generateShortCode() {
+        StringBuilder sb = new StringBuilder(CODE_LENGTH);
+        for (int i = 0; i < CODE_LENGTH; i++) {
+            sb.append(CHARS.charAt(RANDOM.nextInt(CHARS.length())));
+        }
+        return sb.toString();
+    }
+
+    private static void loadShortenedUrls() {
+        if (!config.getFileConfiguration().getBoolean("saveShortenedUrlsToFile")) {
+            return;
+        }
+
+        File file = new File(SHORTENED_URLS_FILE);
+        if (file.exists()) {
+            try (FileReader reader = new FileReader(file)) {
+                Map<String, String> loadedUrls = GSON.fromJson(reader, new TypeToken<Map<String, String>>() {
+                }.getType());
+                if (loadedUrls != null) {
+                    shortenedUrls.putAll(loadedUrls);
+                }
+            } catch (IOException e) {
+                logger.error("Failed to load shortened URLs: {}", e.getMessage());
+            }
+        }
+    }
+
+    private static void saveShortenedUrls() {
+        if (!config.getFileConfiguration().getBoolean("saveShortenedUrlsToFile")) {
+            return;
+        }
+
+        File file = new File(SHORTENED_URLS_FILE);
+        boolean wasCreated = file.getParentFile().mkdirs();
+        if (wasCreated) {
+            logger.info("Created directory for shortened URLs file: {}", file.getParent());
+        }
+
+        try (FileWriter writer = new FileWriter(file)) {
+            GSON.toJson(shortenedUrls, writer);
+        } catch (IOException e) {
+            logger.error("Failed to save shortened URLs: {}", e.getMessage());
+        }
+    }
+
 }
 

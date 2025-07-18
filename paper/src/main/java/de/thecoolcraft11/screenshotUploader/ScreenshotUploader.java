@@ -30,6 +30,9 @@ public final class ScreenshotUploader extends JavaPlugin {
         saveResource("static/js/script.js", config.getFileConfiguration().getBoolean("replaceStaticFilesOnStart"));
         saveResource("static/css/style.css", config.getFileConfiguration().getBoolean("replaceStaticFilesOnStart"));
         saveResource("static/css/styleOld.css", config.getFileConfiguration().getBoolean("replaceStaticFilesOnStart"));
+        saveResource("static/html/shortener.html", config.getFileConfiguration().getBoolean("replaceStaticFilesOnStart"));
+        saveResource("static/js/shortener.js", config.getFileConfiguration().getBoolean("replaceStaticFilesOnStart"));
+        saveResource("static/css/shortener.css", config.getFileConfiguration().getBoolean("replaceStaticFilesOnStart"));
         createModFolder();
         prepareWebServerStart();
         deleteOldScreenshots();
@@ -112,6 +115,7 @@ public final class ScreenshotUploader extends JavaPlugin {
         Path staticDir = Paths.get("./screenshotUploader/static/");
         Path staticJsDir = Paths.get("./screenshotUploader/static/js/");
         Path staticCssDir = Paths.get("./screenshotUploader/static/css/");
+        Path staticHtmlDir = Paths.get("./screenshotUploader/static/html/");
 
         if (!Files.exists(screenshotDir)) {
             try {
@@ -139,6 +143,13 @@ public final class ScreenshotUploader extends JavaPlugin {
                 Files.createDirectories(staticCssDir);
             } catch (IOException e) {
                 getLogger().severe("Failed to create static css directory: " + e.getMessage());
+            }
+        }
+        if (!Files.exists(staticHtmlDir)) {
+            try {
+                Files.createDirectories(staticHtmlDir);
+            } catch (IOException e) {
+                getLogger().severe("Failed to create static html directory: " + e.getMessage());
             }
         }
     }
