@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>URL Shortener</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="/static/css/shortener.css">
+</head>
+<body>
+<button id="toggleDarkMode"
+        style="position: fixed; top: 20px; right: 20px; z-index: 1000; padding: 10px; border-radius: 5px; background: #555; color: white; border: none; cursor: pointer;">
+    Toggle Dark Mode
+</button>
+
+<div class="shortener-container">
+    <h1>URL Shortener</h1>
+    <p>Shorten long URLs to make them easier to share</p>
+
+    <form id="shortenForm" class="shortener-form">
+        <label for="urlInput"></label><input type="url" id="urlInput" class="url-input"
+                                             placeholder="Enter URL to shorten (e.g., https://example.com/long/path)"
+                                             required>
+        <div id="imagePreview" style="margin: 15px 0;"></div>
+        <div class="passphrase-container">
+            <label for="passphraseInput">Passphrase (if required):</label>
+            <input type="password" id="passphraseInput" class="passphrase-input" placeholder="Optional passphrase">
+        </div>
+
+        <button type="submit" class="shorten-button">Shorten URL</button>
+    </form>
+
+    <div id="resultContainer" class="result-container">
+        <h3>Your shortened URL:</h3>a
+        <a id="shortUrl" class="short-url" target="_blank"></a>
+        <button id="copyButton" class="copy-button">Copy to Clipboard</button>
+    </div>
+
+    <div id="errorMessage" class="error-message"></div>
+
+    <div class="history-container">
+        <h3>Recently Shortened URLs</h3>
+        <button id="toggleHistory" class="show-hide-history">Show History</button>
+        <div id="historyItems" style="display: none;"></div>
+    </div>
+</div>
+
+<div style="text-align: center; margin-top: 20px;">
+    <a href="/" style="text-decoration: none; color: #f39c12;">Back to Gallery</a>
+</div>
+</body>
+<script src="/static/js/shortener.js"></script>
+</html>
