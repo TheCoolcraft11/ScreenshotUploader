@@ -156,7 +156,6 @@ public class SignBlockEntityRendererMixin {
                         if (isWall || isWallHanging) {
                             facing = entity.getWorld().getBlockState(entity.getPos()).get(Properties.HORIZONTAL_FACING);
                         }
-
                         Identifier signTexture;
                         if (isHanging || isWallHanging) {
                             signTexture = Identifier.of("minecraft", "textures/entity/signs/hanging/" + woodType.name().toLowerCase() + ".png");
@@ -182,59 +181,53 @@ public class SignBlockEntityRendererMixin {
                         matrices.push();
 
                         if (isWallHanging) {
-                            matrices.translate(0.5f, 0.62223f, 0.92222f);
-
-                            float yRotation = 0;
-                            float offset = 0.42f;
+                            float yOffset = 0.625f;
+                            float xzOffset = 0.5f;
 
                             switch (facing) {
-                                case NORTH:
-                                    yRotation = 180f;
-                                    matrices.translate(0, 0, offset);
-                                    break;
-                                case SOUTH:
-                                    matrices.translate(0, 0, -offset);
+                                case NORTH, SOUTH:
+                                    matrices.translate(xzOffset, yOffset, xzOffset);
                                     break;
                                 case EAST:
-                                    yRotation = 270f;
-                                    matrices.translate(-offset, 0, 0);
+                                    matrices.multiply(new Quaternionf().rotationY((float) Math.toRadians(90)));
+                                    matrices.translate(-xzOffset, yOffset, xzOffset);
                                     break;
                                 case WEST:
-                                    yRotation = 90f;
-                                    matrices.translate(offset, 0, 0);
+                                    matrices.multiply(new Quaternionf().rotationY((float) Math.toRadians(270)));
+                                    matrices.translate(-xzOffset, yOffset, xzOffset);
                                     break;
                             }
 
-                            if (yRotation != 0) {
-                                matrices.multiply(new Quaternionf().rotationY((float) Math.toRadians(yRotation)));
-                            }
 
+
+                        }else if (isHanging) {
+                            matrices.translate(0.5f, 0.65f, 0.5f);
+                            try {
+                                float rotation = entity.getWorld().getBlockState(entity.getPos()).get(Properties.ROTATION) * 22.5f;
+                                matrices.multiply(new Quaternionf().rotationY((float) Math.toRadians(-rotation)));
+                            } catch (Exception ignored) {
+                            }
                         } else if (isWall) {
                             matrices.translate(0.5f, 0.123f, 0.5f);
 
-                            float yRotation = 0;
                             float zOffset = 0.434f;
 
                             switch (facing) {
                                 case NORTH:
-                                    yRotation = 180f;
+                                    matrices.multiply(new Quaternionf().rotationY((float) Math.toRadians(180f)));
                                     matrices.translate(0, 0, zOffset);
                                     break;
                                 case SOUTH:
                                     matrices.translate(0, 0, -zOffset);
                                     break;
                                 case EAST:
-                                    yRotation = 270f;
+                                    matrices.multiply(new Quaternionf().rotationY((float) Math.toRadians(270f)));
                                     matrices.translate(-zOffset, 0, 0);
                                     break;
                                 case WEST:
-                                    yRotation = 90f;
+                                    matrices.multiply(new Quaternionf().rotationY((float) Math.toRadians(90f)));
                                     matrices.translate(zOffset, 0, 0);
                                     break;
-                            }
-
-                            if (yRotation != 0) {
-                                matrices.multiply(new Quaternionf().rotationY((float) Math.toRadians(yRotation)));
                             }
                         } else {
                             matrices.translate(0.5f, 0.45f, 0.5f);
@@ -247,7 +240,7 @@ public class SignBlockEntityRendererMixin {
                         }
 
                         if ((isHanging || isWallHanging)) {
-                            scale *= 1.478865f;
+                            scale = 1.01f;
                         }
 
                         matrices.scale(scale, -scale, scale);
@@ -391,7 +384,8 @@ public class SignBlockEntityRendererMixin {
             matrices.translate(0, ConfigManager.getClientConfig().regularSignVerticalOffset, 0);
         }
 
-        matrices.translate(0, 0, ConfigManager.getClientConfig().imageZOffset);
+        if(!isHanging && ConfigManager.getClientConfig().imageZOffset != 0.0f)  matrices.translate(0, 0, ConfigManager.getClientConfig().imageZOffset);
+        else if (isHanging && ConfigManager.getClientConfig().hangingImageZOffset != 0.0f) matrices.translate(0, 0, ConfigManager.getClientConfig().hangingImageZOffset);
 
         if (useCustomTransformations) {
             matrices.translate(0, 0, 0);

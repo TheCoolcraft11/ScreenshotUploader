@@ -118,10 +118,13 @@ public class ClientConfig {
     public float regularSignVerticalOffset = -2.0f;
 
     @Comment("config.screenshot_uploader.hanging_sign_vertical_offset")
-    public float hangingSignVerticalOffset = 1.2f;
+    public float hangingSignVerticalOffset = 0.325f;
 
     @Comment("config.screenshot_uploader.image_z_offset")
     public float imageZOffset = -0.01f;
+
+    @Comment("config.screenshot_uploader.hanging_image_z_offset")
+    public float hangingImageZOffset = 0.065f;
 
     @Comment("config.screenshot_uploader.regular_sign_image_width")
     public float regularSignImageWidth = 3.8f;
