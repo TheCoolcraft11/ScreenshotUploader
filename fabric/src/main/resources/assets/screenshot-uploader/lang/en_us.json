@@ -328,5 +328,25 @@
   "config.screenshot_uploader.emboss_effect": "Amount of emboss effect applied to the image",
   "config.screenshot_uploader.noise_intensity": "Level of noise added to the image",
   "config.screenshot_uploader.gallery_button_main_menu": "Whether a gallery button should be added to the main menu",
-  "config.screenshot_uploader.gallery_button_pause_menu": "Whether a gallery button should be added to the pause (Esc) menu"
+  "config.screenshot_uploader.gallery_button_pause_menu": "Whether a gallery button should be added to the pause (Esc) menu",
+  "config.screenshot_uploader.preserve_image_aspect_ratio": "Preserve the original aspect ratio of images when displaying them on signs",
+  "config.screenshot_uploader.image_color_r": "Red color component for images displayed on signs (0-255)",
+  "config.screenshot_uploader.image_color_g": "Green color component for images displayed on signs (0-255)",
+  "config.screenshot_uploader.image_color_b": "Blue color component for images displayed on signs (0-255)",
+  "config.screenshot_uploader.image_color_a": "Alpha (transparency) component for images displayed on signs (0-255)",
+  "config.screenshot_uploader.regular_sign_vertical_offset": "Vertical offset for images displayed on regular signs",
+  "config.screenshot_uploader.hanging_sign_vertical_offset": "Vertical offset for images displayed on hanging signs",
+  "config.screenshot_uploader.image_z_offset": "Z-axis offset for images on regular signs (depth positioning)",
+  "config.screenshot_uploader.hanging_image_z_offset": "Z-axis offset for images on hanging signs (depth positioning)",
+  "config.screenshot_uploader.regular_sign_image_width": "Width of images displayed on regular signs",
+  "config.screenshot_uploader.regular_sign_image_height": "Height of images displayed on regular signs",
+  "config.screenshot_uploader.hanging_sign_image_width": "Width of images displayed on hanging signs",
+  "config.screenshot_uploader.hanging_sign_image_height": "Height of images displayed on hanging signs",
+  "config.screenshot_uploader.image_light_boost": "Additional light level boost for images displayed on signs",
+  "config.screenshot_uploader.enable_screenshot_rendering": "Enable rendering of screenshot images on signs with URLs",
+  "config.screenshot_uploader.item_vertical_offset": "Vertical offset for highlight items displayed above signs",
+  "config.screenshot_uploader.item_horizontal_offset": "Horizontal offset for highlight items displayed above signs",
+  "config.screenshot_uploader.item_depth_offset": "Depth offset for highlight items displayed above signs",
+  "config.screenshot_uploader.item_scale": "Scale factor for highlight items displayed above signs"
+
 }
