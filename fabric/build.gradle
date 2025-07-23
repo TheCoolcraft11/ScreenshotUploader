@@ -1,5 +1,5 @@
 plugins {
-	id 'fabric-loom' version '1.10-SNAPSHOT'
+	id 'fabric-loom' version '1.11-SNAPSHOT'
 	id 'maven-publish'
 }
 
@@ -27,7 +27,7 @@ dependencies {
 	minecraft "com.mojang:minecraft:${project.minecraft_version}"
 	mappings "net.fabricmc:yarn:${project.yarn_mappings}:v2"
 	modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
-	modImplementation("com.terraformersmc:modmenu:14.0.0-rc.2")
+	modImplementation("com.terraformersmc:modmenu:15.0.0-beta.3")
 
 	// Fabric API. This is technically optional, but you probably want it anyway.
 	modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
