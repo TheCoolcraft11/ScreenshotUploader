@@ -7,10 +7,10 @@ import de.thecoolcraft11.config.ConfigManager;
 import de.thecoolcraft11.config.data.Album;
 import de.thecoolcraft11.util.ReceivePackets;
 import de.thecoolcraft11.util.ScreenshotUploadHelper;
+import net.minecraft.client.gl.RenderPipelines;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.widget.ButtonWidget;
-import net.minecraft.client.render.RenderLayer;
 import net.minecraft.client.texture.NativeImage;
 import net.minecraft.client.texture.NativeImageBackedTexture;
 import net.minecraft.text.Text;
@@ -260,7 +260,7 @@ public class UploadToServerScreen extends Screen {
             context.fill(imageX - BORDER_WIDTH, imageY - BORDER_WIDTH,
                     imageX + imageWidth + BORDER_WIDTH, imageY + imageHeight + BORDER_WIDTH, 0xFFFFFFFF);
 
-            context.drawTexture(RenderLayer::getGuiTextured, textureId, imageX, imageY, 0, 0,
+            context.drawTexture(RenderPipelines.GUI_TEXTURED, textureId, imageX, imageY, 0, 0,
                     imageWidth, imageHeight, imageWidth, imageHeight);
 
             renderMetadataPanel(context, imageX + imageWidth + 20, imageY);

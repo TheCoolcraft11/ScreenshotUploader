@@ -1,6 +1,5 @@
 package de.thecoolcraft11.mixin;
 
-import com.mojang.blaze3d.systems.RenderSystem;
 import de.thecoolcraft11.ScreenshotUploader;
 import de.thecoolcraft11.config.ConfigManager;
 import net.minecraft.block.*;
@@ -176,7 +175,7 @@ public class SignBlockEntityRendererMixin {
                         }
 
                         float alpha = ConfigManager.getClientConfig().highlightColorA;
-                        RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, alpha);
+                        //RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, alpha);
 
                         matrices.push();
 
@@ -263,7 +262,7 @@ public class SignBlockEntityRendererMixin {
                         }
 
                         matrices.pop();
-                        RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
+                        //RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
                     }
 
                     if (matcher.matches() && entity.isWaxed()) {

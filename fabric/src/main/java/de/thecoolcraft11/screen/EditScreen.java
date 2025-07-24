@@ -1,12 +1,12 @@
 package de.thecoolcraft11.screen;
 
 import de.thecoolcraft11.config.ConfigManager;
+import net.minecraft.client.gl.RenderPipelines;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.Element;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.client.gui.widget.TextFieldWidget;
-import net.minecraft.client.render.RenderLayer;
 import net.minecraft.client.texture.NativeImage;
 import net.minecraft.client.texture.NativeImageBackedTexture;
 import net.minecraft.text.Text;
@@ -940,7 +940,7 @@ public class EditScreen extends Screen {
 
         if (textureId != null) {
             //RenderSystem.setShaderTexture(0, image);
-            context.drawTexture(RenderLayer::getGuiTextured, textureId, width / 4, height / 4, 0, 0, width / 2, height / 2, width / 2, height / 2);
+            context.drawTexture(RenderPipelines.GUI_TEXTURED, textureId, width / 4, height / 4, 0, 0, width / 2, height / 2, width / 2, height / 2);
         } else {
             if (image != null) {
                 if (client != null) {

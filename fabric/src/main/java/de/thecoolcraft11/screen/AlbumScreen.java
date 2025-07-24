@@ -3,10 +3,10 @@ package de.thecoolcraft11.screen;
 import de.thecoolcraft11.config.AlbumManager;
 import de.thecoolcraft11.config.data.Album;
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.gl.RenderPipelines;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.widget.ButtonWidget;
-import net.minecraft.client.render.RenderLayer;
 import net.minecraft.client.texture.NativeImage;
 import net.minecraft.client.texture.NativeImageBackedTexture;
 import net.minecraft.text.Text;
@@ -134,7 +134,7 @@ public class AlbumScreen extends Screen {
         int iconX = x + (ALBUM_WIDTH - iconSize) / 2;
         int iconY = y + (ALBUM_HEIGHT - iconSize) / 2;
 
-        context.drawTexture(RenderLayer::getGuiTextured, FOLDER_ICON, iconX, iconY, 0, 0, iconSize, iconSize, iconSize, iconSize, color);
+        context.drawTexture(RenderPipelines.GUI_TEXTURED, FOLDER_ICON, iconX, iconY, 0, 0, iconSize, iconSize, iconSize, iconSize, color);
         Identifier coverId = coverImageIds.get(album.getCoverScreenshotName());
         if (coverId != null) {
             int coverWidth = (int) (ALBUM_WIDTH * 0.65);
@@ -144,11 +144,11 @@ public class AlbumScreen extends Screen {
             int coverX = (x + (ALBUM_WIDTH - coverWidth) / 2) + coverOffsetX;
             int coverY = (y + (ALBUM_HEIGHT - coverHeight) / 2) - coverOffsetY;
 
-            context.drawTexture(RenderLayer::getGuiTextured, coverId, coverX, coverY, 0, 0, coverWidth, coverHeight, coverWidth, coverHeight);
+            context.drawTexture(RenderPipelines.GUI_TEXTURED, coverId, coverX, coverY, 0, 0, coverWidth, coverHeight, coverWidth, coverHeight);
         }
         boolean isHovering = mouseX >= x && mouseX <= x + ALBUM_WIDTH && mouseY >= y && mouseY <= y + ALBUM_HEIGHT;
         if (!isHovering) {
-            context.drawTexture(RenderLayer::getGuiTextured, FOLDER_ICON_COVER, iconX, iconY, 0, 0, iconSize, iconSize, iconSize, iconSize, color);
+            context.drawTexture(RenderPipelines.GUI_TEXTURED, FOLDER_ICON_COVER, iconX, iconY, 0, 0, iconSize, iconSize, iconSize, iconSize, color);
         }
 
         int titleX = x + 5;

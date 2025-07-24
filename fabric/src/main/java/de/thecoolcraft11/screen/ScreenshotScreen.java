@@ -2,9 +2,9 @@ package de.thecoolcraft11.screen;
 
 import de.thecoolcraft11.ScreenshotUploader;
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.gl.RenderPipelines;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.render.RenderLayer;
 import net.minecraft.client.texture.NativeImage;
 import net.minecraft.client.texture.NativeImageBackedTexture;
 import net.minecraft.text.Text;
@@ -170,7 +170,7 @@ public class ScreenshotScreen extends Screen {
 
         int borderWidth = 5;
         context.fill(x - borderWidth, y - borderWidth, x + imageWidth + borderWidth, y + imageHeight + borderWidth, 0xFFFFFFFF);
-        context.drawTexture(RenderLayer::getGuiTextured, clickedImageId, x, y, 0, 0, imageWidth, imageHeight, imageWidth, imageHeight);
+        context.drawTexture(RenderPipelines.GUI_TEXTURED, clickedImageId, x, y, 0, 0, imageWidth, imageHeight, imageWidth, imageHeight);
 
 
     }
