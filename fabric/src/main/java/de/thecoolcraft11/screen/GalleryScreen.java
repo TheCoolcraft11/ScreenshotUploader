@@ -517,7 +517,7 @@ public class GalleryScreen extends Screen {
 
     @Override
     public void render(DrawContext context, int mouseX, int mouseY, float delta) {
-        renderBackground(context, mouseX, mouseY, delta);
+//         renderBackground(context, mouseX, mouseY, delta);
         super.render(context, mouseX, mouseY, delta);
 
         if (isImageClicked && clickedImageIndex >= 0) {

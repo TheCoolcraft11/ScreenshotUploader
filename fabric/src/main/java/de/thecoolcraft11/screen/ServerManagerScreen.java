@@ -257,7 +257,7 @@ public class ServerManagerScreen extends Screen {
 
     @Override
     public void render(DrawContext context, int mouseX, int mouseY, float delta) {
-        renderBackground(context, mouseX, mouseY, delta);
+//         renderBackground(context, mouseX, mouseY, delta);
         super.render(context, mouseX, mouseY, delta);
         int centerX = width / 2;
         context.fill(centerX - 5, 40, centerX + 5, height - 40, 0x66FFFFFF);
